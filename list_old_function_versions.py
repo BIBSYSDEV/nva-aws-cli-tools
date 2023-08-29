@@ -11,7 +11,7 @@ def list_or_delete_old_lambda_versions(delete):
         for version in versions:
             if version['Version'] != function['Version'] and not version['Version'] in alias_versions:
                 arn = version['FunctionArn']
-                if (delete):
+                if delete:
                     client.delete_function(FunctionName=arn)
                     print('Deleted {}'.format(arn))
                 else:
@@ -21,9 +21,7 @@ def list_or_delete_old_lambda_versions(delete):
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-d", "--delete", action='store_true', help="delete old versions")
-
     args = argParser.parse_args()
-    print("args=%s" % args)
 
     list_or_delete_old_lambda_versions(args.delete)
 

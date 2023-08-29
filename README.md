@@ -2,7 +2,7 @@
 Python scripts using aws-cli 
 
 # Prerequisites
-* python 3
+* python 3.2 or newer
 * pip3 install boto3
 
 # Scripts
