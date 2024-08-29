@@ -4,6 +4,13 @@ Python scripts using aws-cli
 # Prerequisites
 * python 3.2 or newer
 * pip3 install boto3
+* aws credentials available
+
+# Log in to get AWS credentials
+
+Follow manual here:
+https://gitlab.sikt.no/platon/aws-cli-tools/-/tree/master/samlauth
+
 
 # Scripts
 
