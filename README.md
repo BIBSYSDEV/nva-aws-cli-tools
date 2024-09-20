@@ -43,7 +43,12 @@ python3 roles.py help
       It will return a list of items where at least one attribute contains the given value. 
       The items are returned as a list of dictionaries with 'PrimaryKeyHashKey', 'givenName', 
       and 'familyName' as keys.
-
+      
+    - 'clookup' to perform a lookup directly in cognito user pool. 
+      Use it as: python3 roles.py clookup [value]
+      This will return a list of users where at least one attribute contains the given value. 
+      The users are returned as a serialized JSON string.
+      
     - 'help' to see this message again.
 ```
 
