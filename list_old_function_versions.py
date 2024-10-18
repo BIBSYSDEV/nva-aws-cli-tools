@@ -1,4 +1,5 @@
-import boto3, argparse
+import boto3
+import argparse
 
 def clean_old_lambda_versions(client, delete):
     functions_paginator = client.get_paginator('list_functions')

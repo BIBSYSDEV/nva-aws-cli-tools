@@ -115,19 +115,12 @@ def write_roles_to_db(roles, key):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(table_name)
 
-    response = table.update_item(
-        Key={
-            'PrimaryKeyHashKey': key,
-            'PrimaryKeyRangeKey': key
-        },
+    table.update_item(
+        Key={"PrimaryKeyHashKey": key, "PrimaryKeyRangeKey": key},
         UpdateExpression="set #rl = :r",
-        ExpressionAttributeNames={
-            "#rl": "roles"
-        },
-        ExpressionAttributeValues={
-            ':r': roles
-        },
-        ReturnValues="UPDATED_NEW"
+        ExpressionAttributeNames={"#rl": "roles"},
+        ExpressionAttributeValues={":r": roles},
+        ReturnValues="UPDATED_NEW",
     )
 
 def lookup(value):
