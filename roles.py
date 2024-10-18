@@ -1,5 +1,4 @@
 import boto3
-from boto3.dynamodb.conditions import Attr
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 import sys
 import json
