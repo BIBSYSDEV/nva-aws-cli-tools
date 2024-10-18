@@ -1,21 +1,23 @@
 # nva-aws-cli-tools
-Python scripts using aws-cli 
 
-# Prerequisites
+Python scripts using aws-cli
+
+## Prerequisites
+
 * python 3.2 or newer
 * pip3 install boto3
 * aws credentials available
 
-# Log in to get AWS credentials
+### Log in to get AWS credentials
 
 Follow manual here:
-https://gitlab.sikt.no/platon/aws-cli-tools/-/tree/master/samlauth
+<https://gitlab.sikt.no/platon/aws-cli-tools/-/tree/master/samlauth>
 
+## Scripts
 
-# Scripts
+### list_old_function_versions.py
 
-## list_old_function_versions.py
-```
+```bash
 > python3 list_old_function_versions.py -h
 > usage: list_old_function_versions.py [-h] [-d]
 
@@ -23,8 +25,10 @@ options:
   -h, --help    show this help message and exit
   -d, --delete  delete old versions
 ```
-## roles.py
-```
+
+### roles.py
+
+```bash
 python3 roles.py help           
 
     Please, specify one of the following actions:
