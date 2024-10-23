@@ -10,29 +10,9 @@ OneWeekAgo = UTC.localize(datetime.now() - timedelta(weeks=1))
 
 MetadataKey = 'nva-publication-identifier'
 
-Environment = {
-    "sandbox": {
-        "accountId": "750639270376",
-        "tableName": "nva-resources-master-pipelines-NvaPublicationApiPipeline-1O6KDBNB4T3SJ-nva-publication-api"
-    },
-    "dev": {
-        "accountId": "884807050265",
-        "roleArn": "",
-        "tableName": "nva-resources-master-pipelines-NvaPublicationApiPipeline-5W08RY2DNRIO-nva-publication-api"
-    },
-    "test": {
-        "accountId": "884807050265",
-        "tableName": "nva-resources-master-pipelines-NvaPublicationApiPipeline-WPP7RYMM2FCO-nva-publication-api"
-    },
-    "prod": {
-        "accountId": "",
-        "tableName": ""
-    }
-}
 
-
-def delete_untagged_files(s3_client, config):
-    storage_bucket = f'nva-resource-storage-{config["accountId"]}'
+def delete_untagged_files(s3_client, account_id):
+    storage_bucket = f'nva-resource-storage-{account_id}'
 
     paginator = s3_client.get_paginator('list_objects_v2')
     page_iterator = paginator.paginate(
@@ -52,7 +32,7 @@ def delete_untagged_files(s3_client, config):
             last_modified = obj['LastModified']
 
             if last_modified < OneWeekAgo:
-                metadata = fetch_metadata(s3_client, config, key)
+                metadata = fetch_metadata(s3_client, account_id, key)
 
                 if MetadataKey not in metadata:
                     objects_to_delete.append({'Key': key})
@@ -96,20 +76,20 @@ def should_delete_object(obj, metadata):
     return MetadataKey not in metadata and last_modified < OneWeekAgo
 
 
-def fetch_metadata(s3_client, config, key):
-    storage_bucket = f'nva-resource-storage-{config["accountId"]}'
+def fetch_metadata(s3_client, account_id, key):
+    storage_bucket = f'nva-resource-storage-{account_id}'
     return s3_client.head_object(Bucket=storage_bucket,
                                  Key=key)['Metadata']
 
 
-def tag_referenced_files(dynamo_client, s3_resource, config):
-    storage_bucket = f'nva-resource-storage-{config["accountId"]}'
+def tag_referenced_files(dynamo_client, s3_resource, account_id, resources_table_name):
+    storage_bucket = f'nva-resource-storage-{account_id}'
 
     tagged_files = 0
     evaluated_files = 0
     paginator = dynamo_client.get_paginator('scan')
     page_iterator = paginator.paginate(
-        TableName=config['tableName'],
+        TableName=resources_table_name,
         IndexName='ResourcesByIdentifier',
         PaginationConfig={'PageSize': 700}
     )
@@ -144,8 +124,8 @@ def tag_referenced_files(dynamo_client, s3_resource, config):
           + f'tagged {tagged_files}')
 
 
-def reset_tags(s3_client, s3_resource, config):
-    storage_bucket = f'nva-resource-storage-{config["accountId"]}'
+def reset_tags(s3_client, s3_resource, accountId):
+    storage_bucket = f'nva-resource-storage-{accountId}'
 
     paginator = s3_client.get_paginator('list_objects_v2')
     page_iterator = paginator.paginate(
@@ -195,24 +175,27 @@ def update_file_metadata(
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser()
-    argParser.add_argument("environment",
-                           choices=["sandbox", "dev", "test", "prod"])
     argParser.add_argument("command",
                            choices=[
                                "tag-files",
                                "delete-untagged-files",
                                "reset-tags"])
+    argParser.add_argument("resourcesTableName")
+
     args = argParser.parse_args()
 
     _dynamodb_client = boto3.client('dynamodb', region_name='eu-west-1')
     _s3_client = boto3.client('s3', region_name='eu-west-1')
     _s3_resource = boto3.resource('s3', region_name='eu-west-1')
 
-    _config = Environment[args.environment]
+    _resources_table_name = args.resourcesTableName
+    _session = boto3.Session()
+    _sts_client = _session.client('sts')
+    _accountId = _sts_client.get_caller_identity()
 
     if args.command == "tag-files":
-        tag_referenced_files(_dynamodb_client, _s3_resource, _config)
+        tag_referenced_files(_dynamodb_client, _s3_resource, _accountId, _resources_table_name)
     elif args.command == "delete-untagged-files":
-        delete_untagged_files(_s3_client, _config)
+        delete_untagged_files(_s3_client, _accountId)
     elif args.command == "reset-tags":
-        reset_tags(_s3_client, _s3_resource, _config)
+        reset_tags(_s3_client, _s3_resource, _accountId)
