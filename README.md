@@ -28,58 +28,82 @@ uv add boto3 click rich
 uv remove rich click
 
 # Run a script using the managed virtual environment
-uv run roles.py help
+uv run cli.py help
 ```
 
 ### Log in to get AWS credentials
 
 Follow manual here:
-<https://gitlab.sikt.no/platon/aws-cli-tools/-/tree/master/samlauth>
+<https://platon.sikt.no/aws/account-access>
 
-## Scripts
+To to skip --profile option, do `export AWS_PROFILE=LimitedAdmin-123456789000` with your prefered account number 
 
-### list_old_function_versions.py
+## CLI 
 
-```bash
-> python3 list_old_function_versions.py -h
-> usage: list_old_function_versions.py [-h] [-d]
+```
+Usage: cli.py [OPTIONS] COMMAND [ARGS]...
 
-options:
-  -h, --help    show this help message and exit
-  -d, --delete  delete old versions
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  awslambda
+  cognito
+  customers
+  handle
+  users
 ```
 
-### roles.py
+### **CLI Commands Summary**
 
-```bash
-python3 roles.py help           
+#### **`awslambda clean_old_versions`**
+- **Description**: Cleans old versions of AWS Lambda functions.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+  - `--delete`: If set, deletes old Lambda function versions.
 
-    Please, specify one of the following actions:
+---
 
-    - 'read' to get user roles. 
-      Use it as: python3 roles.py read [key] > output.json
-      This will return a JSON of roles for a given key. The output is redirected to output.json file.
+#### **`customers missing_customers`**
+- **Description**: Searches for customer references that do not exist in the customer table.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 
-    - 'write' to write roles from a file to a user. 
-      Use it as: python3 roles.py write [key] [filename]
-      This will read a JSON file of roles and write them to a user defined by the key. 
-      The filename should be a JSON file with the roles.
+#### **`customers duplicate_customers`**
+- **Description**: Searches for duplicate customer references (same Cristin ID).
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 
-    - 'lookup' to lookup a value in the whole table. 
-      Use it as: python3 roles.py lookup [value]
-      It will return a list of items where at least one attribute contains the given value. 
-      The items are returned as a list of dictionaries with 'PrimaryKeyHashKey', 'givenName', 
-      and 'familyName' as keys.
-      
-    - 'clookup' to perform a lookup directly in cognito user pool. 
-      Use it as: python3 roles.py clookup [value]
-      This will return a list of users where at least one attribute contains the given value. 
-      The users are returned as a serialized JSON string.
-      
-    - 'help' to see this message again.
-```
+---
 
-Lists all but the current and aliased versions of any function in the current AWS account.
-Use the `-d` or `--delete` command line option to delete the function versions.
+#### **`users search`**
+- **Description**: Searches for users by user values.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+- **Arguments**:
+  - `search_term`: One or more terms to search for users.
 
-Inspired by [this gist](https://gist.github.com/tobywf/6eb494f4b46cef367540074512161334).
+---
+
+#### **`handle prepare`**
+- **Description**: Prepares handle tasks based on DynamoDB data.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+  - `--customer`: Customer UUID (required).
+  - `--resource-owner`: Resource owner ID (required).
+  - `--output-folder`: Path to save output files (optional).
+
+#### **`handle execute`**
+- **Description**: Executes handle tasks from prepared files.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+  - `--input-folder`: Path to the folder containing input files (required).
+
+---
+
+#### **`cognito search`**
+- **Description**: Searches for Cognito users by attribute values.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+- **Arguments**:
+  - `search_term`: One or more terms to search for users.

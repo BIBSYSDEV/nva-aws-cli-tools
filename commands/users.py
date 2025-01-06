@@ -7,7 +7,7 @@ from commands.services.users_api import UsersAndRolesService
 def users():
     pass
 
-@users.command(help="Search users on user attribute values")
+@users.command(help="Search users by user values")
 @click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use.')
 @click.argument('search_term', required=True, nargs=-1)
 def search(profile, search_term):
