@@ -125,7 +125,7 @@ if __name__ == '__main__':
     output_folder = f'resources-{get_account_alias()}-export'
     #customer = 'bb3d0c0c-5065-4623-9b98-5810983c2478'
     #filter = Key('PK0').begins_with(f'Resource:{customer}')
-    condition = Key('PK0').eq(f'Resource:bb3d0c0c-5065-4623-9b98-5810983c2478:ntnu@194.0.0.0')
+    condition = Key('PK0').eq('Resource:bb3d0c0c-5065-4623-9b98-5810983c2478:ntnu@194.0.0.0')
     batch_size = 700
     #DynamodbExport(table_pattern, filter, batch_size).save_to_folder(output_folder)
     DynamodbExport("default", table_pattern, condition, batch_size).process(process_batch)

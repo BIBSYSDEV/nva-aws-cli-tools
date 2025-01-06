@@ -2,11 +2,10 @@ import click
 import json
 import os
 import shutil
-from multiprocessing import Pool
 from boto3.dynamodb.conditions import Key
 from commands.services.handle_task_writer import HandleTaskWriterService
 from commands.services.handle_task_executor import  HandleTaskExecutorService
-from commands.services.dynamodb_export import DynamodbExport
+from commands.services.dynamodb_export import DynamodbExport, get_account_alias
 
 @click.group()
 def handle():
