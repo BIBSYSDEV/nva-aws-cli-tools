@@ -4,7 +4,6 @@ import os
 import base64
 import zlib
 import re
-from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.types import Binary
 
 class DynamodbExport:
@@ -101,21 +100,3 @@ def get_account_alias(profile=None):
 
     # Return the first account alias or None if the list is empty
     return account_aliases[0] if account_aliases else None
-
-def process_batch(batch, batch_counter):
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    with open(f'{output_folder}/batch_{batch_counter}.jsonl', 'w') as outfile:
-        for data in batch:
-            if ("associatedArtifacts" in data):
-                file_identifiers = []
-                for artifact in data["associatedArtifacts"]:
-                    if artifact["type"].endswith("File"):
-                        file_identifiers.append(artifact["identifier"])
-                
-                json.dump({
-                    "fileIdentifiers": file_identifiers,
-                    "publicationIdentifier": data["identifier"]
-                }, outfile)
-                outfile.write('\n')

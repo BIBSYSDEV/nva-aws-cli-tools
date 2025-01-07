@@ -2,7 +2,6 @@ import requests
 import boto3
 import json
 from datetime import datetime, timedelta
-import argparse
 
 '''
 # example of usage
