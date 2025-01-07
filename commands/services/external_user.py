@@ -118,18 +118,3 @@ class ExternalUser:
     def save_to_file(self):
         with open(f"{self.org_abbreviation}-{self.intended_purpose}-credentials.json", 'w') as json_file:
             json.dump(self.client_data, json_file, indent=4)
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--customer_id', required=True, help="Customer ID to be processed")
-    parser.add_argument('--intended_purpose', required=True, help="Intended purpose for creating external user")
-    parser.add_argument('--scopes', required=True, help="Comma-separated list of scopes")
-    args = parser.parse_args()
-
-    customer_id = args.customer_id
-    intended_purpose = args.intended_purpose
-    scopes = args.scopes.split(',')
-
-    external_user_service = ExternalUserService()
-    external_user = external_user_service.create(customer_id, intended_purpose, scopes)
-    external_user.save_to_file()

@@ -8,7 +8,6 @@ class CognitoService:
     def search(self, search_term):
         user_pool_id = self._get_user_pool_id()
         users = self._get_all_users(user_pool_id)
-        print(search_term)
         return self._lookup_users_by_attribute_value(search_term, users)
 
     def _get_user_pool_id(self):

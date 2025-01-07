@@ -12,11 +12,11 @@ def handle():
     pass
 
 @handle.command()
-@click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use. e.q LimitedAdmin-000123456789')
-@click.option('-c', '--customer', required=True, help='Customer UUID')
-@click.option('-r', '--resource-owner', required=True, help='Resource owner ID')
-@click.option('-o', '--output-folder', required=False, help='Output folder path')
-def prepare(profile, customer, resource_owner, output_folder):
+@click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config')
+@click.option('-c', '--customer', required=True, help='Customer UUID. e.g. bb3d0c0c-5065-4623-9b98-5810983c2478')
+@click.option('-r', '--resource-owner', required=True, help='Resource owner ID. e.g. ntnu@194.0.0.0')
+@click.option('-o', '--output-folder', required=False, help='Output folder path. e.g. sikt-nva-sandbox-resources-ntnu@194.0.0.0-handle-tasks')
+def prepare(profile:str, customer:str, resource_owner:str, output_folder:str) -> None:
     table_pattern = '^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$'
     condition = Key('PK0').eq(f'Resource:{customer}:{resource_owner}')
     batch_size = 700
@@ -47,9 +47,9 @@ def prepare(profile, customer, resource_owner, output_folder):
 
 
 @handle.command()
-@click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use.')
-@click.option('-i', '--input-folder', required=True, help='Input folder path')
-def execute(profile, input_folder):
+@click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config')
+@click.option('-i', '--input-folder', required=True, help='Input folder path. e.g. sikt-nva-sandbox-resources-ntnu@194.0.0.0-handle-tasks')
+def execute(profile:str, input_folder:str) -> None:
     complete_folder = os.path.join(input_folder, 'complete')
     os.makedirs(complete_folder, exist_ok=True)
 

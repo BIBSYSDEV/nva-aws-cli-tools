@@ -56,7 +56,7 @@ Commands:
 
 ### **CLI Commands Summary**
 
-#### **`awslambda clean_old_versions`**
+#### **`awslambda delete-old-versions`**
 - **Description**: Cleans old versions of AWS Lambda functions.
 - **Options**:
   - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
@@ -64,12 +64,12 @@ Commands:
 
 ---
 
-#### **`customers missing_customers`**
+#### **`customers list-missing`**
 - **Description**: Searches for customer references in users that do not exist in the customer table.
 - **Options**:
   - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 
-#### **`customers duplicate_customers`**
+#### **`customers list-duplicate`**
 - **Description**: Searches for duplicate customer references (same Cristin ID).
 - **Options**:
   - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
