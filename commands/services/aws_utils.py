@@ -1,5 +1,6 @@
 # aws_utils.py
 import boto3
+import json
 
 def get_account_alias(profile=None):
     # Create a default Boto3 session
@@ -13,3 +14,6 @@ def get_account_alias(profile=None):
 
     # Return the first account alias or None if the list is empty
     return account_aliases[0] if account_aliases else None
+
+def prettify(object):
+    return json.dumps(object, indent=2, sort_keys=True, default=str, ensure_ascii=False)

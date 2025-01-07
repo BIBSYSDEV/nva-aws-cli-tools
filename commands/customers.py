@@ -1,7 +1,7 @@
 import click
-import json
 
 from commands.services.customers_api import CustomersService
+from commands.services.aws_utils import prettify
 
 @click.group()
 def customers():
@@ -11,10 +11,10 @@ def customers():
 @click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use.')
 def missing_customers(profile):
     result = CustomersService(profile).search_missing_customers()
-    click.echo(json.dumps(result, indent=2, sort_keys=True, default=str, ensure_ascii=False))
+    click.echo(prettify(result))
 
 @customers.command(help="Search dubplicate customer references (same cristin id)")
 @click.option('--profile', envvar='AWS_PROFILE', default='default', help='The AWS profile to use.')
 def duplicate_customers(profile):
     result = CustomersService(profile).search_duplicate_customers()
-    click.echo(json.dumps(result, indent=2, sort_keys=True, default=str, ensure_ascii=False))
+    click.echo(prettify(result))

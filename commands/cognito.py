@@ -1,7 +1,7 @@
 import click
-import json
 
 from commands.services.cognito_api import CognitoService
+from commands.services.aws_utils import prettify
 
 @click.group()
 def cognito():
@@ -13,4 +13,4 @@ def cognito():
 def search(profile, search_term):
     search_term = ' '.join(search_term)
     result = CognitoService(profile).search(search_term)
-    click.echo(json.dumps(result, indent=2, sort_keys=True, default=str, ensure_ascii=False))
+    click.echo(prettify(result))
