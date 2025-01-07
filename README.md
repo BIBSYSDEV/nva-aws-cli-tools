@@ -65,7 +65,7 @@ Commands:
 ---
 
 #### **`customers missing_customers`**
-- **Description**: Searches for customer references that do not exist in the customer table.
+- **Description**: Searches for customer references in users that do not exist in the customer table.
 - **Options**:
   - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 
@@ -78,6 +78,15 @@ Commands:
 
 #### **`users search`**
 - **Description**: Searches for users by user values.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+- **Arguments**:
+  - `search_term`: One or more terms to search for users.
+
+---
+
+#### **`cognito search`**
+- **Description**: Searches for Cognito users by attribute values.
 - **Options**:
   - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 - **Arguments**:
@@ -98,12 +107,3 @@ Commands:
 - **Options**:
   - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   - `--input-folder`: Path to the folder containing input files (required).
-
----
-
-#### **`cognito search`**
-- **Description**: Searches for Cognito users by attribute values.
-- **Options**:
-  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
-- **Arguments**:
-  - `search_term`: One or more terms to search for users.

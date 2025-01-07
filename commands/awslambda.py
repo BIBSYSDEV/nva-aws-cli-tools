@@ -12,9 +12,6 @@ def clean_old_versions(profile, delete):
     session = boto3.Session(profile_name=profile)
     client = session.client('lambda')
 
-    _clean_old_lambda_versions(client, delete)
-
-def _clean_old_lambda_versions(client, delete):
     functions_paginator = client.get_paginator('list_functions')
     version_paginator = client.get_paginator('list_versions_by_function')
 
