@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "boto3>=1.35.36",
     "click>=8.1.7",
+    "requests>=2.32.3",
     "rich>=13.9.2",
     "tabulate>=0.9.0",
     "tqdm>=4.66.5",
