@@ -83,6 +83,14 @@ Commands:
 - **Arguments**:
   - `search_term`: One or more terms to search for users.
 
+#### **`users create-external`**
+- **Description**: Add external API user.
+- **Options**:
+  - `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
+  - `--customer`: Customer UUID. e.g. bb3d0c0c-5065-4623-9b98-5810983c2478 [required]
+  - `--intended_purpose`: The intended purpose. e.g. oslomet-thesis-integration  [required]
+  - `--scopes`: Comma-separated list of scopes without whitespace, e.g., https://api.nva.unit.no/scopes/third-party/publication-read,https://api.nva.unit.no/scopes/third-party/publication-upsert  [required]
+
 ---
 
 #### **`cognito search`**
