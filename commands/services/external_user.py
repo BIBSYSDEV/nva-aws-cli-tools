@@ -2,6 +2,7 @@ import requests
 import boto3
 import json
 from datetime import datetime, timedelta
+from dataclasses import dataclass
 
 '''
 # example of usage
@@ -11,14 +12,16 @@ from services import ExternalUserService
 
 customer_id = "bb3d0c0c-5065-4623-9b98-5810983c2478" #sikt in dev
 intended_purpose = "handle-migration"
+profile = "sikt-nva-dev"
+scopes = ["https://api.nva.unit.no/scopes/third-party/publication-read"]
 
-external_user_service = ExternalUserService()
-external_user = external_user_service.create(customer_id, intended_purpose)
+external_user_service = ExternalUserService(profile)
+external_user = external_user_service.create(customer_id, intended_purpose, scopes)
 external_user.save_to_file()
 '''
 class ExternalUserService:
-    def __init__(self):
-        self.session = boto3.Session()
+    def __init__(self, profile):
+        self.session = boto3.Session(profile_name=profile)
         self.ssm = self.session.client('ssm')
         self.secretsmanager = self.session.client('secretsmanager')
         self.api_domain = self._get_system_parameter('/NVA/ApiDomain')
@@ -46,6 +49,7 @@ class ExternalUserService:
             'client_secret': self.client_credentials['backendClientSecret'],
         }
         response = requests.post(url, headers=headers, data=data)
+        response.raise_for_status()
         response_json = response.json()
         token_expiry_time = datetime.now() + timedelta(seconds=response_json['expires_in'])
         return response_json['access_token'], token_expiry_time
@@ -75,6 +79,7 @@ class ExternalUserService:
             "scopes": scopes
         }
         response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
         response_json = response.json()
         return {
             "clientId": response_json["clientId"],
@@ -108,11 +113,11 @@ class ExternalUserService:
             return ExternalUser(self.org_abbreviation, self.intended_purpose, client_data)
 
 
+@dataclass
 class ExternalUser:
-    def __init__(self, org_abbreviation, intended_purpose, client_data):
-        self.org_abbreviation = org_abbreviation
-        self.intended_purpose = intended_purpose
-        self.client_data = client_data
+    org_abbreviation: str
+    intended_purpose: str
+    client_data: dict
 
     def save_to_file(self):
         with open(f"{self.org_abbreviation}-{self.intended_purpose}-credentials.json", 'w') as json_file:
