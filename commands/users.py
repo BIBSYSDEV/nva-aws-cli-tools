@@ -3,7 +3,6 @@ import click
 from commands.services.users_api import UsersAndRolesService
 from commands.services.aws_utils import prettify
 from commands.services.external_user import ExternalUserService
-from dataclasses import asdict
 
 @click.group()
 def users():
