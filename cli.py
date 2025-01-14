@@ -7,9 +7,11 @@ from commands.users import users
 from commands.customers import customers
 from commands.awslambda import awslambda
 
+
 @click.group()
 def cli():
     pass
+
 
 cli.add_command(cognito)
 cli.add_command(handle)
