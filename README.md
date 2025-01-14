@@ -1,14 +1,10 @@
 # nva-aws-cli-tools
 
-Python scripts using aws-cli
+This repository contains a CLI tool wrapping Python scripts for managing AWS resources.
+These are intended for various administrative tasks related to the NVA project, as an alternative to using the AWS Console or AWS CLI directly.
 
-## Prerequisites
 
-* python 3.2 or newer
-* pip3 install boto3
-* aws credentials available
-
-## Setup with uv (experimental)
+## Setup with uv (optional)
 
 This section describes how to use `uv`, a new package manager for Python.
 Following this guide will set up an isolated virtual environment with the Python version specified in `.python-version`.
@@ -30,6 +26,24 @@ uv remove rich click
 # Run a script using the managed virtual environment
 uv run cli.py help
 ```
+
+### Development
+
+```bash
+# Run linter checks
+uv run ruff check
+
+# Reformat code
+uv run ruff format
+```
+
+## Usage
+
+Preqrequisites to use this project:
+
+* Python 3.2 or newer
+* All dependencies listed in `pyproject.toml`
+* AWS credentials available
 
 ### Log in to get AWS credentials
 
