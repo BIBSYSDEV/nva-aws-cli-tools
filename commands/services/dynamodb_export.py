@@ -30,9 +30,9 @@ class DynamodbExport:
 
 
     def _iterate_batches(self, table, custom_batch_processor):
-        response = table.query(
+        response = table.scan(
             Limit=self.batch_size,
-            KeyConditionExpression=self.condition,
+            FilterExpression=self.condition,
             ReturnConsumedCapacity='TOTAL'
         )
         items = response['Items']
@@ -44,7 +44,7 @@ class DynamodbExport:
         print(f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}")
         
         while 'LastEvaluatedKey' in response:
-            response = table.query(ExclusiveStartKey=response['LastEvaluatedKey'], Limit=self.batch_size, KeyConditionExpression=self.condition, ReturnConsumedCapacity='TOTAL')
+            response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'], Limit=self.batch_size, FilterExpression=self.condition, ReturnConsumedCapacity='TOTAL')
             items = response['Items']
             if items:
                 batch = self._inflate_batch(items)
