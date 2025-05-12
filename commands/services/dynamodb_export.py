@@ -31,7 +31,41 @@ class DynamodbExport:
         dynamodb_resource = session.resource("dynamodb")
         return dynamodb_resource.Table(table_name)
 
-    def _iterate_batches(self, table, custom_batch_processor):
+    def _iterate_batches_scan(self, table, custom_batch_processor):
+        response = table.scan(
+            Limit=self.batch_size,
+            FilterExpression=self.condition,
+            ReturnConsumedCapacity="TOTAL",
+        )
+        items = response["Items"]
+        batch = self._inflate_batch(items)
+        custom_batch_processor(batch, self.batch_counter)
+        self.batch_counter += 1
+        total_count = len(items)
+        total_consumed_capacity = response["ConsumedCapacity"]["CapacityUnits"]
+        print(
+            f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
+        )
+
+        while "LastEvaluatedKey" in response:
+            response = table.scan(
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+                Limit=self.batch_size,
+                FilterExpression=self.condition,
+                ReturnConsumedCapacity="TOTAL",
+            )
+            items = response["Items"]
+            if items:
+                batch = self._inflate_batch(items)
+                custom_batch_processor(batch, self.batch_counter)
+                self.batch_counter += 1
+                total_count += len(items)
+                total_consumed_capacity += response["ConsumedCapacity"]["CapacityUnits"]
+                print(
+                    f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
+                )
+
+    def _iterate_batches_query(self, table, custom_batch_processor):
         response = table.query(
             Limit=self.batch_size,
             KeyConditionExpression=self.condition,
@@ -96,11 +130,11 @@ class DynamodbExport:
     def save_to_folder(self, output_folder):
         self.output_folder = output_folder
         table = self.get_table()
-        self._iterate_batches(table, self._save_inflated_items_to_file)
+        self._iterate_batches_scan(table, self._save_inflated_items_to_file)
 
-    def process(self, action):
+    def process_query(self, batch_action):
         table = self.get_table()
-        self._iterate_batches(table, action)
+        self._iterate_batches_query(table, batch_action)
 
 
 def get_account_alias(profile=None):

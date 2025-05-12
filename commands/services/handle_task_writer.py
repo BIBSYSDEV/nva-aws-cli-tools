@@ -18,26 +18,42 @@ class HandleTaskWriterService:
                     return handle
         return None
 
-    def process_item(self, publication):
+    # similar to this, create a method that returns all additional handle(.net) identifiers that prefix that matches with a given prefix
+    def _get_additional_identifier_handles(self, publication, prefix):
+        handles = []
+        for additionalIdentifier in publication.get("additionalIdentifiers", []):
+            if additionalIdentifier.get("type") == "HandleIdentifier" or (
+                additionalIdentifier.get("source") == "handle"
+                and additionalIdentifier.get("type") == "AdditionalIdentifier"
+            ):
+                handle = additionalIdentifier.get("value")
+                if f"//hdl.handle.net/{prefix}" in handle:
+                    handles.append(handle)
+        return handles
+
+    def process_item(self, publication, prefix):
         task = {}
         additional_identifier_handle = self._get_sikt_additional_identifier_handle(
             publication
         )
         top_handle = publication.get("publication")
-        task["identifiter"] = publication["identifier"]
+        task["identifier"] = publication.get("identifier")
         task["publication"] = publication
+        task["handles_to_import"] = self._get_additional_identifier_handles(
+            publication, prefix
+        )
 
         if top_handle and self._is_sikt_handle(top_handle):
             task["action"] = "nop"  # all good, already sikt managed handle in place
         elif top_handle and not self._is_sikt_handle(top_handle):
             if additional_identifier_handle:
                 task["action"] = "move_top_to_additional_and_promote_additional"
-                task["updated_handle"] = additional_identifier_handle
+                task["top_handle"] = additional_identifier_handle
             else:
                 task["action"] = "move_top_to_additional_and_create_new_top"
         elif not top_handle and additional_identifier_handle:
             task["action"] = "promote_additional"
-            task["updated_handle"] = additional_identifier_handle
+            task["top_handle"] = additional_identifier_handle
         elif not top_handle and not additional_identifier_handle:
             task["action"] = "create_new_top"
         return task
