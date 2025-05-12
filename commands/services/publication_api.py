@@ -54,7 +54,7 @@ class PublicationApiService:
         return self.token
 
     def fetch_publication(self, publicationIdentifier, doNotRedirect=True):
-        url = f"https://{self.api_domain}/publication/{publicationIdentifier}?doNotRedirect={doNotRedirect}"
+        url = f"{self.get_uri(publicationIdentifier)}?doNotRedirect={doNotRedirect}"
         headers = {'Authorization': f"Bearer {self._get_token()}", 'Accept': 'application/json'}
         response = requests.get(url, headers=headers)
         if response.status_code == 200:  # If the status code indicates success
@@ -64,7 +64,7 @@ class PublicationApiService:
             return None
 
     def update_publication(self, publicationIdentifier, request_body):
-        url = f"https://{self.api_domain}/publication/{publicationIdentifier}"
+        url = self.get_uri(publicationIdentifier)
         headers = {'Authorization': f"Bearer {self._get_token()}", 'Content-Type': 'application/json', 'Accept': 'application/json'}
         response = requests.put(url, headers=headers, json=request_body)
         return response.json()
@@ -75,3 +75,6 @@ class PublicationApiService:
         headers = {'Authorization': f"Bearer {self._get_token()}", 'Content-Type': 'application/json', 'Accept': 'application/json'}
         response = requests.post(url, headers=headers, json=request_body)
         return response.json()
+    
+    def get_uri(self, publicationIdentifier):
+        return f"https://{self.api_domain}/publication/{publicationIdentifier}"

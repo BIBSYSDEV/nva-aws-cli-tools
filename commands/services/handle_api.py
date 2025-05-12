@@ -26,8 +26,8 @@ create_response = service.create_handle(request_body)
 print(create_response)
 '''
 class HandleApiService:
-    def __init__(self):
-        self.session = boto3.Session()
+    def __init__(self, profile):
+        self.session = boto3.Session(profile_name=profile)
         self.ssm = self.session.client('ssm')
         self.secretsmanager = self.session.client('secretsmanager')
         self.api_domain = self._get_system_parameter('/NVA/ApiDomain')
