@@ -3,9 +3,7 @@ import click
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import prettify
 from commands.services.dynamodb_export import DynamodbExport
-from types import SimpleNamespace
-import json
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Attr
 
 
 @click.group()
@@ -44,7 +42,7 @@ def copy(profile: str, publication_identifier: str) -> None:
 @click.option("--folder", required=True, help="The folder to save the exported data.")
 def export(profile: str, folder: str) -> None:
     table_pattern = "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
-    condition = Attr("PK0").begins_with(f"Resource:") & Attr("SK0").begins_with(
+    condition = Attr("PK0").begins_with("Resource:") & Attr("SK0").begins_with(
         "Resource:"
     )
     batch_size = 700

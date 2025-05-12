@@ -79,7 +79,6 @@ class HandleTaskExecutorService:
 
     def import_handles(self, item):
         handles_to_import = item.get("handles_to_import", [])
-        top_handle = item.get("top_handle")
         for handle in handles_to_import:
             path_segments = handle.split("/")
             suffix = path_segments.pop()  # Last segment
