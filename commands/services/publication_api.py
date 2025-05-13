@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 
 
 class PublicationApiService:
-    def __init__(self, client_id=None, client_secret=None):
-        self.session = boto3.Session()
+    def __init__(self, profile, client_id=None, client_secret=None):
+        self.session = boto3.Session(profile_name=profile)
         self.ssm = self.session.client("ssm")
         self.secretsmanager = self.session.client("secretsmanager")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
@@ -64,7 +64,7 @@ class PublicationApiService:
         return self.token
 
     def fetch_publication(self, publicationIdentifier, doNotRedirect=True):
-        url = f"https://{self.api_domain}/publication/{publicationIdentifier}?doNotRedirect={doNotRedirect}"
+        url = f"{self.get_uri(publicationIdentifier)}?doNotRedirect={doNotRedirect}"
         headers = {
             "Authorization": f"Bearer {self._get_token()}",
             "Accept": "application/json",
@@ -77,7 +77,7 @@ class PublicationApiService:
             return None
 
     def update_publication(self, publicationIdentifier, request_body):
-        url = f"https://{self.api_domain}/publication/{publicationIdentifier}"
+        url = self.get_uri(publicationIdentifier)
         headers = {
             "Authorization": f"Bearer {self._get_token()}",
             "Content-Type": "application/json",
@@ -85,3 +85,16 @@ class PublicationApiService:
         }
         response = requests.put(url, headers=headers, json=request_body)
         return response.json()
+
+    def create_publication(self, request_body):
+        url = f"https://{self.api_domain}/publication"
+        headers = {
+            "Authorization": f"Bearer {self._get_token()}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        response = requests.post(url, headers=headers, json=request_body)
+        return response.json()
+
+    def get_uri(self, publicationIdentifier):
+        return f"https://{self.api_domain}/publication/{publicationIdentifier}"

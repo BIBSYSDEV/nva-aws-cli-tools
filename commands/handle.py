@@ -38,8 +38,13 @@ def handle():
     required=False,
     help="Output folder path. e.g. sikt-nva-sandbox-resources-ntnu@194.0.0.0-handle-tasks",
 )
+@click.option(
+    "--prefix",
+    required=False,
+    help="handle.net prefix. e.g. 20.500.12242 that should be imported to NVA",
+)
 def prepare(
-    profile: str, customer: str, resource_owner: str, output_folder: str
+    profile: str, customer: str, resource_owner: str, output_folder: str, prefix: str
 ) -> None:
     table_pattern = "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
     condition = Key("PK0").eq(f"Resource:{customer}:{resource_owner}")
@@ -59,13 +64,15 @@ def prepare(
     def process_batch(batch, batch_counter):
         with open(f"{output_folder}/batch_{batch_counter}.jsonl", "w") as outfile:
             for data in batch:
-                task = HandleTaskWriterService().process_item(data)
+                task = HandleTaskWriterService().process_item(data, prefix)
                 action = task.get("action")
                 action_counts[action] = action_counts.get(action, 0) + 1
                 json.dump(task, outfile)
                 outfile.write("\n")
 
-    DynamodbExport(profile, table_pattern, condition, batch_size).process(process_batch)
+    DynamodbExport(profile, table_pattern, condition, batch_size).process_query(
+        process_batch
+    )
 
     print("Action counts: ", action_counts)
     print(f"Customer: {customer}")
@@ -91,10 +98,10 @@ def execute(profile: str, input_folder: str) -> None:
 
     for batch_file in os.listdir(input_folder):
         file_path = os.path.join(input_folder, batch_file)
-        if os.path.isfile(file_path):
+        if os.path.isfile(file_path) and batch_file.endswith(".jsonl"):
             with open(file_path, "r") as infile:
                 batch = [json.loads(line) for line in infile]
-                HandleTaskExecutorService(profile).execute(batch)
+                HandleTaskExecutorService(profile, input_folder).execute(batch)
 
             # Move the file to the 'complete' folder after processing
             new_file_path = os.path.join(complete_folder, batch_file)
