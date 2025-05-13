@@ -37,24 +37,16 @@ class HandleTaskExecutorService:
             self.sqlite_conn.close()
 
     def move_top_to_additional_and_promote_additional(self, task):
-        # Logic to move top handle to additional and promote additional
-        print("move_top_to_additional_and_promote_additional: " + task.get("action"))
-        pass
-
+        raise NotImplementedError("Work in progress")
+        
     def move_top_to_additional_and_create_new_top(self, task):
-        # Logic to move top handle to additional and create new top handle
-        print("move_top_to_additional_and_create_new_top: " + task.get("action"))
-        pass
+        raise NotImplementedError("Work in progress")
 
     def promote_additional(self, task):
-        # Logic to promote additional handle
-        print("promote_additional: " + task.get("action"))
-        pass
+        raise NotImplementedError("Work in progress")
 
     def create_new_top(self, task):
-        # Logic to create new top handle
-        print("create_new_top: " + task.get("action"))
-        pass
+        raise NotImplementedError("Work in progress")
 
     def log_task_done(self, task_id):
         now = datetime.now().isoformat()

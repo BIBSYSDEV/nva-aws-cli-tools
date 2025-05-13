@@ -18,7 +18,6 @@ class HandleTaskWriterService:
                     return handle
         return None
 
-    # similar to this, create a method that returns all additional handle(.net) identifiers that prefix that matches with a given prefix
     def _get_additional_identifier_handles(self, publication, prefix):
         handles = []
         for additionalIdentifier in publication.get("additionalIdentifiers", []):

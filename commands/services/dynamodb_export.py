@@ -9,6 +9,15 @@ from boto3.dynamodb.types import Binary
 
 class DynamodbExport:
     def __init__(self, profile, table_pattern, condition, batch_size):
+        """
+        Initializes the DynamoDB service with the specified parameters.
+
+        Args:
+            profile (str): The AWS profile to use for authentication.
+            table_pattern (str): A pattern to match DynamoDB table name.
+            condition (Attr): The condition to filter items during export. 
+            batch_size (int): The number of items to process in each batch.
+        """
         self.condition = condition
         self.batch_size = batch_size
         self.table_pattern = table_pattern
