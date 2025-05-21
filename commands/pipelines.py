@@ -1,5 +1,5 @@
 import click
-from commands.services.aws_utils import prettify, get_account_alias
+from commands.services.aws_utils import get_account_alias
 from commands.services.pipelines import CodePipelineService
 from rich.console import Console
 from rich.table import Table
