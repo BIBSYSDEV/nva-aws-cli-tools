@@ -2,44 +2,23 @@ import boto3
 from dataclasses import dataclass, field
 from datetime import datetime
 from rich.text import Text
-from rich.pretty import pprint
 
 
 @dataclass
-class StageDetails:
+class ExecutionDetails:
     execution_id: str
     last_change: datetime
     status: str = field(default="Unknown")
 
 
 @dataclass
-class SourceDetails:
-    execution_id: str
-    repository: str
-    branch: str
-    status: str = field(default="Unknown")
-
-
-@dataclass
-class BuildDetails:
-    execution_id: str
-    built_at: datetime
-    status: str = field(default="Unknown")
-
-
-@dataclass
-class DeployDetails:
-    execution_id: str
-    deployed_at: datetime
-    status: str = field(default="Unknown")
-
-
-@dataclass
 class PipelineDetails:
     pipeline_name: str
-    source: SourceDetails
-    build: BuildDetails
-    deploy: DeployDetails
+    repository: str
+    branch: str
+    source: ExecutionDetails
+    build: ExecutionDetails
+    deploy: ExecutionDetails
 
     def get_status_text(self) -> Text:
         if self.is_in_sync():
@@ -70,86 +49,50 @@ class PipelineDetails:
         return True
 
 
-def get_stage_status(stage_state: dict) -> tuple[str, str]:
+def get_execution_details(stage_state: dict) -> ExecutionDetails:
     """
-    Extracts the status and execution ID from the stage state.
+    Extracts the execution details for a single stage.
     """
-    latest_execution = stage_state.get("latestExecution")
-    if latest_execution is None:
-        print("Error: No latest execution found for stage.")
+    latest_execution = stage_state.get("latestExecution", {})
     execution_id = latest_execution.get("pipelineExecutionId")
-    if execution_id is None:
-        print("Error: No execution ID found for stage.")
     status = latest_execution.get("status", "Unknown")
-    return execution_id, status
 
+    action_states = stage_state.get("actionStates", [])
+    action_timestamp = None
+    if len(action_states) > 0:
+        action_details = action_states[0].get("latestExecution", {})
+        action_timestamp = action_details.get("lastStatusChange")
 
-def get_source_details(stage_state: dict) -> SourceDetails:
-    """
-    Extracts the source information from the stage state.
-    """
-    execution_id, status = get_stage_status(stage_state)
-
-    action_states = stage_state.get("actionStates")
-    if action_states is None:
-        print("Error: No action states found for source stage.")
-        return None
-    entity_url = action_states[0].get("entityUrl", "")
-    if "Branch=" in entity_url:
-        git_branch = entity_url.split("Branch=")[-1].split("&")[0]
-    if "FullRepositoryId=" in entity_url:
-        repo_name = entity_url.split("FullRepositoryId=")[-1].split("&")[0]
-    return SourceDetails(
-        execution_id=execution_id,
-        status=status,
-        repository=repo_name,
-        branch=git_branch,
+    return ExecutionDetails(
+        status=status, execution_id=execution_id, last_change=action_timestamp
     )
 
 
-def get_build_details(stage_state: dict) -> BuildDetails:
+def get_source_details(stage_state: dict) -> tuple[str, str]:
     """
-    Extracts the build information from the stage state.
+    Extracts the source information (branch/repo) from the source stage.
     """
-    execution_id, status = get_stage_status(stage_state)
-    action_states = stage_state.get("actionStates")
-    if action_states is None is None:
-        print("Error: No action states found for build stage.")
-        return None
-    action_details = action_states[0].get("latestExecution", {})
-
-    return BuildDetails(
-        execution_id=execution_id,
-        status=status,
-        built_at=action_details.get("lastStatusChange"),
-    )
-
-
-def get_deploy_details(stage_state: dict) -> DeployDetails:
-    """
-    Extracts the deployment information from the stage state.
-    """
-    execution_id, status = get_stage_status(stage_state)
-    action_states = stage_state.get("actionStates")
-    if action_states is None is None:
-        print("Error: No action states or latest execution found for deployment stage.")
-        return None
-    action_details = action_states[0].get("latestExecution", {})
-
-    return DeployDetails(
-        execution_id=execution_id,
-        status=status,
-        deployed_at=action_details.get("lastStatusChange"),
-    )
+    branch_name = None
+    repo_name = None
+    action_states = stage_state.get("actionStates", [])
+    if len(action_states) > 0:
+        entity_url = action_states[0].get("entityUrl", "")
+        if "Branch=" in entity_url:
+            branch_name = entity_url.split("Branch=")[-1].split("&")[0]
+        if "FullRepositoryId=" in entity_url:
+            repo_name = entity_url.split("FullRepositoryId=")[-1].split("&")[0]
+    return branch_name, repo_name
 
 
 def get_single_pipeline_details(pipeline_name: str, stages: dict) -> PipelineDetails:
-
-    source_details = get_source_details(stages["Source"])
-    build_details = get_build_details(stages["Build"])
-    deploy_details = get_deploy_details(stages["Deploy"])
+    branch_name, repo_name = get_source_details(stages["Source"])
+    source_details = get_execution_details(stages["Source"])
+    build_details = get_execution_details(stages["Build"])
+    deploy_details = get_execution_details(stages["Deploy"])
     return PipelineDetails(
         pipeline_name=pipeline_name,
+        repository=repo_name,
+        branch=branch_name,
         source=source_details,
         build=build_details,
         deploy=deploy_details,

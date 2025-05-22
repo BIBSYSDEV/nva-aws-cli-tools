@@ -38,7 +38,7 @@ class HandleTaskExecutorService:
 
     def move_top_to_additional_and_promote_additional(self, task):
         raise NotImplementedError("Work in progress")
-        
+
     def move_top_to_additional_and_create_new_top(self, task):
         raise NotImplementedError("Work in progress")
 

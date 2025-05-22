@@ -18,6 +18,7 @@ def awslambda():
 def delete_old_versions(profile: str, delete: bool) -> None:
     LambdaService(profile).delete_old_versions(delete)
 
+
 @awslambda.command(help="Generate concurrency report for AWS Lambda functions.")
 @click.option(
     "--profile",

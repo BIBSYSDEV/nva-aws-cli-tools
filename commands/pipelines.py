@@ -6,8 +6,6 @@ from commands.services.pipelines import (
 )
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text
-from collections import defaultdict
 
 
 @click.group()
@@ -51,19 +49,19 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
 
     sorted_pipelines = sorted(
         pipelines,
-        key=lambda x: (x.deploy.deployed_at),
+        key=lambda x: (x.deploy.last_change),
         reverse=True,
     )
 
     for pipeline in sorted_pipelines:
         deployed_at = (
-            pipeline.deploy.deployed_at.strftime("%Y-%m-%d %H:%M:%S")
-            if pipeline.deploy.deployed_at
+            pipeline.deploy.last_change.strftime("%Y-%m-%d %H:%M:%S")
+            if pipeline.deploy.last_change
             else "N/A"
         )
         table.add_row(
-            pipeline.source.repository,
-            pipeline.source.branch,
+            pipeline.repository,
+            pipeline.branch,
             pipeline.get_status_text(),
             deployed_at,
         )
