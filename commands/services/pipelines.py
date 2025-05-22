@@ -1,33 +1,56 @@
 import boto3
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from rich.text import Text
+from typing import Optional
 
 
 @dataclass
 class ExecutionDetails:
     execution_id: str
     last_change: datetime
-    status: str = field(default="Unknown")
+    status: str = "Unknown"
+
+    def get_last_change(self) -> str:
+        if self.last_change is None:
+            return "Unknown"
+        else:
+            return self.last_change.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+    def get_status_text(self) -> Text:
+        if self.status == "Succeeded":
+            return Text("✔ Succeeded", style="green")
+        elif self.status == "InProgress":
+            return Text("In progress...", style="yellow")
+        elif self.status == "Failed":
+            return Text("✘ Failed", style="red")
+        else:
+            return Text("✘ Unknown", style="red")
 
 
 @dataclass
 class PipelineDetails:
     pipeline_name: str
-    repository: str
-    branch: str
     source: ExecutionDetails
     build: ExecutionDetails
     deploy: ExecutionDetails
+    repository: Optional[str] = field(default="Unknown")
+    branch: Optional[str] = field(default="Unknown")
+
+    def __post_init__(self):
+        if self.repository is None:
+            self.repository = "Unknown"
+        if self.branch is None:
+            self.branch = "Unknown"
 
     def get_status_text(self) -> Text:
-        if self.is_in_sync():
-            if self.is_successful():
-                return Text("✔ Succeeded", style="green")
-            else:
-                return Text("Unknown", style="red")
+        stage_statuses = [self.source.status, self.build.status, self.deploy.status]
+        if self.is_in_sync() and all(
+            status == "Succeeded" for status in stage_statuses
+        ):
+            return Text("✔", style="green")
         else:
-            return Text("In progress...", style="orange")
+            return Text("✘", style="red")
 
     def is_in_sync(self) -> bool:
         """
@@ -38,15 +61,6 @@ class PipelineDetails:
             == self.build.execution_id
             == self.deploy.execution_id
         )
-
-    def is_successful(self) -> bool:
-        """
-        Check if the pipeline stages are successful.
-        """
-        statuses = [self.source.status, self.build.status, self.deploy.status]
-        if any(status != "Succeeded" for status in statuses):
-            return False
-        return True
 
 
 def get_execution_details(stage_state: dict) -> ExecutionDetails:
@@ -85,10 +99,10 @@ def get_source_details(stage_state: dict) -> tuple[str, str]:
 
 
 def get_single_pipeline_details(pipeline_name: str, stages: dict) -> PipelineDetails:
-    branch_name, repo_name = get_source_details(stages["Source"])
-    source_details = get_execution_details(stages["Source"])
-    build_details = get_execution_details(stages["Build"])
-    deploy_details = get_execution_details(stages["Deploy"])
+    branch_name, repo_name = get_source_details(stages.get("Source", {}))
+    source_details = get_execution_details(stages.get("Source", {}))
+    build_details = get_execution_details(stages.get("Build", {}))
+    deploy_details = get_execution_details(stages.get("Deploy", {}))
     return PipelineDetails(
         pipeline_name=pipeline_name,
         repository=repo_name,

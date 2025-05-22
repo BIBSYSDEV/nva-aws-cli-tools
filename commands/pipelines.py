@@ -42,28 +42,33 @@ def branches(profile: str) -> None:
 
 def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("Pipeline")
     table.add_column("Repository")
     table.add_column("Branch")
-    table.add_column("Status")
+    table.add_column("Build status")
+    table.add_column("Built at")
+    table.add_column("Deploy status")
     table.add_column("Deployed at")
+    table.add_column("OK?")
 
+    # Sort by last deployment
     sorted_pipelines = sorted(
         pipelines,
-        key=lambda x: (x.deploy.last_change),
+        key=lambda x: (x.deploy.get_last_change()),
         reverse=True,
     )
 
     for pipeline in sorted_pipelines:
-        deployed_at = (
-            pipeline.deploy.last_change.strftime("%Y-%m-%d %H:%M:%S")
-            if pipeline.deploy.last_change
-            else "N/A"
-        )
+        pipeline_alias = pipeline.pipeline_name.replace("master-pipelines-", "")[:30]
         table.add_row(
+            pipeline_alias,
             pipeline.repository,
             pipeline.branch,
+            pipeline.build.get_status_text(),
+            pipeline.build.get_last_change(),
+            pipeline.deploy.get_status_text(),
+            pipeline.deploy.get_last_change(),
             pipeline.get_status_text(),
-            deployed_at,
         )
 
     console.print(table)
