@@ -1,6 +1,7 @@
 import boto3
 import json
 
+
 class LambdaService:
     def __init__(self, profile):
         self.profile = profile
@@ -33,7 +34,7 @@ class LambdaService:
                                 client.delete_function(FunctionName=arn)
                         else:
                             print("  💚 {}".format(arn))
-    
+
     def concurrency(self):
         session = boto3.Session(profile_name=self.profile)
         client = session.client("lambda")
@@ -56,12 +57,17 @@ class LambdaService:
                     # If a function doesn't have reserved concurrency, AWS will raise a ResourceNotFoundException.
                     reserved_concurrency = None
                 functions.append(
-                    {"FunctionName": function_name, "ReservedConcurrency": reserved_concurrency}
+                    {
+                        "FunctionName": function_name,
+                        "ReservedConcurrency": reserved_concurrency,
+                    }
                 )
 
         # Sort functions by reserved concurrency in descending order
         functions.sort(
-            key=lambda x: x["ReservedConcurrency"] if x["ReservedConcurrency"] is not None else -1,
+            key=lambda x: x["ReservedConcurrency"]
+            if x["ReservedConcurrency"] is not None
+            else -1,
             reverse=True,
         )
 

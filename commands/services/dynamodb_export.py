@@ -15,7 +15,7 @@ class DynamodbExport:
         Args:
             profile (str): The AWS profile to use for authentication.
             table_pattern (str): A pattern to match DynamoDB table name.
-            condition (Attr): The condition to filter items during export. 
+            condition (Attr): The condition to filter items during export.
             batch_size (int): The number of items to process in each batch.
         """
         self.condition = condition
