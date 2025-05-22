@@ -42,7 +42,6 @@ def branches(profile: str) -> None:
 
 def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("Pipeline")
     table.add_column("Repository")
     table.add_column("Branch")
     table.add_column("Build status")
@@ -60,9 +59,7 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     for pipeline in sorted_pipelines:
         if pipeline.repository == "Unknown":
             continue
-        pipeline_alias = pipeline.pipeline_name.replace("master-pipelines-", "")[:30]
         table.add_row(
-            pipeline_alias,
             pipeline.repository,
             pipeline.branch,
             pipeline.build.get_status_text(),
