@@ -48,7 +48,7 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     table.add_column("Built at")
     table.add_column("Deploy status")
     table.add_column("Deployed at")
-    table.add_column("Summary")
+    table.add_column("Last commit message")
 
     # Sort by last deployment
     sorted_pipelines = sorted(
