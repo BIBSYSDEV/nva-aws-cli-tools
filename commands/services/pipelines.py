@@ -8,7 +8,7 @@ from typing import Optional
 @dataclass
 class ExecutionDetails:
     execution_id: str
-    last_change: datetime
+    last_change: Optional[datetime] = None
     status: str = "Unknown"
 
     def get_last_change(self) -> str:

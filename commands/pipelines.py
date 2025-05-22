@@ -49,7 +49,6 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     table.add_column("Built at")
     table.add_column("Deploy status")
     table.add_column("Deployed at")
-    table.add_column("OK?")
 
     # Sort by last deployment
     sorted_pipelines = sorted(
@@ -59,6 +58,8 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     )
 
     for pipeline in sorted_pipelines:
+        if pipeline.repository == "Unknown":
+            continue
         pipeline_alias = pipeline.pipeline_name.replace("master-pipelines-", "")[:30]
         table.add_row(
             pipeline_alias,
@@ -68,7 +69,6 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
             pipeline.build.get_last_change(),
             pipeline.deploy.get_status_text(),
             pipeline.deploy.get_last_change(),
-            pipeline.get_status_text(),
         )
 
     console.print(table)
