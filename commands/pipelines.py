@@ -48,6 +48,7 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
     table.add_column("Built at")
     table.add_column("Deploy status")
     table.add_column("Deployed at")
+    table.add_column("Summary")
 
     # Sort by last deployment
     sorted_pipelines = sorted(
@@ -66,6 +67,7 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
             pipeline.build.get_last_change(),
             pipeline.deploy.get_status_text(),
             pipeline.deploy.get_last_change(),
+            pipeline.summary,
         )
 
     console.print(table)

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from rich.text import Text
 from typing import Optional
-
+import json
 
 @dataclass
 class ExecutionDetails:
@@ -36,12 +36,15 @@ class PipelineDetails:
     deploy: ExecutionDetails
     repository: Optional[str] = field(default="Unknown")
     branch: Optional[str] = field(default="Unknown")
+    summary: Optional[str] = field(default="Unknown")
 
     def __post_init__(self):
         if self.repository is None:
             self.repository = "Unknown"
         if self.branch is None:
             self.branch = "Unknown"
+        if self.summary is None:
+            self.summary = "Unknown"
 
     def get_status_text(self) -> Text:
         stage_statuses = [self.source.status, self.build.status, self.deploy.status]
@@ -82,24 +85,39 @@ def get_execution_details(stage_state: dict) -> ExecutionDetails:
     )
 
 
+def get_summary(source_action: dict) -> str:
+    """
+    Extracts the summary information from the source stage.
+    """
+    summary = source_action.get("latestExecution", {}).get("summary", "")
+    if summary.startswith('{"ProviderType":"GitHub"'):
+        commit_message = json.loads(summary)["CommitMessage"]
+        cleaned_message = commit_message.replace("\n", " ").strip()
+        return cleaned_message[:50]
+    return summary
+
+
 def get_source_details(stage_state: dict) -> tuple[str, str]:
     """
     Extracts the source information (branch/repo) from the source stage.
     """
+
     branch_name = None
     repo_name = None
+    summary = None
     action_states = stage_state.get("actionStates", [])
     if len(action_states) > 0:
+        summary = get_summary(action_states[0])
         entity_url = action_states[0].get("entityUrl", "")
         if "Branch=" in entity_url:
             branch_name = entity_url.split("Branch=")[-1].split("&")[0]
         if "FullRepositoryId=" in entity_url:
             repo_name = entity_url.split("FullRepositoryId=")[-1].split("&")[0]
-    return branch_name, repo_name
+    return branch_name, repo_name, summary
 
 
 def get_single_pipeline_details(pipeline_name: str, stages: dict) -> PipelineDetails:
-    branch_name, repo_name = get_source_details(stages.get("Source", {}))
+    branch_name, repo_name, summary = get_source_details(stages.get("Source", {}))
     source_details = get_execution_details(stages.get("Source", {}))
     build_details = get_execution_details(stages.get("Build", {}))
     deploy_details = get_execution_details(stages.get("Deploy", {}))
@@ -107,6 +125,7 @@ def get_single_pipeline_details(pipeline_name: str, stages: dict) -> PipelineDet
         pipeline_name=pipeline_name,
         repository=repo_name,
         branch=branch_name,
+        summary=summary,
         source=source_details,
         build=build_details,
         deploy=deploy_details,
@@ -123,6 +142,7 @@ def get_pipeline_details_for_account(profile: str) -> list[PipelineDetails]:
     for pipeline in pipelines:
         pipeline_name = pipeline["name"]
         response = codepipeline.get_pipeline_state(name=pipeline_name)
+
         stages = {stage["stageName"]: stage for stage in response["stageStates"]}
         pipeline_details = get_single_pipeline_details(pipeline_name, stages)
         results.append(pipeline_details)
