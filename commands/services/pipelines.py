@@ -130,7 +130,7 @@ def get_source_details(stage_state: dict) -> tuple[str, str]:
     return branch_name, repo_name
 
 
-def get_details_from_pipeline_execution(pipeline_runs: dict) -> ExecutionDetails:
+def get_details_from_pipeline_execution(pipeline_runs: dict) -> Optional[ExecutionDetails]:
     """
     Extracts the execution details from a pipeline summary.
     """
@@ -154,7 +154,7 @@ def get_details_from_pipeline_execution(pipeline_runs: dict) -> ExecutionDetails
 
 def get_single_pipeline_details(
     pipeline_name: str, codepipeline_client
-) -> PipelineDetails:
+) -> Optional[PipelineDetails]:
     # Get current source details
     pipeline_state = codepipeline_client.get_pipeline_state(name=pipeline_name)
     stages = {stage["stageName"]: stage for stage in pipeline_state["stageStates"]}
@@ -162,7 +162,7 @@ def get_single_pipeline_details(
 
     if branch_name is None:
         # Skipping irrelevant pipelines with no source details
-        return
+       return None
 
     # Check last pipeline run
     last_run = codepipeline_client.list_pipeline_executions(
