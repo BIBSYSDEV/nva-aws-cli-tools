@@ -1,9 +1,7 @@
 import click
 from commands.services.aws_utils import get_account_alias
-from commands.services.pipelines import (
-    get_pipeline_details_for_account,
-    PipelineDetails,
-)
+from commands.services.pipelines import get_pipeline_details_for_account
+
 from rich.console import Console
 from rich.table import Table
 
@@ -23,37 +21,37 @@ def pipelines():
     help="The AWS profile to use. e.g., sikt-nva-sandbox",
 )
 def branches(profile: str) -> None:
-    console = Console()
     profiles = profile.split(",")
-
     for single_profile in profiles:
-        selected_profile = single_profile.strip()
-        alias = get_account_alias(selected_profile)
-        console.print(
-            f"[bold magenta]Fetching pipeline details for account: {alias} ({selected_profile})...[/bold magenta]"
-        )
-        pipelines = get_pipeline_details_for_account(selected_profile)
-
-        console.print(
-            f"[bold magenta]Account: {alias} ({len(pipelines)} pipelines)[/bold magenta]"
-        )
-        display_table(pipelines, console)
+        show_summary_table(single_profile.strip())
 
 
-def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
-    table = Table(show_header=True, header_style="bold cyan")
+def show_summary_table(profile: str) -> None:
+    console = Console()
+    alias = get_account_alias(profile)
+    console.print(
+        f"[bold magenta]Fetching pipeline details for account: {alias} ({profile})...[/bold magenta]"
+    )
+    pipelines = get_pipeline_details_for_account(profile)
+
+    # Define the table
+    table = Table(
+        show_header=True,
+        header_style="bold cyan",
+        show_lines=True,
+        title=f"[bold magenta]Account: {alias} ({len(pipelines)} pipelines)[/bold magenta]",
+        caption=f"[bold magenta]{alias}[/bold magenta]",
+    )
     table.add_column("Repository")
     table.add_column("Branch")
-    table.add_column("Build status")
-    table.add_column("Built at")
-    table.add_column("Deploy status")
-    table.add_column("Deployed at")
-    table.add_column("Last commit message")
+    table.add_column("Status")
+    table.add_column("Last triggered", no_wrap=True, justify="left", max_width=50)
+    table.add_column("Last deploy", no_wrap=True, justify="left", max_width=50)
 
     # Sort by last deployment
     sorted_pipelines = sorted(
         pipelines,
-        key=lambda x: (x.deploy.get_last_change()),
+        key=lambda x: (x.last_deploy.get_last_change()),
         reverse=True,
     )
 
@@ -63,11 +61,9 @@ def display_table(pipelines: list[PipelineDetails], console: Console) -> None:
         table.add_row(
             pipeline.repository,
             pipeline.branch,
-            pipeline.build.get_status_text(),
-            pipeline.build.get_last_change(),
-            pipeline.deploy.get_status_text(),
-            pipeline.deploy.get_last_change(),
-            pipeline.summary,
+            pipeline.get_status_text(),
+            pipeline.get_link_to_last_commit(),
+            pipeline.get_link_to_deployed_commit(),
         )
 
     console.print(table)
