@@ -102,4 +102,4 @@ def purge(profile: str, queue: str, count: int, prefix: str, dry_run: bool) -> N
 
     # Delete messages with the specified prefix
     deleted_count = delete_messages_with_prefix(sqs_client, queue, prefix, count)
-    print(f"Deleted {deleted_count} messages from '{queue=}'.")
+    print(f"Deleted {deleted_count} messages from {queue=}.")
