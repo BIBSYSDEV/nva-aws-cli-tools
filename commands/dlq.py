@@ -1,7 +1,11 @@
 import click
 import boto3
 from rich.pretty import pprint
-from commands.services.dlq import get_messages, summarize_messages
+from commands.services.dlq import (
+    get_messages,
+    summarize_messages,
+    delete_messages_with_prefix,
+)
 
 
 @click.group()
@@ -69,18 +73,32 @@ def read(profile: str, queue: str, count: int) -> None:
     default=100,
     help="Max number of messages to read",
 )
-def purge(profile: str, queue: str, count: int, prefix: str) -> None:
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be deleted without actually deleting",
+)
+def purge(profile: str, queue: str, count: int, prefix: str, dry_run: bool) -> None:
     session = boto3.Session(profile_name=profile)
     sqs_client = session.client("sqs")
-    messages = get_messages(sqs_client, queue, count)
-    to_delete = [msg for msg in messages if msg.get("Body", "").startswith(prefix)]
-    delete_count = 0
-    for msg in to_delete:
-        print(
-            f"Deleting message with ID: {msg['MessageId']} and body: {msg['Body'][:50]}..."
-        )
-        sqs_client.delete_message(QueueUrl=queue, ReceiptHandle=msg["ReceiptHandle"])
-        delete_count += 1
-    print(
-        f"Deleted {delete_count} messages with body prefix '{prefix}' from the queue '{queue}'."
-    )
+
+    if dry_run:
+        messages = get_messages(sqs_client, queue, count)
+        to_delete = [msg for msg in messages if msg.get("Body", "").startswith(prefix)]
+        by_sender, by_type = summarize_messages(to_delete)
+        print(f"DRY RUN - Found {len(to_delete)} messages to delete:")
+        print("Summary by sender:")
+        pprint(by_sender)
+        print("Summary by content:")
+        pprint(by_type)
+        return
+
+    print(f"Target quueue: {queue}")
+    print(f"Prefix to match: {prefix}")
+    print(f"Max messages to delete: {count}")
+    if not click.confirm("Purge messages from this queue?", default=False):
+        print("Aborting...")
+        return
+
+    deleted_count = delete_messages_with_prefix(sqs_client, queue, prefix, count)
+    print(f"Deleted {deleted_count} messages from '{queue=}'.")

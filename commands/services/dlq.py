@@ -1,21 +1,25 @@
 from collections import defaultdict
 
 
-def get_messages(sqs_client, queue: str, max_count: int) -> None:
-    print("Reading all messages from the queue...")
-    all_messages: list[dict] = []
-    seen_message_ids: set = set()
-    while True and len(all_messages) < max_count:
-        print("Fetching batch of messages from the queue...")
+def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, any]]:
+    """Read messages from queue."""
+    print("Reading messages from the queue...")
+    all_messages: list[dict[str, any]] = []
+    seen_message_ids: set[str] = set()
+
+    while len(all_messages) < max_count:
         response = sqs_client.receive_message(
             QueueUrl=queue,
-            MaxNumberOfMessages=10,
-            WaitTimeSeconds=1,  # Short polling
+            MaxNumberOfMessages=min(10, max_count - len(all_messages)),
+            WaitTimeSeconds=1,
             MessageAttributeNames=["All"],
             AttributeNames=["All"],
         )
 
         messages = response.get("Messages", [])
+        if not messages:
+            break
+
         new_messages = [
             msg for msg in messages if msg["MessageId"] not in seen_message_ids
         ]
@@ -24,25 +28,14 @@ def get_messages(sqs_client, queue: str, max_count: int) -> None:
 
         all_messages.extend(new_messages)
         seen_message_ids.update(msg["MessageId"] for msg in new_messages)
-        all_messages.extend(new_messages)
-        print(f"Received {len(new_messages)} messages.")
-
-        # Change visibility timeout to 0 to make messages immediately available again
-        receipt_handles = [msg["ReceiptHandle"] for msg in new_messages]
-        for handle in receipt_handles:
-            sqs_client.change_message_visibility(
-                QueueUrl=queue, ReceiptHandle=handle, VisibilityTimeout=0
-            )
+        print(f"Received {len(new_messages)} new messages.")
 
     print(f"Total messages read: {len(all_messages)}")
     return all_messages
 
 
-def summarize_messages(messages: list[dict]) -> dict:
+def summarize_messages(messages: list[dict[str, any]]) -> tuple:
     """Summarize messages by sender and body."""
-    summary = defaultdict(
-        lambda: defaultdict(lambda: {"count": 0, "candidates": set()})
-    )
     by_sender = defaultdict(lambda: {"count": 0, "candidates": set()})
     by_type = defaultdict(lambda: {"count": 0, "candidates": set()})
 
@@ -54,12 +47,70 @@ def summarize_messages(messages: list[dict]) -> dict:
             .get("candidateIdentifier", {})
             .get("StringValue", "Unknown")
         )
-        summary[sender_id][body]["count"] += 1
-        summary[sender_id][body]["candidates"].add(candidate)
 
         by_sender[sender_id]["count"] += 1
         by_sender[sender_id]["candidates"].add(candidate)
 
         by_type[body]["count"] += 1
         by_type[body]["candidates"].add(candidate)
+
     return by_sender, by_type
+
+
+def delete_messages_with_prefix(
+    sqs_client, queue: str, prefix: str, max_count: int
+) -> int:
+    """Delete messages with specific prefix in body as we encounter them."""
+    print(f"Deleting messages with prefix '{prefix}'...")
+    deleted_count = 0
+    processed_count = 0
+    seen_message_ids: set[str] = set()
+
+    while processed_count < max_count:
+        response = sqs_client.receive_message(
+            QueueUrl=queue,
+            MaxNumberOfMessages=min(10, max_count - processed_count),
+            WaitTimeSeconds=1,
+            MessageAttributeNames=["All"],
+            AttributeNames=["All"],
+        )
+
+        messages = response.get("Messages", [])
+        if not messages:
+            break
+
+        new_messages = [
+            msg for msg in messages if msg["MessageId"] not in seen_message_ids
+        ]
+        if not new_messages:
+            break
+
+        seen_message_ids.update(msg["MessageId"] for msg in new_messages)
+        processed_count += len(new_messages)
+
+        # Process each message
+        for msg in new_messages:
+            body = msg.get("Body", "")
+            if body.startswith(prefix):
+                try:
+                    print(f"Deleting message: {msg['MessageId']} - {body[:50]}...")
+                    sqs_client.delete_message(
+                        QueueUrl=queue, ReceiptHandle=msg["ReceiptHandle"]
+                    )
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"Failed to delete message {msg['MessageId']}: {e}")
+            else:
+                # Reset visibility for non-matching messages
+                try:
+                    sqs_client.change_message_visibility(
+                        QueueUrl=queue,
+                        ReceiptHandle=msg["ReceiptHandle"],
+                        VisibilityTimeout=0,
+                    )
+                except Exception as e:
+                    print(
+                        f"Warning: Could not reset visibility for message {msg['MessageId']}: {e}"
+                    )
+
+    return deleted_count
