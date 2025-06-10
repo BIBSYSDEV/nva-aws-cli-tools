@@ -82,7 +82,7 @@ def purge(profile: str, queue: str, count: int, prefix: str, dry_run: bool) -> N
     session = boto3.Session(profile_name=profile)
     sqs_client = session.client("sqs")
 
-    print(f"Target quueue: {queue}")
+    print(f"Target queue: {queue}")
     print(f"Prefix to match: {prefix}")
     print(f"Max messages to delete: {count}")
 
