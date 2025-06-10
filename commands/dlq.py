@@ -82,6 +82,10 @@ def purge(profile: str, queue: str, count: int, prefix: str, dry_run: bool) -> N
     session = boto3.Session(profile_name=profile)
     sqs_client = session.client("sqs")
 
+    print(f"Target quueue: {queue}")
+    print(f"Prefix to match: {prefix}")
+    print(f"Max messages to delete: {count}")
+
     if dry_run:
         messages = get_messages(sqs_client, queue, count)
         to_delete = [msg for msg in messages if msg.get("Body", "").startswith(prefix)]
@@ -92,13 +96,10 @@ def purge(profile: str, queue: str, count: int, prefix: str, dry_run: bool) -> N
         print("Summary by content:")
         pprint(by_type)
         return
-
-    print(f"Target quueue: {queue}")
-    print(f"Prefix to match: {prefix}")
-    print(f"Max messages to delete: {count}")
     if not click.confirm("Purge messages from this queue?", default=False):
         print("Aborting...")
         return
 
+    # Delete messages with the specified prefix
     deleted_count = delete_messages_with_prefix(sqs_client, queue, prefix, count)
     print(f"Deleted {deleted_count} messages from '{queue=}'.")
