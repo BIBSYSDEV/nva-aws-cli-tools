@@ -18,4 +18,4 @@ def get_account_alias(profile: str = None) -> str:
 
 
 def prettify(object) -> str:
-    return json.dumps(object, indent=2, sort_keys=True, default=str, ensure_ascii=False)
+    return json.dumps(object, indent=2, sort_keys=False, default=str, ensure_ascii=False)

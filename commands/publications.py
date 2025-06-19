@@ -1,5 +1,8 @@
 import click
+import subprocess
+import json
 import os
+from deepdiff import DeepDiff
 
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import prettify
@@ -33,7 +36,7 @@ def copy(profile: str, publication_identifier: str) -> None:
     click.echo(prettify(new))
 
 @publications.command(
-    help="Fetch a publication and open it in the chosen editor, e.g., VS Code"
+    help="Edit a publication by opening it in the chosen editor, e.g., VS Code and saving changes"
 )
 @click.option(
     "--profile",
@@ -47,18 +50,65 @@ def copy(profile: str, publication_identifier: str) -> None:
     help="The editor to use for opening the publication, defaults to Visual Studio Code (use 'code')",
 )
 @click.argument("publication_identifier", required=True, nargs=1)
-def fetch(profile: str, editor: str, publication_identifier: str) -> None:
+def edit(profile: str, editor: str, publication_identifier: str) -> None:
     service = PublicationApiService(profile)
     publication = service.fetch_publication(publication_identifier)
+    publication.pop("@context", None)
 
-    # Write the content to a local file in the current working directory
     file_name = f"{publication_identifier}.json"
     
     with open(file_name, "w") as file:
         file.write(prettify(publication))
 
-    # Open the file in the specified editor
-    os.system(f"{editor} {file_name}")
+    try:
+        if editor == "code":
+            subprocess.run([editor, "--new-window", "--wait", file_name])
+        else:
+            click.echo(f"Error: The specified editor '{editor}' could not be found.")
+            return
+    except FileNotFoundError:
+        click.echo(f"Error: The specified editor '{editor}' could not be found.")
+        return
+
+
+    with open(file_name, "r") as file:
+        updated_publication = json.load(file)
+
+    diff = DeepDiff(publication, updated_publication, ignore_order=True)
+
+    if diff:
+        click.echo("Changes detected in the publication:")
+        click.echo(diff.pretty())
+
+        if click.confirm("Do you want to save these changes?", default=False):
+            response = service.update_publication(publication_identifier, updated_publication)
+            click.echo("Changes saved successfully.")
+        else:
+            click.echo("Changes were not saved.")
+    else:
+        click.echo("No changes detected. Nothing to save.")
+
+@publications.command(
+    help="Fetch a publication and save it to the current working directory as a JSON file."
+)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.argument("publication_identifier", required=True, nargs=1)
+def fetch(profile: str, publication_identifier: str) -> None:
+    service = PublicationApiService(profile)
+    publication = service.fetch_publication(publication_identifier)
+
+    publication.pop("@context", None)
+
+    file_name = f"{publication_identifier}.json"
+    with open(file_name, "w") as file:
+        json.dump(publication, file, indent=4)
+
+    click.echo(f"Publication saved to {os.path.abspath(file_name)}")
 
 
 @publications.command(help="Export all publications")
