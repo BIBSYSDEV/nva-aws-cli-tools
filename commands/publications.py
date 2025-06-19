@@ -81,7 +81,7 @@ def edit(profile: str, editor: str, publication_identifier: str) -> None:
         click.echo(diff.pretty())
 
         if click.confirm("Do you want to save these changes?", default=False):
-            response = service.update_publication(publication_identifier, updated_publication)
+            service.update_publication(publication_identifier, updated_publication)
             click.echo("Changes saved successfully.")
         else:
             click.echo("Changes were not saved.")
