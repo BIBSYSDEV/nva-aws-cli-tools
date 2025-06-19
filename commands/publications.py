@@ -1,4 +1,5 @@
 import click
+import os
 
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import prettify
@@ -30,6 +31,34 @@ def copy(profile: str, publication_identifier: str) -> None:
     original.pop("@context")
     new = service.create_publication(original)
     click.echo(prettify(new))
+
+@publications.command(
+    help="Fetch a publication and open it in the chosen editor, e.g., VS Code"
+)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.option(
+    "--editor",
+    default="code",
+    help="The editor to use for opening the publication, defaults to Visual Studio Code (use 'code')",
+)
+@click.argument("publication_identifier", required=True, nargs=1)
+def fetch(profile: str, editor: str, publication_identifier: str) -> None:
+    service = PublicationApiService(profile)
+    publication = service.fetch_publication(publication_identifier)
+
+    # Write the content to a local file in the current working directory
+    file_name = f"{publication_identifier}.json"
+    
+    with open(file_name, "w") as file:
+        file.write(prettify(publication))
+
+    # Open the file in the specified editor
+    os.system(f"{editor} {file_name}")
 
 
 @publications.command(help="Export all publications")
