@@ -5,7 +5,10 @@ import shutil
 from boto3.dynamodb.conditions import Key
 from commands.services.handle_task_writer import HandleTaskWriterService
 from commands.services.handle_task_executor import HandleTaskExecutorService
-from commands.services.dynamodb_export import DynamodbExport, get_account_alias
+from commands.services.dynamodb_publications import (
+    DynamodbPublications,
+    get_account_alias,
+)
 
 
 @click.group()
@@ -70,8 +73,8 @@ def prepare(
                 json.dump(task, outfile)
                 outfile.write("\n")
 
-    DynamodbExport(profile, table_pattern, condition, batch_size).process_query(
-        process_batch
+    DynamodbPublications(profile, table_pattern).process_query(
+        condition, batch_size, process_batch
     )
 
     print("Action counts: ", action_counts)
