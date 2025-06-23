@@ -39,9 +39,7 @@ class DynamodbPublications:
         dynamodb_resource = self.session.resource("dynamodb")
         return dynamodb_resource.Table(table_name)
 
-    def _iterate_batches_scan(
-        self, condition, batch_size, custom_batch_processor
-    ):
+    def _iterate_batches_scan(self, condition, batch_size, custom_batch_processor):
         response = self.table.scan(
             Limit=batch_size,
             FilterExpression=condition,
@@ -75,9 +73,7 @@ class DynamodbPublications:
                     f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
                 )
 
-    def _iterate_batches_query(
-        self, condition, batch_size, custom_batch_processor
-    ):
+    def _iterate_batches_query(self, condition, batch_size, custom_batch_processor):
         response = self.table.query(
             Limit=batch_size,
             KeyConditionExpression=condition,
@@ -231,40 +227,63 @@ class DynamodbPublications:
                 "ExpressionAttributeNames": expression_attribute_names,
                 "ExpressionAttributeValues": {
                     k: (
-                        {"S": v} if isinstance(v, str) else
-                        {"N": str(v)} if isinstance(v, (int, float)) else
-                        {"B": bytes(v)} if isinstance(v, Binary) else
-                        {"B": v} if isinstance(v, bytes) else
-                        {"BOOL": v} if isinstance(v, bool) else
-                        {"NULL": True} if v is None else
-                        {"SS": v} if isinstance(v, set) and all(isinstance(i, str) for i in v) else
-                        {"NS": {str(i) for i in v}} if isinstance(v, set) and all(isinstance(i, (int, float)) for i in v) else
-                        {"BS": [Binary(i) for i in v]} if isinstance(v, set) and all(isinstance(i, (bytes, Binary)) for i in v) else
-                        {"M": v} if isinstance(v, dict) else
-                        {"L": [
-                            {"S": i} if isinstance(i, str) else
-                            {"N": str(i)} if isinstance(i, (int, float)) else
-                            {"B": bytes(v)} if isinstance(v, Binary) else
-                            {"B": v} if isinstance(v, bytes) else
-                            ValueError(f"Unsupported list item type: {type(i)}")
-                            for i in v
-                        ]} if isinstance(v, list) else
-                        ValueError(f"Unsupported value type: {type(v)}")
+                        {"S": v}
+                        if isinstance(v, str)
+                        else {"N": str(v)}
+                        if isinstance(v, (int, float))
+                        else {"B": bytes(v)}
+                        if isinstance(v, Binary)
+                        else {"B": v}
+                        if isinstance(v, bytes)
+                        else {"BOOL": v}
+                        if isinstance(v, bool)
+                        else {"NULL": True}
+                        if v is None
+                        else {"SS": v}
+                        if isinstance(v, set) and all(isinstance(i, str) for i in v)
+                        else {"NS": {str(i) for i in v}}
+                        if isinstance(v, set)
+                        and all(isinstance(i, (int, float)) for i in v)
+                        else {"BS": [Binary(i) for i in v]}
+                        if isinstance(v, set)
+                        and all(isinstance(i, (bytes, Binary)) for i in v)
+                        else {"M": v}
+                        if isinstance(v, dict)
+                        else {
+                            "L": [
+                                {"S": i}
+                                if isinstance(i, str)
+                                else {"N": str(i)}
+                                if isinstance(i, (int, float))
+                                else {"B": bytes(v)}
+                                if isinstance(v, Binary)
+                                else {"B": v}
+                                if isinstance(v, bytes)
+                                else ValueError(
+                                    f"Unsupported list item type: {type(i)}"
+                                )
+                                for i in v
+                            ]
+                        }
+                        if isinstance(v, list)
+                        else ValueError(f"Unsupported value type: {type(v)}")
                     )
                     for k, v in expression_attribute_values.items()
-                }
+                },
             }
         }
-    
+
     def custom_json_serializer(self, obj):
         """
         Custom serializer for JSON encoding.
         Handles Binary and bytes objects by converting them to base64 strings.
         """
         if isinstance(obj, Binary):
-            return base64.b64encode(obj.value).decode('utf-8')  # Binary -> base64 string
+            return base64.b64encode(obj.value).decode(
+                "utf-8"
+            )  # Binary -> base64 string
         elif isinstance(obj, bytes):
-            return base64.b64encode(obj).decode('utf-8')  # bytes -> base64 string
+            return base64.b64encode(obj).decode("utf-8")  # bytes -> base64 string
         raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
     def execute_batch_updates(self, transact_items):
@@ -272,7 +291,6 @@ class DynamodbPublications:
         Execute collected transactions in batch.
         """
         self.dynamodb.transact_write_items(TransactItems=transact_items)
-
 
 
 def get_account_alias(profile=None):

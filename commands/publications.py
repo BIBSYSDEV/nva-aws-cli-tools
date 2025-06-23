@@ -4,7 +4,11 @@ import os
 import csv
 
 from commands.services.publication_api import PublicationApiService
-from commands.services.aws_utils import extract_publication_identifier, prettify, edit_and_diff
+from commands.services.aws_utils import (
+    extract_publication_identifier,
+    prettify,
+    edit_and_diff,
+)
 from commands.services.dynamodb_publications import DynamodbPublications
 from boto3.dynamodb.conditions import Attr
 
@@ -141,7 +145,9 @@ def edit_dynamodb(profile: str, publication_identifier: str) -> None:
     pk0, sk0, resource = service.fetch_resource_by_identifier(publication_identifier)
 
     def update_callback(updated_publication):
-        service.update_resource(pk0, sk0, data=service.deflate_resource(updated_publication))
+        service.update_resource(
+            pk0, sk0, data=service.deflate_resource(updated_publication)
+        )
 
     edit_and_diff(resource, update_callback)
 
@@ -176,9 +182,13 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                 publication_identifier = extract_publication_identifier(row["id"])
                 new_cristin_id = row["cristinIdentifier"]
 
-                print(f"Processing publication: {publication_identifier} with new Cristin ID: {new_cristin_id}")
+                print(
+                    f"Processing publication: {publication_identifier} with new Cristin ID: {new_cristin_id}"
+                )
 
-                pk0, sk0, resource = service.fetch_resource_by_identifier(publication_identifier)
+                pk0, sk0, resource = service.fetch_resource_by_identifier(
+                    publication_identifier
+                )
 
                 if not resource:
                     click.echo(
@@ -193,14 +203,19 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                     "sourceName": "cristin@nibio",
                 }
                 if new_id_object not in resource.get("additionalIdentifiers", []):
-                    resource.setdefault("additionalIdentifiers", []).append(new_id_object)
+                    resource.setdefault("additionalIdentifiers", []).append(
+                        new_id_object
+                    )
                 else:
                     print("Identifier already exists.")
                 resource["cristinIdentifier"] = new_id_object
 
                 # Prepare the update statement
                 update_statement = service.prepare_update_resource(
-                    pk0, sk0, data=service.deflate_resource(resource), PK4=f"CristinIdentifier:{new_cristin_id}"
+                    pk0,
+                    sk0,
+                    data=service.deflate_resource(resource),
+                    PK4=f"CristinIdentifier:{new_cristin_id}",
                 )
                 update_statements.append(update_statement)
 

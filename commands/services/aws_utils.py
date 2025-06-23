@@ -8,6 +8,7 @@ import os
 from deepdiff import DeepDiff
 import re
 
+
 def get_account_alias(profile: str = None) -> str:
     # Create a default Boto3 session
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
