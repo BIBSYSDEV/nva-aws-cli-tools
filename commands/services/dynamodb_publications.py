@@ -90,7 +90,7 @@ class DynamodbPublications:
         )
 
         while "LastEvaluatedKey" in response:
-            response = table.query(
+            response = self.table.query(
                 ExclusiveStartKey=response["LastEvaluatedKey"],
                 Limit=batch_size,
                 KeyConditionExpression=condition,

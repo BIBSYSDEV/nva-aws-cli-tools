@@ -3,7 +3,6 @@ import boto3
 import json
 import click
 import subprocess
-import json
 import os
 from deepdiff import DeepDiff
 import re
