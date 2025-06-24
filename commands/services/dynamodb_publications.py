@@ -225,53 +225,44 @@ class DynamodbPublications:
                 "Key": {"PK0": {"S": pk0}, "SK0": {"S": sk0}},
                 "UpdateExpression": update_expression_str,
                 "ExpressionAttributeNames": expression_attribute_names,
-                "ExpressionAttributeValues": {
-                    k: (
-                        {"S": v}
-                        if isinstance(v, str)
-                        else {"N": str(v)}
-                        if isinstance(v, (int, float))
-                        else {"B": bytes(v)}
-                        if isinstance(v, Binary)
-                        else {"B": v}
-                        if isinstance(v, bytes)
-                        else {"BOOL": v}
-                        if isinstance(v, bool)
-                        else {"NULL": True}
-                        if v is None
-                        else {"SS": v}
-                        if isinstance(v, set) and all(isinstance(i, str) for i in v)
-                        else {"NS": {str(i) for i in v}}
-                        if isinstance(v, set)
-                        and all(isinstance(i, (int, float)) for i in v)
-                        else {"BS": [Binary(i) for i in v]}
-                        if isinstance(v, set)
-                        and all(isinstance(i, (bytes, Binary)) for i in v)
-                        else {"M": v}
-                        if isinstance(v, dict)
-                        else {
-                            "L": [
-                                {"S": i}
-                                if isinstance(i, str)
-                                else {"N": str(i)}
-                                if isinstance(i, (int, float))
-                                else {"B": bytes(v)}
-                                if isinstance(v, Binary)
-                                else {"B": v}
-                                if isinstance(v, bytes)
-                                else ValueError(
-                                    f"Unsupported list item type: {type(i)}"
-                                )
-                                for i in v
-                            ]
-                        }
-                        if isinstance(v, list)
-                        else ValueError(f"Unsupported value type: {type(v)}")
-                    )
-                    for k, v in expression_attribute_values.items()
-                },
+                "ExpressionAttributeValues": self._create_expression_attribute_values(expression_attribute_values),
             }
         }
+    
+    def _create_expression_attribute_values(self, expression_attribute_values):
+        def convert_value(v):
+            if isinstance(v, str):
+                return {"S": v}
+            elif isinstance(v, (int, float)):
+                return {"N": str(v)}
+            elif isinstance(v, bytes):
+                return {"B": v}
+            elif isinstance(v, Binary):  # For `Binary` type from Boto3
+                return {"B": bytes(v)}
+            elif isinstance(v, bool):
+                return {"BOOL": v}
+            elif v is None:
+                return {"NULL": True}
+            elif isinstance(v, set):
+                if all(isinstance(i, str) for i in v):
+                    return {"SS": v}
+                elif all(isinstance(i, (int, float)) for i in v):
+                    return {"NS": {str(i) for i in v}}
+                elif all(isinstance(i, (bytes, Binary)) for i in v):
+                    return {"BS": [bytes(i) for i in v]}
+            elif isinstance(v, dict):
+                return {"M": v}
+            elif isinstance(v, list):
+                return {
+                    "L": [
+                        convert_value(i) if isinstance(i, (str, int, float, bytes, Binary, bool, type(None))) else ValueError(f"Unsupported list item type: {type(i)}")
+                        for i in v
+                    ]
+                }
+            else:
+                raise ValueError(f"Unsupported value type: {type(v)}")
+
+        return {k: convert_value(v) for k, v in expression_attribute_values.items()}
 
     def execute_batch_updates(self, transact_items):
         self.dynamodb.transact_write_items(TransactItems=transact_items)

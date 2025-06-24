@@ -1,6 +1,4 @@
 import click
-import json
-import os
 import csv
 
 from commands.services.publication_api import PublicationApiService
@@ -70,7 +68,7 @@ def edit(profile: str, editor: str, publication_identifier: str) -> None:
 
 
 @publications.command(
-    help="Fetch a publication and save it to the publication_data folder as a JSON file."
+    help="Fetch a publication"
 )
 @click.option(
     "--profile",
@@ -83,17 +81,15 @@ def fetch(profile: str, publication_identifier: str) -> None:
     service = PublicationApiService(profile)
     publication = service.fetch_publication(publication_identifier)
 
+    if not publication:
+        click.echo(f"Publication with identifier {publication_identifier} not found.")
+        return
+
     publication.pop("@context", None)
 
-    # Define the folder to store publications
-    folder_name = "publication_data"
-    os.makedirs(folder_name, exist_ok=True)  # Create the folder if it doesn't exist
-
-    file_name = os.path.join(folder_name, f"{publication_identifier}.json")
-    with open(file_name, "w") as file:
-        json.dump(publication, file, indent=4)
-
-    click.echo(f"Publication saved to {os.path.abspath(file_name)}")
+    click.echo(
+        prettify(publication)
+    )
 
 
 @publications.command(help="Export all publications")
@@ -123,13 +119,10 @@ def export(profile: str, folder: str) -> None:
 )
 @click.argument("publication_identifier", required=True, nargs=1)
 def fetch_dynamodb(profile: str, publication_identifier: str) -> None:
-    click.echo(
-        prettify(
-            DynamodbPublications(profile, table_pattern).fetch_resource_by_identifier(
-                publication_identifier
-            )
-        )
+    _, _, resource = DynamodbPublications(profile, table_pattern).fetch_resource_by_identifier(
+        publication_identifier
     )
+    click.echo(prettify(resource))
 
 
 @publications.command(help="Update publication in DynamoDB")
