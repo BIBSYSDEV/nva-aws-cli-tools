@@ -150,7 +150,8 @@ class DynamodbPublications:
     def fetch_resource_by_identifier(self, identifier):
         response = self.table.query(
             IndexName="ResourcesByIdentifier",
-            KeyConditionExpression=Key("PK3").eq(f"Resource:{identifier}") & Key("SK3").eq(f"Resource:{identifier}"),
+            KeyConditionExpression=Key("PK3").eq(f"Resource:{identifier}")
+            & Key("SK3").eq(f"Resource:{identifier}"),
             Limit=1,
         )
         items = response.get("Items", [])
@@ -225,10 +226,12 @@ class DynamodbPublications:
                 "Key": {"PK0": {"S": pk0}, "SK0": {"S": sk0}},
                 "UpdateExpression": update_expression_str,
                 "ExpressionAttributeNames": expression_attribute_names,
-                "ExpressionAttributeValues": self._create_expression_attribute_values(expression_attribute_values),
+                "ExpressionAttributeValues": self._create_expression_attribute_values(
+                    expression_attribute_values
+                ),
             }
         }
-    
+
     def _create_expression_attribute_values(self, expression_attribute_values):
         def convert_value(v):
             if isinstance(v, str):
@@ -255,7 +258,11 @@ class DynamodbPublications:
             elif isinstance(v, list):
                 return {
                     "L": [
-                        convert_value(i) if isinstance(i, (str, int, float, bytes, Binary, bool, type(None))) else ValueError(f"Unsupported list item type: {type(i)}")
+                        convert_value(i)
+                        if isinstance(
+                            i, (str, int, float, bytes, Binary, bool, type(None))
+                        )
+                        else ValueError(f"Unsupported list item type: {type(i)}")
                         for i in v
                     ]
                 }

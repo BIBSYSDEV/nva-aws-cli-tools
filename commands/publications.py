@@ -67,9 +67,7 @@ def edit(profile: str, editor: str, publication_identifier: str) -> None:
     edit_and_diff(publication, update_callback)
 
 
-@publications.command(
-    help="Fetch a publication"
-)
+@publications.command(help="Fetch a publication")
 @click.option(
     "--profile",
     envvar="AWS_PROFILE",
@@ -87,9 +85,7 @@ def fetch(profile: str, publication_identifier: str) -> None:
 
     publication.pop("@context", None)
 
-    click.echo(
-        prettify(publication)
-    )
+    click.echo(prettify(publication))
 
 
 @publications.command(help="Export all publications")
@@ -119,9 +115,9 @@ def export(profile: str, folder: str) -> None:
 )
 @click.argument("publication_identifier", required=True, nargs=1)
 def fetch_dynamodb(profile: str, publication_identifier: str) -> None:
-    _, _, resource = DynamodbPublications(profile, table_pattern).fetch_resource_by_identifier(
-        publication_identifier
-    )
+    _, _, resource = DynamodbPublications(
+        profile, table_pattern
+    ).fetch_resource_by_identifier(publication_identifier)
     click.echo(prettify(resource))
 
 
