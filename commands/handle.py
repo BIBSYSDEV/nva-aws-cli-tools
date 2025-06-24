@@ -3,12 +3,10 @@ import json
 import os
 import shutil
 from boto3.dynamodb.conditions import Key
+from commands.services.aws_utils import get_account_alias
 from commands.services.handle_task_writer import HandleTaskWriterService
 from commands.services.handle_task_executor import HandleTaskExecutorService
-from commands.services.dynamodb_publications import (
-    DynamodbPublications,
-    get_account_alias,
-)
+from commands.services.dynamodb_publications import DynamodbPublications
 
 
 @click.group()

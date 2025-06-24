@@ -273,35 +273,5 @@ class DynamodbPublications:
             }
         }
 
-    def custom_json_serializer(self, obj):
-        """
-        Custom serializer for JSON encoding.
-        Handles Binary and bytes objects by converting them to base64 strings.
-        """
-        if isinstance(obj, Binary):
-            return base64.b64encode(obj.value).decode(
-                "utf-8"
-            )  # Binary -> base64 string
-        elif isinstance(obj, bytes):
-            return base64.b64encode(obj).decode("utf-8")  # bytes -> base64 string
-        raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
     def execute_batch_updates(self, transact_items):
-        """
-        Execute collected transactions in batch.
-        """
         self.dynamodb.transact_write_items(TransactItems=transact_items)
-
-
-def get_account_alias(profile=None):
-    # Create a default Boto3 session
-    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-
-    # Create an IAM client
-    iam = session.client("iam")
-
-    # Get the account alias
-    account_aliases = iam.list_account_aliases()["AccountAliases"]
-
-    # Return the first account alias or None if the list is empty
-    return account_aliases[0] if account_aliases else None

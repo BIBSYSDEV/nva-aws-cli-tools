@@ -163,11 +163,10 @@ def edit_dynamodb(profile: str, publication_identifier: str) -> None:
 )
 @click.argument("input", type=click.Path(exists=True), required=True, nargs=1)
 def migrate_by_dynamodb(profile: str, input: str) -> None:
-    # Initialize the DynamoDB service
     service = DynamodbPublications(profile, table_pattern)
 
     update_statements = []
-    batch_size = 15  # Batch size for updates
+    batch_size = 15
 
     def execute_batch():
         if update_statements:
@@ -210,7 +209,6 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                     print("Identifier already exists.")
                 resource["cristinIdentifier"] = new_id_object
 
-                # Prepare the update statement
                 update_statement = service.prepare_update_resource(
                     pk0,
                     sk0,
@@ -219,7 +217,6 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                 )
                 update_statements.append(update_statement)
 
-                # Execute batch updates if batch size is reached
                 if len(update_statements) >= batch_size:
                     execute_batch()
 
