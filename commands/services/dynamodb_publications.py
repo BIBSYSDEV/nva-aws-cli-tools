@@ -150,7 +150,7 @@ class DynamodbPublications:
     def fetch_resource_by_identifier(self, identifier):
         response = self.table.query(
             IndexName="ResourcesByIdentifier",
-            KeyConditionExpression=Key("PK3").eq(f"Resource:{identifier}"),
+            KeyConditionExpression=Key("PK3").eq(f"Resource:{identifier}") & Key("SK3").eq(f"Resource:{identifier}"),
             Limit=1,
         )
         items = response.get("Items", [])
