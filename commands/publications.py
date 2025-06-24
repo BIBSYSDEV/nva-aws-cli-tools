@@ -188,7 +188,7 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                 new_id_object = {
                     "type": "CristinIdentifier",
                     "value": new_cristin_id,
-                    "sourceName": "cristin@nibio",
+                    "sourceName": "cristin@nva",
                 }
                 if new_id_object not in resource.get("additionalIdentifiers", []):
                     resource.setdefault("additionalIdentifiers", []).append(
