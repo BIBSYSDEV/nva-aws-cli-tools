@@ -11,6 +11,7 @@ from commands.publications import publications
 from commands.pipelines import pipelines
 from commands.organization_migration import organization_migration
 
+
 @click.group()
 def cli():
     pass

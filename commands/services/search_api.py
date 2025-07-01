@@ -1,6 +1,6 @@
 import boto3
 import requests
-import json
+
 
 class SearchApiService:
     def __init__(self, profile):
@@ -24,5 +24,8 @@ class SearchApiService:
         if response.status_code == 200:  # If the status code indicates success
             return response.json()
         else:
-            print(f"Failed to search. {response.status_code}: {response.json()}", response.status_code)
+            print(
+                f"Failed to search. {response.status_code}: {response.json()}",
+                response.status_code,
+            )
             return None

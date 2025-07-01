@@ -1,27 +1,24 @@
 import click
 import json
 import copy
-import sys
-import uuid
 from deepdiff import DeepDiff
 
 from commands.services.search_api import SearchApiService
 from commands.services.dynamodb_publications import DynamodbPublications
-from commands.services.aws_utils import (
-    prettify
-)
+from commands.services.aws_utils import prettify
+from commands.services.resource import Resource
 
 table_pattern = (
     "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
 )
 
+
 @click.group()
 def organization_migration():
     pass
 
-@organization_migration.command(
-    help="List affected publications"
-)
+
+@organization_migration.command(help="List affected publications")
 @click.option(
     "--profile",
     envvar="AWS_PROFILE",
@@ -34,22 +31,23 @@ def organization_migration():
     help="the file name for report of usage of organization identifier",
 )
 @click.argument("organization_identifier", required=True, nargs=1)
-def list_publications(profile: str, organization_identifier: str, filename: str) -> dict:
+def list_publications(
+    profile: str, organization_identifier: str, filename: str
+) -> dict:
     service = SearchApiService(profile)
     params = {"unit": organization_identifier}
     contributors_response = fetch_all(service, params)
     params = {"userAffiliation": organization_identifier}
     owner_response = fetch_all(service, params)
     report = prettify(format(contributors_response, owner_response))
-    if (filename):
-      with open(filename, "w") as file:
-        file.write(report)
+    if filename:
+        with open(filename, "w") as file:
+            file.write(report)
     else:
-      click.echo(report)
+        click.echo(report)
 
-@organization_migration.command(
-    help="Update publications"
-)
+
+@organization_migration.command(help="Update publications")
 @click.option(
     "--profile",
     envvar="AWS_PROFILE",
@@ -63,7 +61,12 @@ def list_publications(profile: str, organization_identifier: str, filename: str)
 )
 @click.argument("old_organization_identifier", required=True, nargs=1)
 @click.argument("new_organization_identifier", required=True, nargs=1)
-def update_publications(profile: str, old_organization_identifier: str, new_organization_identifier: str, filename: str) -> dict:
+def update_publications(
+    profile: str,
+    old_organization_identifier: str,
+    new_organization_identifier: str,
+    filename: str,
+) -> dict:
     with open(filename, "r") as file:
         report = json.load(file)
 
@@ -71,29 +74,44 @@ def update_publications(profile: str, old_organization_identifier: str, new_orga
     contributors = report.get("contributors", [])
     for identifier in contributors:
         (pk0, sk0, resource) = database.fetch_resource_by_identifier(identifier)
-        click.echo(f"Checking resource {resource}")
-        updated_resource = update_affiliation_id(resource, old_organization_identifier, new_organization_identifier)
-        diff = DeepDiff(resource, updated_resource, ignore_order=True)
-        click.echo(f"Updating {identifier}...")
-        click.echo(diff.pretty())
-        database.update_resource(pk0, sk0, data=database.deflate_resource(updated_resource), version=str(uuid.uuid4()))
+        bo = Resource(resource)
+        bo.migrate_contributor_affiliations(
+            old_organization_identifier, new_organization_identifier
+        )
+
+        diff = DeepDiff(resource, bo.data, ignore_order=True)
+        print(f"Updating {identifier}...")
+        print(diff.pretty())
+        # database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
     owners = report.get("owners", [])
     for identifier in owners:
         (pk0, sk0, resource) = database.fetch_resource_by_identifier(identifier)
-        updated_resource = update_owner_affiliation_id(resource, old_organization_identifier, new_organization_identifier)
-        diff = DeepDiff(resource, updated_resource, ignore_order=True)
+        bo = Resource(resource)
+        bo.migrate_owner_affiliation(
+            old_organization_identifier, new_organization_identifier
+        )
+
+        diff = DeepDiff(resource, bo.data, ignore_order=True)
         click.echo(f"Updating {identifier}...")
         click.echo(diff.pretty())
-        database.update_resource(pk0, sk0, data=database.deflate_resource(updated_resource), version=str(uuid.uuid4()))
+        # database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
+
 
 def update_owner_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
     updated_resource = copy.deepcopy(resource)
-    owner_affiliation = updated_resource.get("resourceOwner", {}).get("ownerAffiliation", None)
+    owner_affiliation = updated_resource.get("resourceOwner", {}).get(
+        "ownerAffiliation", None
+    )
 
     if owner_affiliation and owner_affiliation.endswith(old_suffix):
-        click.echo(f"Updating resourceOwner.ownerAffiliation {owner_affiliation} → ...{new_suffix}")
-        updated_resource.get("resourceOwner", {})["ownerAffiliation"] = owner_affiliation[:-len(old_suffix)] + new_suffix
+        click.echo(
+            f"Updating resourceOwner.ownerAffiliation {owner_affiliation} → ...{new_suffix}"
+        )
+        updated_resource.get("resourceOwner", {})["ownerAffiliation"] = (
+            owner_affiliation[: -len(old_suffix)] + new_suffix
+        )
     return updated_resource
+
 
 def update_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
     updated_resource = copy.deepcopy(resource)
@@ -103,9 +121,12 @@ def update_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
         for affiliation in affiliations:
             aff_id = affiliation.get("id")
             if aff_id and aff_id.endswith(old_suffix):
-                click.echo(f"Updating contributor.affiliation.id {aff_id} → ...{new_suffix}")
-                affiliation["id"] = aff_id[:-len(old_suffix)] + new_suffix
+                click.echo(
+                    f"Updating contributor.affiliation.id {aff_id} → ...{new_suffix}"
+                )
+                affiliation["id"] = aff_id[: -len(old_suffix)] + new_suffix
     return updated_resource
+
 
 def fetch_all(service, params) -> list:
     default_params = {"sort": "modified_date:asc", "size": "100"}
@@ -140,8 +161,6 @@ def fetch_all(service, params) -> list:
 
     return list(identifiers)
 
+
 def format(contributors_response, owner_response) -> str:
-  return {
-    "contributors": contributors_response,
-    "owners": owner_response
-  }
+    return {"contributors": contributors_response, "owners": owner_response}
