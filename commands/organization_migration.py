@@ -84,7 +84,7 @@ def update_publications(profile: str, old_organization_identifier: str, new_orga
         diff = DeepDiff(resource, updated_resource, ignore_order=True)
         click.echo(f"Updating {identifier}...")
         click.echo(diff.pretty())
-        database.update_resource(pk0, sk0, data=database.deflate_resource(updated_resource))
+        database.update_resource(pk0, sk0, data=database.deflate_resource(updated_resource), version=str(uuid.uuid4()))
 
 def update_owner_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
     updated_resource = copy.deepcopy(resource)
