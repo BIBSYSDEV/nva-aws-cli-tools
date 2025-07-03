@@ -180,6 +180,7 @@ dependencies = [
     { name = "rich" },
     { name = "tabulate" },
     { name = "tqdm" },
+    { name = "uuid" },
 ]
 
 [package.dev-dependencies]
@@ -197,6 +198,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.9.2" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "tqdm", specifier = ">=4.66.5" },
+    { name = "uuid", specifier = ">=1.30" },
 ]
 
 [package.metadata.requires-dev]
@@ -372,3 +374,9 @@ sdist = { url = "https://files.pythonhosted.org/packages/ed/63/22ba4ebfe7430b763
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/d9/5f4c13cecde62396b0d3fe530a50ccea91e7dfc1ccf0e09c228841bb5ba8/urllib3-2.2.3-py3-none-any.whl", hash = "sha256:ca899ca043dcb1bafa3e262d73aa25c465bfb49e0bd9dd5d59f1d0acba2f8fac", size = 126338, upload-time = "2024-09-12T10:52:16.589Z" },
 ]
+
+[[package]]
+name = "uuid"
+version = "1.30"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/63/f42f5aa951ebf2c8dac81f77a8edcc1c218640a2a35a03b9ff2d4aa64c3d/uuid-1.30.tar.gz", hash = "sha256:1f87cc004ac5120466f36c5beae48b4c48cc411968eed0eaecd3da82aa96193f", size = 5811, upload-time = "2007-05-26T11:13:24Z" }
