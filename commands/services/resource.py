@@ -40,5 +40,5 @@ class Resource:
             )
         self.data = updated
 
-    def data(self) -> dict:
+    def get_data(self) -> dict:
         return self.data

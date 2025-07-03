@@ -79,10 +79,10 @@ def update_publications(
             old_organization_identifier, new_organization_identifier
         )
 
-        diff = DeepDiff(resource, bo.data, ignore_order=True)
+        diff = DeepDiff(resource, bo.get_data(), ignore_order=True)
         print(f"Updating {identifier}...")
         print(diff.pretty())
-        # database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
+        database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
     owners = report.get("owners", [])
     for identifier in owners:
         (pk0, sk0, resource) = database.fetch_resource_by_identifier(identifier)
@@ -94,7 +94,7 @@ def update_publications(
         diff = DeepDiff(resource, bo.data, ignore_order=True)
         click.echo(f"Updating {identifier}...")
         click.echo(diff.pretty())
-        # database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
+        database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
 
 
 def update_owner_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):

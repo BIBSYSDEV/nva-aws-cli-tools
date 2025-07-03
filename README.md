@@ -29,6 +29,9 @@ uv run cli.py help
 ### Development
 
 ```bash
+# Run tests
+uv run pytest
+
 # Run linter checks
 uv run ruff check
 
