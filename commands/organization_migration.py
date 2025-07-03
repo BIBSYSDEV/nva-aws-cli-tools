@@ -1,6 +1,6 @@
 import click
 import json
-import copy
+import uuid
 from deepdiff import DeepDiff
 
 from commands.services.search_api import SearchApiService
@@ -82,7 +82,9 @@ def update_publications(
         diff = DeepDiff(resource, bo.get_data(), ignore_order=True)
         print(f"Updating {identifier}...")
         print(diff.pretty())
-        database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
+        database.update_resource(
+            pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4())
+        )
     owners = report.get("owners", [])
     for identifier in owners:
         (pk0, sk0, resource) = database.fetch_resource_by_identifier(identifier)
@@ -94,27 +96,9 @@ def update_publications(
         diff = DeepDiff(resource, bo.data, ignore_order=True)
         click.echo(f"Updating {identifier}...")
         click.echo(diff.pretty())
-        database.update_resource(pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4()))
-
-
-def update_owner_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
-    bo = Resource(resource)
-    bo.migrate_owner_affiliation(old_suffix, new_suffix)
-    click.echo(f"Updated resourceOwner.ownerAffiliation using Resource.migrate_owner_affiliation.")
-    return bo.data
-def update_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
-    updated_resource = copy.deepcopy(resource)
-    contributors = updated_resource.get("entityDescription", {}).get("contributors", [])
-    for contributor in contributors:
-        affiliations = contributor.get("affiliations", [])
-        for affiliation in affiliations:
-            aff_id = affiliation.get("id")
-            if aff_id and aff_id.endswith(old_suffix):
-                click.echo(
-                    f"Updating contributor.affiliation.id {aff_id} → ...{new_suffix}"
-                )
-                affiliation["id"] = aff_id[: -len(old_suffix)] + new_suffix
-    return updated_resource
+        database.update_resource(
+            pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4())
+        )
 
 
 def fetch_all(service, params) -> list:
@@ -128,7 +112,7 @@ def fetch_all(service, params) -> list:
         if modified_since:
             merged_params["modified_since"] = modified_since
 
-        click.echo(f"Fetching next page og search hits: {merged_params}...")
+        click.echo(f"Fetching next page of search hits: {merged_params}...")
         response = service.resource_search(merged_params)
         hits = response.get("hits", [])
 
