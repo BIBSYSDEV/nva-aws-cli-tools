@@ -98,21 +98,10 @@ def update_publications(
 
 
 def update_owner_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
-    updated_resource = copy.deepcopy(resource)
-    owner_affiliation = updated_resource.get("resourceOwner", {}).get(
-        "ownerAffiliation", None
-    )
-
-    if owner_affiliation and owner_affiliation.endswith(old_suffix):
-        click.echo(
-            f"Updating resourceOwner.ownerAffiliation {owner_affiliation} → ...{new_suffix}"
-        )
-        updated_resource.get("resourceOwner", {})["ownerAffiliation"] = (
-            owner_affiliation[: -len(old_suffix)] + new_suffix
-        )
-    return updated_resource
-
-
+    bo = Resource(resource)
+    bo.migrate_owner_affiliation(old_suffix, new_suffix)
+    click.echo(f"Updated resourceOwner.ownerAffiliation using Resource.migrate_owner_affiliation.")
+    return bo.data
 def update_affiliation_id(resource: dict, old_suffix: str, new_suffix: str):
     updated_resource = copy.deepcopy(resource)
     contributors = updated_resource.get("entityDescription", {}).get("contributors", [])
