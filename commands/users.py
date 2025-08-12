@@ -23,7 +23,7 @@ def search(profile: str, search_term: str) -> None:
     result = UsersAndRolesService(profile).search(search_term)
     click.echo(prettify(result))
 
-@users.command(help="Approve user terms")
+@users.command(help="Approve user terms by passing cristin person ID (e.g. 2009968)")
 @click.option(
     "--profile",
     envvar="AWS_PROFILE",
