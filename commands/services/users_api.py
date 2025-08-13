@@ -4,6 +4,8 @@ import requests
 
 
 class UsersAndRolesService:
+    system_user = "nva-backend@20754.0.0.0"
+
     def __init__(self, profile):
         self.profile = profile
         session = (
@@ -24,23 +26,23 @@ class UsersAndRolesService:
             f"https://{self.api_domain}/users-roles/terms-and-conditions/current"
         )
         if response.status_code != 200:
-            raise ValueError("Failed to retrieve current terms and conditions URI.")
+            raise ValueError(
+                f"Failed to retrieve current terms and conditions URI. Status code: {response.status_code} - {response.text}"
+            )
 
         terms_conditions_uri = response.json().get("termsConditionsUri")
         if not terms_conditions_uri:
             raise ValueError("Current terms and conditions URI not found.")
         now_utc = datetime.datetime.now(datetime.timezone.utc)
-        timestamp_str = (
-            now_utc.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now_utc.microsecond:06d}000Z"
-        )
+        timestamp_str = now_utc.strftime("%Y-%m-%dT%H:%M:%S.%f000Z")
 
         item = {
             "id": f"https://{self.api_domain}/cristin/person/{person_id}",
             "type": "TermsConditions",
             "created": timestamp_str,
             "modified": timestamp_str,
-            "modifiedBy": "nva-backend@20754.0.0.0",
-            "owner": "nva-backend@20754.0.0.0",
+            "modifiedBy": self.system_user,
+            "owner": self.system_user,
             "termsConditionsUri": terms_conditions_uri,
         }
 
