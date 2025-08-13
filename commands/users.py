@@ -24,6 +24,19 @@ def search(profile: str, search_term: str) -> None:
     click.echo(prettify(result))
 
 
+@users.command(help="Approve user terms by passing cristin person ID (e.g. 2009968)")
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.argument("user_id", required=True)
+def approve_terms(profile: str, user_id: str) -> None:
+    result = UsersAndRolesService(profile).approve_terms(user_id)
+    click.echo(prettify(result))
+
+
 @users.command(help="Add external API user")
 @click.option(
     "--profile",

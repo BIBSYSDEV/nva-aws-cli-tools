@@ -1,0 +1,20 @@
+{
+  "first_name": "test",
+  "surname": "testesen3",
+  "norwegian_national_id": "17055449392",
+  "detailed_affiliations": [
+    {
+      "affiliation": {
+        "unit": {
+          "cristin_unit_id": "20754.0.0.0"
+        }
+      },
+      "position": {
+        "code": "1087"
+      },
+      "start_date": "2025-03-01T12:00:00.000Z",
+      "end_date": "2040-03-01T12:00:00.000Z",
+      "fte_percentage": 100
+    }
+  ]
+}
