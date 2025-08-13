@@ -67,9 +67,7 @@ def import_persons(profile: str, folder_path: str) -> None:
                     # Pre-approve terms if the user was added successfully
                     cristin_person_id = add_result.get("cristin_person_id")
                     if cristin_person_id:
-                        approve_result = UsersAndRolesService(profile).approve_terms(
-                            cristin_person_id
-                        )
+                        UsersAndRolesService(profile).approve_terms(cristin_person_id)
                         click.echo(f"Terms pre-approved for user {cristin_person_id}")
                     else:
                         click.echo(
