@@ -14,13 +14,15 @@ class UsersAndRolesService:
         self.ssm = session.client("ssm")
         self.dynamodb = session.resource("dynamodb")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
-    
+
     def approve_terms(self, person_id):
         table_name = self._get_terms_table_name()
         table = self.dynamodb.Table(table_name)
 
         http_client = requests.Session()
-        response = http_client.get(f"https://{self.api_domain}/users-roles/terms-and-conditions/current")
+        response = http_client.get(
+            f"https://{self.api_domain}/users-roles/terms-and-conditions/current"
+        )
         if response.status_code != 200:
             raise ValueError("Failed to retrieve current terms and conditions URI.")
 
@@ -28,7 +30,9 @@ class UsersAndRolesService:
         if not terms_conditions_uri:
             raise ValueError("Current terms and conditions URI not found.")
         now_utc = datetime.datetime.now(datetime.timezone.utc)
-        timestamp_str = now_utc.strftime('%Y-%m-%dT%H:%M:%S.') + f'{now_utc.microsecond:06d}000Z'
+        timestamp_str = (
+            now_utc.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now_utc.microsecond:06d}000Z"
+        )
 
         item = {
             "id": f"https://{self.api_domain}/cristin/person/{person_id}",
@@ -86,7 +90,7 @@ class UsersAndRolesService:
                 return table_name
 
         raise ValueError("No valid table found.")
-    
+
     def _get_terms_table_name(self):
         response = self.dynamodb.meta.client.list_tables()
 

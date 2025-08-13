@@ -28,7 +28,7 @@ class CristinService:
         http_client = requests.Session()
         auth = base64.b64encode(
             f"{self.credentials['username']}:{self.credentials['password']}".encode(
-            "utf-8"
+                "utf-8"
             )
         ).decode("utf-8")
 
@@ -45,7 +45,7 @@ class CristinService:
         if not response.ok:
             print(response.text)
             return response.text
-        
+
         return response.json()
 
     def _get_system_parameter(self, name):

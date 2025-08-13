@@ -12,6 +12,7 @@ from commands.services.aws_utils import prettify
 def cristin():
     pass
 
+
 @cristin.command(
     help="Add cristin user by passing user data as a JSON string from a file or stdin."
 )
@@ -35,10 +36,14 @@ def add_user(profile: str, input_file) -> None:
     result = CristinService(profile).add_person(user_data)
     click.echo(prettify(result))
 
+
 @cristin.command(
     help="Add cristin persons from all JSON files in a folder and pre-approve their terms."
 )
-@click.argument("folder_path", type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True))
+@click.argument(
+    "folder_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True),
+)
 @click.option(
     "--profile",
     envvar="AWS_PROFILE",
@@ -62,12 +67,18 @@ def import_persons(profile: str, folder_path: str) -> None:
                     # Pre-approve terms if the user was added successfully
                     cristin_person_id = add_result.get("cristin_person_id")
                     if cristin_person_id:
-                        approve_result = UsersAndRolesService(profile).approve_terms(cristin_person_id)
+                        approve_result = UsersAndRolesService(profile).approve_terms(
+                            cristin_person_id
+                        )
                         click.echo(f"Terms pre-approved for user {cristin_person_id}")
                     else:
-                        click.echo(f"Failed to retrieve Cristin person ID for user in file: {filename}")
+                        click.echo(
+                            f"Failed to retrieve Cristin person ID for user in file: {filename}"
+                        )
 
             except json.JSONDecodeError:
                 click.echo(f"Invalid JSON in file: {file_path}")
             except Exception as e:
-                click.echo(f"An error occurred while processing file {file_path}: {str(e)}")
+                click.echo(
+                    f"An error occurred while processing file {file_path}: {str(e)}"
+                )
