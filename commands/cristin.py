@@ -36,9 +36,8 @@ def add_person(profile: str, input_file) -> None:
     result = CristinService(profile).add_person(user_data)
     click.echo(prettify(result))
 
-@cristin.command(
-    help="Update an existing person in Cristin."
-)
+
+@cristin.command(help="Update an existing person in Cristin.")
 @click.argument("user_id", required=True)
 @click.argument("input_file", type=click.File("r"), default=sys.stdin)
 @click.option(
@@ -54,6 +53,7 @@ def update_person(profile: str, input_file, user_id) -> None:
         user_data_json = input_file.read()
     user_data = json.loads(user_data_json)
     CristinService(profile).update_person(user_id, user_data)
+
 
 @cristin.command(
     help="Add cristin persons from all JSON files in a folder and pre-approve their terms."

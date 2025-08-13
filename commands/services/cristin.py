@@ -24,9 +24,7 @@ class CristinService:
         )
         credentials = self._get_secret("CristinClientBasicAuth")
         self.auth = base64.b64encode(
-            f"{credentials['username']}:{credentials['password']}".encode(
-                "utf-8"
-            )
+            f"{credentials['username']}:{credentials['password']}".encode("utf-8")
         ).decode("utf-8")
 
     def add_person(self, person):
