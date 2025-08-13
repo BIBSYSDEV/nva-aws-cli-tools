@@ -23,9 +23,9 @@ def cristin():
     default="default",
     help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
 )
-def add_user(profile: str, input_file) -> None:
+def add_person(profile: str, input_file) -> None:
     """
-    Adds a user to Cristin. User data is read from INPUT_FILE (json).
+    Adds a person to Cristin. Person data is read from INPUT_FILE (json).
     If INPUT_FILE is not provided, it reads from stdin.
     """
     if input_file.isatty():
@@ -36,6 +36,24 @@ def add_user(profile: str, input_file) -> None:
     result = CristinService(profile).add_person(user_data)
     click.echo(prettify(result))
 
+@cristin.command(
+    help="Update an existing person in Cristin."
+)
+@click.argument("user_id", required=True)
+@click.argument("input_file", type=click.File("r"), default=sys.stdin)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+def update_person(profile: str, input_file, user_id) -> None:
+    if input_file.isatty():
+        user_data_json = sys.stdin.read()
+    else:
+        user_data_json = input_file.read()
+    user_data = json.loads(user_data_json)
+    CristinService(profile).update_person(user_id, user_data)
 
 @cristin.command(
     help="Add cristin persons from all JSON files in a folder and pre-approve their terms."
