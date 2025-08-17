@@ -200,6 +200,26 @@ class CristinService:
             print(f"Error while updating person (ID: {user_id}): {response.text}")
             return response.text
 
+    def put_person_image(self, user_id, image_data):
+        http_client = requests.Session()
+
+        response = http_client.put(
+            f"{self.cristin_api}/persons/{user_id}/picture",
+            data=image_data,
+            headers={
+                "Content-Type": "image/jpeg",
+                "Accept": "application/json",
+                "Authorization": f"Basic {self.auth}",
+                self.bypass_header: self.bypass_value,
+            },
+        )
+
+        if not response.ok:
+            print(
+                f"Error while uploading image for person (ID: {user_id}): {response.text}"
+            )
+            return response.text
+
     def _get_system_parameter(self, name):
         response = self.ssm.get_parameter(Name=name)
         return response["Parameter"]["Value"]

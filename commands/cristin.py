@@ -306,3 +306,19 @@ def import_projects(profile: str, input_folder: str) -> None:
     click.echo(
         "All projects imported successfully. When adding, make sure to wait a bit for search indexing before retrying."
     )
+
+
+# uv run cli.py cristin put-person-image --profile sikt-nva-dev 274537 image.jpg
+@cristin.command(help="Upload a person's image to Cristin.")
+@click.argument("user_id", required=True)
+@click.argument("image_file", type=click.File("rb"), required=True)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+def put_person_image(profile: str, user_id: str, image_file) -> None:
+    image_data = image_file.read()
+    CristinService(profile).put_person_image(user_id, image_data)
+    click.echo("OK")
