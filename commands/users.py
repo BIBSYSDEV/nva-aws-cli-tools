@@ -1,4 +1,6 @@
+import json
 import click
+import sys
 
 from commands.services.users_api import UsersAndRolesService
 from commands.services.aws_utils import prettify
@@ -23,6 +25,22 @@ def search(profile: str, search_term: str) -> None:
     result = UsersAndRolesService(profile).search(search_term)
     click.echo(prettify(result))
 
+@users.command(help="Add user")
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.argument("user_data", type=click.File("r"), default=sys.stdin)
+def add_user(profile: str, user_data: str) -> None:
+    if user_data.isatty():
+        user_data_json = sys.stdin.read()
+    else:
+        user_data_json = user_data.read()
+    user = json.loads(user_data_json)
+    result = UsersAndRolesService(profile).add_user(user)
+    click.echo(prettify(result))
 
 @users.command(help="Approve user terms by passing cristin person ID (e.g. 2009968)")
 @click.option(

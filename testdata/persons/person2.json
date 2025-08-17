@@ -1,6 +1,6 @@
 {
   "first_name": "test",
-  "surname": "testesen2",
+  "surname": "testesen to",
   "norwegian_national_id": "19101018248",
   "detailed_affiliations": [
     {
@@ -15,6 +15,14 @@
       "start_date": "2025-03-01T12:00:00.000Z",
       "end_date": "2040-03-01T12:00:00.000Z",
       "fte_percentage": 100
+    }
+  ],
+  "keywords": [
+    {
+      "code": "3548"
+    },
+    {
+      "code": "5156"
     }
   ]
 }

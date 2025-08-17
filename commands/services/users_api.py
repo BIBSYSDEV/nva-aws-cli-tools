@@ -1,21 +1,37 @@
+from urllib.parse import quote_plus
 import boto3
 import datetime
 import requests
+import json
+from datetime import datetime, timedelta, timezone
 
 
 class UsersAndRolesService:
     system_user = "nva-backend@20754.0.0.0"
 
-    def __init__(self, profile):
-        self.profile = profile
+    def __init__(self, profile, client_id=None, client_secret=None):
         session = (
-            boto3.Session(profile_name=self.profile)
-            if self.profile
+            boto3.Session(profile_name=profile)
+            if profile
             else boto3.Session()
         )
         self.ssm = session.client("ssm")
         self.dynamodb = session.resource("dynamodb")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
+        self.secretsmanager = session.client("secretsmanager")
+        self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
+        self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
+        if client_id and client_secret:
+            self.client_credentials = {
+                "backendClientId": client_id,
+                "backendClientSecret": client_secret,
+            }
+        else:
+            self.client_credentials = self._get_secret(
+                "BackendCognitoClientCredentials"
+            )
+        self.token = self._get_cognito_token()
+        self.token_expiry_time = datetime.now()  # Initialize with current time
 
     def approve_terms(self, person_id):
         table_name = self._get_terms_table_name()
@@ -33,7 +49,7 @@ class UsersAndRolesService:
         terms_conditions_uri = response.json().get("termsConditionsUri")
         if not terms_conditions_uri:
             raise ValueError("Current terms and conditions URI not found.")
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        now_utc = datetime.now(timezone.utc)
         timestamp_str = now_utc.strftime("%Y-%m-%dT%H:%M:%S.%f000Z")
 
         item = {
@@ -71,6 +87,70 @@ class UsersAndRolesService:
         matching_items.extend(self._items_search(response["Items"], search_words))
 
         return matching_items
+    
+    def add_user(self, person):
+        """
+        POST https://api.dev.nva.aws.unit.no/users-roles/users
+
+        payload:
+        {
+        "cristinIdentifier": "34322",
+        "customerId": "https://api.dev.nva.aws.unit.no/customer/bb3d0c0c-5065-4623-9b98-5810983c2478",
+        "roles": [{ "type": "Role", "rolename": "Creator" }],
+        "viewingScope": { "type": "ViewingScope", "includedUnits": [] }
+        }
+        """
+        http_client = requests.Session()
+        headers = {
+            "Authorization": f"Bearer {self._get_token()}",
+            "Accept": "application/json",
+        }
+        response = http_client.post(
+            f"https://{self.api_domain}/users-roles/users",
+            json=person,
+            headers=headers
+        )
+        if not response.ok:
+            raise ValueError(
+                f"Failed to create user. Status code: {response.status_code} - {response.text}"
+            )
+
+        return response.json()
+    
+    def update_user(self, user):
+        http_client = requests.Session()
+        headers = {
+            "Authorization": f"Bearer {self._get_token()}",
+            "Accept": "application/json",
+        }
+        response = http_client.put(
+            f"https://{self.api_domain}/users-roles/users/{quote_plus(user['username'])}",
+            json=user,
+            headers=headers
+        )
+        if not response.ok:
+            raise ValueError(
+                f"Failed to update user. Status code: {response.status_code} - {response.text}"
+            )
+
+        return response.json()
+
+    def get_user_by_username(self, username):
+        http_client = requests.Session()
+        headers = {
+            "Authorization": f"Bearer {self._get_token()}",
+            "Accept": "application/json",
+        }
+        response = http_client.get(
+            f"https://{self.api_domain}/users-roles/users/{quote_plus(username)}",
+            headers=headers
+        )
+        if response.status_code != 200:
+            raise ValueError(
+                f"Failed to retrieve user by username. Status code: {response.status_code} - {response.text}"
+            )
+
+        return response.json()
 
     def _items_search(self, items, search_words):
         matching_items = []
@@ -101,3 +181,37 @@ class UsersAndRolesService:
                 return table_name
 
         raise ValueError("No valid table found.")
+    
+    def _get_system_parameter(self, name):
+        response = self.ssm.get_parameter(Name=name)
+        return response["Parameter"]["Value"]
+
+    def _get_secret(self, name):
+        response = self.secretsmanager.get_secret_value(SecretId=name)
+        secret_string = response["SecretString"]
+        secret = json.loads(secret_string)
+        return secret
+
+    def _get_cognito_token(self):
+        url = f"{self.cognito_uri}/oauth2/token"
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        data = {
+            "grant_type": "client_credentials",
+            "client_id": self.client_credentials["backendClientId"],
+            "client_secret": self.client_credentials["backendClientSecret"],
+        }
+        response = requests.post(url, headers=headers, data=data)
+        response_json = response.json()
+        self.token_expiry_time = datetime.now() + timedelta(
+            seconds=response_json["expires_in"]
+        )  # Set the expiry time
+        return response_json["access_token"]
+
+    def _is_token_expired(self):
+        # If there are less than 30 seconds until the token expires, consider it expired
+        return datetime.now() > self.token_expiry_time - timedelta(seconds=30)
+
+    def _get_token(self):
+        if self._is_token_expired():
+            self.token = self._get_cognito_token()
+        return self.token
