@@ -1,6 +1,5 @@
 from urllib.parse import quote_plus
 import boto3
-import datetime
 import requests
 import json
 from datetime import datetime, timedelta, timezone
