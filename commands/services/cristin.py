@@ -49,7 +49,6 @@ class CristinService:
 
         return response.json()
 
-
     def get_person(self, user_id):
         http_client = requests.Session()
 
@@ -97,7 +96,7 @@ class CristinService:
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "Authorization": f"Basic {self.auth}",
-                self.bypass_header: self.bypass_value
+                self.bypass_header: self.bypass_value,
             },
         )
         if not response.ok:
@@ -115,10 +114,10 @@ class CristinService:
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "Authorization": f"Basic {self.auth}",
-                self.bypass_header: self.bypass_value
+                self.bypass_header: self.bypass_value,
             },
         )
-        
+
         if not response.ok:
             sys.exit(f"Error while finding project by title '{title}': {response.text}")
 
@@ -141,7 +140,7 @@ class CristinService:
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "Authorization": f"Basic {self.auth}",
-                self.bypass_header: self.bypass_value
+                self.bypass_header: self.bypass_value,
             },
         )
         if not response.ok:
@@ -170,7 +169,7 @@ class CristinService:
                 "Content-Type": "application/merge-patch+json",
                 "Accept": "application/json",
                 "Authorization": f"Basic {self.auth}",
-                self.bypass_header: self.bypass_value
+                self.bypass_header: self.bypass_value,
             },
         )
         if not response.ok:

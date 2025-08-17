@@ -25,6 +25,7 @@ def search(profile: str, search_term: str) -> None:
     result = UsersAndRolesService(profile).search(search_term)
     click.echo(prettify(result))
 
+
 @users.command(help="Add user")
 @click.option(
     "--profile",
@@ -41,6 +42,7 @@ def add_user(profile: str, user_data: str) -> None:
     user = json.loads(user_data_json)
     result = UsersAndRolesService(profile).add_user(user)
     click.echo(prettify(result))
+
 
 @users.command(help="Approve user terms by passing cristin person ID (e.g. 2009968)")
 @click.option(

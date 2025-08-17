@@ -10,11 +10,7 @@ class UsersAndRolesService:
     system_user = "nva-backend@20754.0.0.0"
 
     def __init__(self, profile, client_id=None, client_secret=None):
-        session = (
-            boto3.Session(profile_name=profile)
-            if profile
-            else boto3.Session()
-        )
+        session = boto3.Session(profile_name=profile) if profile else boto3.Session()
         self.ssm = session.client("ssm")
         self.dynamodb = session.resource("dynamodb")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
@@ -87,7 +83,7 @@ class UsersAndRolesService:
         matching_items.extend(self._items_search(response["Items"], search_words))
 
         return matching_items
-    
+
     def add_user(self, person):
         """
         POST https://api.dev.nva.aws.unit.no/users-roles/users
@@ -106,9 +102,7 @@ class UsersAndRolesService:
             "Accept": "application/json",
         }
         response = http_client.post(
-            f"https://{self.api_domain}/users-roles/users",
-            json=person,
-            headers=headers
+            f"https://{self.api_domain}/users-roles/users", json=person, headers=headers
         )
         if not response.ok:
             raise ValueError(
@@ -116,7 +110,7 @@ class UsersAndRolesService:
             )
 
         return response.json()
-    
+
     def update_user(self, user):
         http_client = requests.Session()
         headers = {
@@ -126,7 +120,7 @@ class UsersAndRolesService:
         response = http_client.put(
             f"https://{self.api_domain}/users-roles/users/{quote_plus(user['username'])}",
             json=user,
-            headers=headers
+            headers=headers,
         )
         if not response.ok:
             raise ValueError(
@@ -143,7 +137,7 @@ class UsersAndRolesService:
         }
         response = http_client.get(
             f"https://{self.api_domain}/users-roles/users/{quote_plus(username)}",
-            headers=headers
+            headers=headers,
         )
         if response.status_code != 200:
             raise ValueError(
@@ -181,7 +175,7 @@ class UsersAndRolesService:
                 return table_name
 
         raise ValueError("No valid table found.")
-    
+
     def _get_system_parameter(self, name):
         response = self.ssm.get_parameter(Name=name)
         return response["Parameter"]["Value"]
