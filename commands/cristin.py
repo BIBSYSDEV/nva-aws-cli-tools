@@ -114,9 +114,8 @@ def import_persons(profile: str, folder_path: str) -> None:
                         nva_user = user_service.get_user_by_username(
                             f"{cristin_person_id}@20754.0.0.0"
                         )
-
                         if not nva_user:
-                            user_service.add_user(
+                            nva_user = user_service.add_user(
                                 {
                                     "cristinIdentifier": cristin_person_id,
                                     "customerId": "https://api.dev.nva.aws.unit.no/customer/bb3d0c0c-5065-4623-9b98-5810983c2478",
@@ -132,81 +131,21 @@ def import_persons(profile: str, folder_path: str) -> None:
                                 f"User already exists in NVA: {nva_user['username']}"
                             )
 
-                        nva_user["roles"] = [
-                            {
-                                "rolename": "Editor",
-                                "accessRights": [
-                                    "MANAGE_RESOURCES_ALL",
-                                    "MANAGE_OWN_AFFILIATION",
-                                ],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Support-Curator",
-                                "accessRights": [
-                                    "MANAGE_RESOURCES_STANDARD",
-                                    "SUPPORT",
-                                ],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Nvi-Curator",
-                                "accessRights": [
-                                    "MANAGE_RESOURCES_STANDARD",
-                                    "MANAGE_NVI_CANDIDATES",
-                                ],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Creator",
-                                "accessRights": ["MANAGE_OWN_RESOURCES"],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Institution-admin",
-                                "accessRights": ["MANAGE_OWN_AFFILIATION"],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Curator-thesis-embargo",
-                                "accessRights": [
-                                    "MANAGE_DEGREE_EMBARGO",
-                                    "MANAGE_RESOURCES_STANDARD",
-                                ],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Publishing-Curator",
-                                "accessRights": [
-                                    "MANAGE_PUBLISHING_REQUESTS",
-                                    "MANAGE_RESOURCES_STANDARD",
-                                    "MANAGE_RESOURCE_FILES",
-                                ],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Doi-Curator",
-                                "accessRights": [
-                                    "MANAGE_DOI",
-                                    "MANAGE_RESOURCES_STANDARD",
-                                ],
-                                "type": "Role",
-                            },
-                            {
-                                "rolename": "Curator-thesis",
-                                "accessRights": [
-                                    "MANAGE_DEGREE",
-                                    "MANAGE_RESOURCES_STANDARD",
-                                ],
-                                "type": "Role",
-                            },
-                        ]
+                        with open(os.path.join(folder_path, "roles", "roles.json"), "r", encoding="utf-8") as roles_file:
+                            roles_data = json.loads(roles_file.read())
+                            nva_user["roles"] = roles_data
 
                         user_service.update_user(nva_user)
                         click.echo(f"User roles updated in NVA: {nva_user['username']}")
 
                         user_service.approve_terms(cristin_person_id)
                         click.echo(f"Terms pre-approved for user {cristin_person_id}")
+
+                        with open(os.path.join(folder_path, "images", "image.jpg"), "rb") as image_file:
+                            cristin_service.put_person_image(
+                                cristin_person_id, image_file.read()
+                            )
+                            click.echo(f"User image updated in Cristin: {cristin_person_id}")
                     else:
                         click.echo(
                             f"Failed to retrieve Cristin person ID for user in file: {filename}"
