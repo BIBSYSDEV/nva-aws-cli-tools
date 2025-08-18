@@ -131,7 +131,11 @@ def import_persons(profile: str, folder_path: str) -> None:
                                 f"User already exists in NVA: {nva_user['username']}"
                             )
 
-                        with open(os.path.join(folder_path, "roles", "roles.json"), "r", encoding="utf-8") as roles_file:
+                        with open(
+                            os.path.join(folder_path, "roles", "roles.json"),
+                            "r",
+                            encoding="utf-8",
+                        ) as roles_file:
                             roles_data = json.loads(roles_file.read())
                             nva_user["roles"] = roles_data
 
@@ -141,11 +145,15 @@ def import_persons(profile: str, folder_path: str) -> None:
                         user_service.approve_terms(cristin_person_id)
                         click.echo(f"Terms pre-approved for user {cristin_person_id}")
 
-                        with open(os.path.join(folder_path, "images", "image.jpg"), "rb") as image_file:
+                        with open(
+                            os.path.join(folder_path, "images", "image.jpg"), "rb"
+                        ) as image_file:
                             cristin_service.put_person_image(
                                 cristin_person_id, image_file.read()
                             )
-                            click.echo(f"User image updated in Cristin: {cristin_person_id}")
+                            click.echo(
+                                f"User image updated in Cristin: {cristin_person_id}"
+                            )
                     else:
                         click.echo(
                             f"Failed to retrieve Cristin person ID for user in file: {filename}"
