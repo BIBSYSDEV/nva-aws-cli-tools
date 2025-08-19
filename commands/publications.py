@@ -204,16 +204,17 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                         PK4=f"CristinIdentifier:{new_cristin_id}",
                     )
                     update_statements.append(update_statement)
-                    
+
                     click.echo(
                         f"🟢 prepared update for publication: {publication_identifier} with Cristin ID: {new_cristin_id}"
                     )
                 else:
-                    print(f"🔵 Identifier already exists: {publication_identifier} with Cristin ID: {new_cristin_id}")
+                    print(
+                        f"🔵 Identifier already exists: {publication_identifier} with Cristin ID: {new_cristin_id}"
+                    )
 
                 if len(update_statements) >= batch_size:
                     execute_batch()
-
 
             except KeyError as e:
                 click.echo(f"Missing expected column in CSV: {e}", err=True)

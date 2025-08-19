@@ -238,21 +238,19 @@ def import_projects(profile: str, input_folder: str, manager_id: str) -> None:
             with open(file_path, "r") as input_file:
                 data = json.load(input_file)
                 project = cristin_service.find_project_by_title(data["title"]["nb"])
-                
-                data["participants"] = [{
-                    "cristin_person_id": manager_id,
-                    "roles": [
-                        { 
-                            "role_code": "PRO_MANAGER",
-                            "institution": {
-                                "cristin_institution_id": "20754"
-                            },
-                            "unit": {
-                                "cristin_unit_id": "20754.0.0.0"
+
+                data["participants"] = [
+                    {
+                        "cristin_person_id": manager_id,
+                        "roles": [
+                            {
+                                "role_code": "PRO_MANAGER",
+                                "institution": {"cristin_institution_id": "20754"},
+                                "unit": {"cristin_unit_id": "20754.0.0.0"},
                             }
-                        }
-                    ]
-                }]
+                        ],
+                    }
+                ]
 
                 if not project:
                     click.echo(
