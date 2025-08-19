@@ -17,21 +17,5 @@
       "code": "nb"
     }
   ],
-  "participants": [
-    {
-      "cristin_person_id": "1862292",
-      "roles": [
-        { 
-          "role_code": "PRO_MANAGER",
-          "institution": {
-            "cristin_institution_id": "20754"
-          },
-          "unit": {
-            "cristin_unit_id": "20754.0.0.0"
-          }
-        }
-      ]
-    }
-  ],
    "external_url": "https://www.example.org"
 }

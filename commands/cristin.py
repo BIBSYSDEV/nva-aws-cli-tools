@@ -223,13 +223,14 @@ def update_project(profile: str, project_id: str, input_file) -> None:
 @click.argument(
     "input_folder", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
+@click.argument("manager_id", required=True)
 @click.option(
     "--profile",
     envvar="AWS_PROFILE",
     default="default",
     help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
 )
-def import_projects(profile: str, input_folder: str) -> None:
+def import_projects(profile: str, input_folder: str, manager_id: str) -> None:
     cristin_service = CristinService(profile)
     for filename in os.listdir(input_folder):
         if filename.endswith(".json"):
@@ -237,6 +238,22 @@ def import_projects(profile: str, input_folder: str) -> None:
             with open(file_path, "r") as input_file:
                 data = json.load(input_file)
                 project = cristin_service.find_project_by_title(data["title"]["nb"])
+                
+                data["participants"] = [{
+                    "cristin_person_id": manager_id,
+                    "roles": [
+                        { 
+                            "role_code": "PRO_MANAGER",
+                            "institution": {
+                                "cristin_institution_id": "20754"
+                            },
+                            "unit": {
+                                "cristin_unit_id": "20754.0.0.0"
+                            }
+                        }
+                    ]
+                }]
+
                 if not project:
                     click.echo(
                         f"Project {data['title']['nb']} not found in Cristin, adding..."
