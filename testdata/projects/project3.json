@@ -1,0 +1,21 @@
+{
+  "title": {
+    "nb": "karate cristin service test 3",
+    "en": "karate cristin service test 3"
+  },
+  "start_date": "2025-08-03T22:00:00.000Z",
+  "end_date": "2047-12-31T23:00:00.000Z",
+  "coordinating_institution": {
+    "institution": {
+      "cristin_institution_id": "20754"
+    },
+    "unit": {
+      "cristin_unit_id": "20754.0.0.0"
+    }
+  },
+  "languages": [
+    {
+      "code": "nb"
+    }
+  ]
+}

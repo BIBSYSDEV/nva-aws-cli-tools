@@ -1,0 +1,51 @@
+[
+  {
+    "rolename": "Editor",
+    "accessRights": ["MANAGE_RESOURCES_ALL", "MANAGE_OWN_AFFILIATION"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Support-Curator",
+    "accessRights": ["MANAGE_RESOURCES_STANDARD", "SUPPORT"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Nvi-Curator",
+    "accessRights": ["MANAGE_RESOURCES_STANDARD", "MANAGE_NVI_CANDIDATES"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Creator",
+    "accessRights": ["MANAGE_OWN_RESOURCES"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Institution-admin",
+    "accessRights": ["MANAGE_OWN_AFFILIATION"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Curator-thesis-embargo",
+    "accessRights": ["MANAGE_DEGREE_EMBARGO", "MANAGE_RESOURCES_STANDARD"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Publishing-Curator",
+    "accessRights": [
+      "MANAGE_PUBLISHING_REQUESTS",
+      "MANAGE_RESOURCES_STANDARD",
+      "MANAGE_RESOURCE_FILES"
+    ],
+    "type": "Role"
+  },
+  {
+    "rolename": "Doi-Curator",
+    "accessRights": ["MANAGE_DOI", "MANAGE_RESOURCES_STANDARD"],
+    "type": "Role"
+  },
+  {
+    "rolename": "Curator-thesis",
+    "accessRights": ["MANAGE_DEGREE", "MANAGE_RESOURCES_STANDARD"],
+    "type": "Role"
+  }
+]

@@ -159,6 +159,7 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
 
     def execute_batch():
         if update_statements:
+            print(f"⬆️ Executing batch of {len(update_statements)} updates.")
             service.execute_batch_updates(update_statements)
             update_statements.clear()
 
@@ -194,24 +195,26 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                     resource.setdefault("additionalIdentifiers", []).append(
                         new_id_object
                     )
-                else:
-                    print("Identifier already exists.")
-                resource["cristinIdentifier"] = new_id_object
+                    resource["cristinIdentifier"] = new_id_object
 
-                update_statement = service.prepare_update_resource(
-                    pk0,
-                    sk0,
-                    data=service.deflate_resource(resource),
-                    PK4=f"CristinIdentifier:{new_cristin_id}",
-                )
-                update_statements.append(update_statement)
+                    update_statement = service.prepare_update_resource(
+                        pk0,
+                        sk0,
+                        data=service.deflate_resource(resource),
+                        PK4=f"CristinIdentifier:{new_cristin_id}",
+                    )
+                    update_statements.append(update_statement)
+
+                    click.echo(
+                        f"🟢 prepared update for publication: {publication_identifier} with Cristin ID: {new_cristin_id}"
+                    )
+                else:
+                    print(
+                        f"🔵 Identifier already exists: {publication_identifier} with Cristin ID: {new_cristin_id}"
+                    )
 
                 if len(update_statements) >= batch_size:
                     execute_batch()
-
-                click.echo(
-                    f"Successfully prepared update for publication: {publication_identifier} with Cristin ID: {new_cristin_id}"
-                )
 
             except KeyError as e:
                 click.echo(f"Missing expected column in CSV: {e}", err=True)
