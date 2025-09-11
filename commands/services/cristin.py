@@ -17,7 +17,12 @@ class CristinService:
         self.ssm = session.client("ssm")
         self.secretsmanager = session.client("secretsmanager")
 
-        self.cristin_api = f"https://{self._get_system_parameter('cristinRestApi')}"
+        # Set API URL based on profile
+        if self.profile and "prod" in self.profile.lower():
+            self.cristin_api = "https://api.cristin.no/v2"
+        else:
+            self.cristin_api = "https://api.cristin-test.uio.no/v2"
+            
         self.bypass_header = self._get_system_parameter(
             "CristinBotFilterBypassHeaderName"
         )
@@ -45,7 +50,7 @@ class CristinService:
         )
         if not response.ok:
             print(response.text)
-            return response.text
+            return None
 
         return response.json()
 
@@ -84,6 +89,12 @@ class CristinService:
         if not response.ok:
             print(response.text)
             return response.text
+        
+        if len(response.json()) == 0:
+            return None
+
+        if len(response.json()) > 1:
+            sys.exit(f"Multiple persons found with national ID '{norwegian_national_id}': {response.text}")
 
         return response.json()[0]
 
@@ -181,6 +192,7 @@ class CristinService:
 
         person.pop("cristin_person_id", None)
         person.pop("norwegian_national_id", None)
+        person.pop("reserved", None)
 
         # Perform the PATCH request
         response = http_client.patch(
