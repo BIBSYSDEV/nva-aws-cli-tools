@@ -2,6 +2,7 @@ import click
 import sys
 import json
 import os
+import csv
 
 from commands.services.cristin import CristinService
 from commands.services.users_api import UsersAndRolesService
@@ -67,6 +68,18 @@ def get_person(profile: str, user_id) -> None:
     result = CristinService(profile).get_person(user_id)
     click.echo(prettify(result))
 
+
+@cristin.command(help="Get person from Cristin by Norwegian National ID.")
+@click.argument("norwegian_national_id", required=True)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+def get_person_by_nin(profile: str, norwegian_national_id: str) -> None:
+    result = CristinService(profile).get_person_by_nin(norwegian_national_id)
+    click.echo(prettify(result))
 
 @cristin.command(
     help="Add cristin persons from all JSON files in a folder and pre-approve their terms."
@@ -284,3 +297,53 @@ def put_person_image(profile: str, user_id: str, image_file) -> None:
     image_data = image_file.read()
     CristinService(profile).put_person_image(user_id, image_data)
     click.echo("OK")
+
+@cristin.command(help="Accept csv for a list of users with cristin ids, nins, and full names and sets name is exsist in \"N/A\".")
+@click.argument("input_file", type=click.File("r"))
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+def update_names_job(profile: str, input_file) -> None:
+    cristin = CristinService(profile)
+    # PERSONLOPENR;FORNAVN;ETTERNAVN;FODSELSDATO;PERSONNR;DATO_OPPRETTET;;NIN;NAME
+    reader = csv.DictReader(input_file, delimiter=";")
+
+    for row in reader:
+        try:
+            #click.echo(f"Processing row: {row}")
+            cristin_id = row["PERSONLOPENR"]
+            nin = row["NIN"]
+            full_name = row["NAME"]
+            # pick last word as surname, rest as first name
+            name_parts = full_name.split()
+            if len(name_parts) > 1:
+                first_name = " ".join(name_parts[:-1])
+                surname = name_parts[-1]
+                cristin_person = cristin.get_person(cristin_id)
+                if cristin_person:
+                    if cristin_person.get("first_name") == "N/A" or cristin_person.get("surname") == "N/A":
+                        update_data = {
+                            "first_name": first_name,
+                            "first_name_preferred": first_name,
+                            "surname": surname,
+                            "surname_preferred": surname
+                        }
+                        cristin.update_person(cristin_id, update_data)
+                        click.echo(f"✅ Updated cristin id {cristin_id} with name {first_name} {surname}")
+                    else:
+                        click.echo(f"🟡 Skipping cristin id {cristin_id}, name already set to {cristin_person.get('first_name')} {cristin_person.get('surname')}")
+                else:
+                    click.echo(f"🛑 Cristin person not found for ID {cristin_id}", err=True)
+            else:
+                error_msg = f"Unexpected name format for NIN {nin}: '{full_name}'"
+                click.echo(error_msg, err=True)
+                quit(1)
+            
+        except KeyError as e:
+            click.echo(f"🛑 Missing expected column in CSV: {e}", err=True)
+        except Exception as e:
+            click.echo(f"🛑 Failed to process publication {row}: {e}", err=True)
+    click.echo("🎉 All done.")
