@@ -77,7 +77,7 @@ class CristinService:
         http_client = requests.Session()
 
         response = http_client.get(
-            f"{self.cristin_api}/persons?national_id={norwegian_national_id}",
+            f"{self.cristin_api}/persons/resolve?national_id={norwegian_national_id}",
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
@@ -87,16 +87,12 @@ class CristinService:
             },
         )
         if not response.ok:
+            if response.status_code == 404:
+                return None
             print(response.text)
-            return response.text
-        
-        if len(response.json()) == 0:
             return None
 
-        if len(response.json()) > 1:
-            sys.exit(f"Multiple persons found with national ID '{norwegian_national_id}': {response.text}")
-
-        return response.json()[0]
+        return response.json()
 
     def get_project(self, project_id):
         http_client = requests.Session()
