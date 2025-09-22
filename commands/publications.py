@@ -1,5 +1,8 @@
 import click
 import csv
+import json
+import time
+import boto3
 
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import (
@@ -223,3 +226,144 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
 
     # Execute any remaining updates in the batch
     execute_batch()
+
+
+@publications.command(
+    help="Reindex publications by sending their IDs to SQS queue in batches. Takes a text file with publication IDs."
+)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.option(
+    "--batch-size",
+    default=10,
+    help="Number of messages to send per batch (default: 10)",
+)
+@click.argument("input_file", type=click.Path(exists=True), required=True)
+def reindex(profile: str, batch_size: int, input_file: str) -> None:
+    """
+    Read publication IDs from a text file and send reindex messages to SQS queue.
+
+    The input file should contain one publication identifier per line, e.g.:
+    0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12
+    0198cc59dd10-5a7163aa-3dbd-4bcd-b8eb-1898559f5717
+    """
+    session = boto3.Session(profile_name=profile)
+    sqs = session.client("sqs")
+
+    # Find the DynamodbResourceBatchJobWorkQueue
+    click.echo("🔍 Looking for DynamodbResourceBatchJobWorkQueue...")
+
+    try:
+        response = sqs.list_queues()
+        all_queues = response.get("QueueUrls", [])
+
+        # Filter queues that match the pattern
+        matching_queues = [
+            q for q in all_queues if "DynamodbResourceBatchJobWorkQueue" in q
+        ]
+
+        if not matching_queues:
+            click.echo(
+                "❌ No queue found matching pattern *DynamodbResourceBatchJobWorkQueue*",
+                err=True,
+            )
+            return
+
+        if len(matching_queues) > 1:
+            click.echo(
+                f"⚠️  Found {len(matching_queues)} matching queues. Using the first one:",
+                err=True,
+            )
+            for q in matching_queues:
+                click.echo(f"  - {q}")
+
+        queue_url = matching_queues[0]
+        click.echo(f"✅ Found queue: {queue_url}")
+
+    except Exception as e:
+        click.echo(f"❌ Error finding queue: {str(e)}", err=True)
+        return
+
+    total_sent = 0
+    failed_count = 0
+    batch_messages = []
+
+    click.echo(f"📚 Reading publication IDs from {input_file}")
+    click.echo(f"📦 Batch size: {batch_size}")
+
+    with open(input_file, "r") as f:
+        lines = [line.strip() for line in f if line.strip()]
+
+    total_ids = len(lines)
+    click.echo(f"📊 Found {total_ids} publication IDs to process")
+
+    for i, publication_id in enumerate(lines, 1):
+        # Create the SQS message for reindexing
+        message_body = {
+            "dynamoDbKey": {
+                "partitionKey": f"Resource:{publication_id}",
+                "sortKey": f"Resource:{publication_id}",
+                "indexName": "ResourcesByIdentifier",
+            },
+            "jobType": "REINDEX_RECORD",
+            "parameters": {},
+        }
+
+        batch_messages.append(
+            {"Id": str(len(batch_messages)), "MessageBody": json.dumps(message_body)}
+        )
+
+        # Send batch when it reaches the specified size or at the end
+        if len(batch_messages) >= batch_size or i == total_ids:
+            try:
+                response = sqs.send_message_batch(
+                    QueueUrl=queue_url, Entries=batch_messages
+                )
+
+                # Check for successful sends
+                successful = len(response.get("Successful", []))
+                failed = response.get("Failed", [])
+
+                total_sent += successful
+                failed_count += len(failed)
+
+                if failed:
+                    for failure in failed:
+                        click.echo(
+                            f"❌ Failed to send message {failure['Id']}: {failure.get('Message', 'Unknown error')}",
+                            err=True,
+                        )
+
+                click.echo(
+                    f"✅ Sent batch: {successful}/{len(batch_messages)} messages "
+                    f"(Total progress: {total_sent}/{total_ids})"
+                )
+
+                # Clear the batch for next iteration
+                batch_messages = []
+
+                # Small delay to avoid throttling
+                if i < total_ids:
+                    time.sleep(0.1)
+
+            except Exception as e:
+                click.echo(f"❌ Error sending batch: {str(e)}", err=True)
+                failed_count += len(batch_messages)
+                batch_messages = []
+
+    # Final summary
+    click.echo("\n📈 Reindexing Summary:")
+    click.echo(f"   Total IDs processed: {total_ids}")
+    click.echo(f"   Successfully queued: {total_sent}")
+    click.echo(f"   Failed: {failed_count}")
+
+    if total_sent == total_ids:
+        click.echo("✨ All publications successfully queued for reindexing!")
+    elif failed_count > 0:
+        click.echo(
+            f"⚠️  {failed_count} messages failed to send. Check the errors above."
+        )
