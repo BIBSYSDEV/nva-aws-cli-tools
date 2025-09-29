@@ -245,27 +245,39 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
     default=3,
     help="Number of concurrent batch senders (default: 3)",
 )
-@click.argument("input_file", type=click.Path(exists=True), required=True)
-def reindex(profile: str, batch_size: int, concurrency: int, input_file: str) -> None:
+@click.argument("input_source", required=True)
+def reindex(profile: str, batch_size: int, concurrency: int, input_source: str) -> None:
     """
-    Read publication IDs from a text file and send reindex messages to SQS queue.
+    Send reindex messages to SQS queue for publication IDs.
 
-    The input file should contain one publication identifier per line, e.g.:
-    0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12
-    0198cc59dd10-5a7163aa-3dbd-4bcd-b8eb-1898559f5717
+    INPUT_SOURCE can be either:
+    - A file path containing one publication ID per line
+    - A single publication ID (e.g., 0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12)
+
+    Examples:
+        # Reindex from file
+        cli.py publications reindex publication_ids.txt
+
+        # Reindex single publication
+        cli.py publications reindex 0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12
     """
+    import os
+
     # Initialize the batch job service
     service = ResourceBatchJobService(profile)
 
-    click.echo(f"📚 Reading publication IDs from {input_file}")
+    # Display input information based on type
+    if os.path.isfile(input_source):
+        click.echo(f"📚 Processing publication IDs from file: {input_source}")
+        # Count IDs for display
+        with open(input_source, "r") as f:
+            total_ids = sum(1 for line in f if line.strip())
+        click.echo(f"📊 Found {total_ids} publication IDs to process")
+    else:
+        click.echo(f"📄 Processing single publication ID: {input_source}")
+
     click.echo(f"📦 Batch size: {batch_size}")
     click.echo(f"⚡ Concurrency: {concurrency} concurrent senders")
-
-    # Count the IDs for progress display
-    with open(input_file, "r") as f:
-        total_ids = sum(1 for line in f if line.strip())
-
-    click.echo(f"📊 Found {total_ids} publication IDs to process")
     click.echo("🚀 Processing batch job...")
 
     # Define progress callback for batch feedback
@@ -275,12 +287,12 @@ def reindex(profile: str, batch_size: int, concurrency: int, input_file: str) ->
             f"(Total progress: {total_sent}/{total_ids})"
         )
 
-    # Process the batch job with progress feedback and concurrency
+    # Process the reindex job (service handles both file and single ID)
     result = service.process_reindex_job(
-        input_file, batch_size, report_batch_progress, concurrency
+        input_source, batch_size, report_batch_progress, concurrency
     )
 
-    # Check if there was an error finding the queue
+    # Check if there was an error
     if not result["success"] and result.get("error"):
         click.echo(f"❌ {result['error']}", err=True)
         return

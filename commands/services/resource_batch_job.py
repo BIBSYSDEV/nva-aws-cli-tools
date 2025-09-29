@@ -1,4 +1,7 @@
 import json
+import os
+import re
+import tempfile
 from typing import Dict, List, Tuple, Optional, Callable
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -184,17 +187,95 @@ class ResourceBatchJobService:
             "failures": all_failures,
         }
 
+    def _validate_publication_id(self, publication_id: str) -> bool:
+        # Check length (36 for UUID or 49 for extended format)
+        if len(publication_id) not in [36, 49]:
+            return False
+
+        # Check format (only lowercase letters, numbers, and hyphens)
+        if not re.match(r"^[a-z0-9-]+$", publication_id):
+            return False
+
+        return True
+
+    def _resolve_input_source(self, input_source: str) -> Tuple[str, int, bool]:
+        # Check if input_source is a file
+        if os.path.isfile(input_source):
+            # Count the IDs in the file
+            with open(input_source, "r") as f:
+                total_ids = sum(1 for line in f if line.strip())
+            return input_source, total_ids, False
+
+        # Treat as a single publication ID
+        id_to_process = input_source.strip()
+
+        # Validate the ID
+        if not self._validate_publication_id(id_to_process):
+            raise ValueError(
+                f"Invalid publication ID: {id_to_process}. "
+                f"Must be 36 or 49 characters, containing only lowercase letters (a-z), "
+                f"numbers (0-9), and hyphens (-)."
+            )
+
+        # Create a temporary file with the single ID
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp:
+            tmp.write(id_to_process + "\n")
+            temp_file = tmp.name
+
+        return temp_file, 1, True
+
     def process_reindex_job(
         self,
-        input_file: str,
+        input_source: str,
         batch_size: int = 10,
         progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
         concurrency: int = 3,
     ) -> Dict:
-        return self.process_batch_job(
-            input_file=input_file,
-            job_type=BatchJobType.REINDEX_RECORD,
-            batch_size=batch_size,
-            progress_callback=progress_callback,
-            concurrency=concurrency,
-        )
+        """
+        Process a reindex job from a file or single ID.
+
+        Args:
+            input_source: Either a file path containing IDs or a single publication ID
+            batch_size: Number of messages to send per batch
+            progress_callback: Optional callback for progress updates
+            concurrency: Number of concurrent batch senders
+
+        Returns:
+            Dictionary with job results including 'input_type' field
+        """
+        # Resolve input source to file
+        try:
+            input_file, total_ids, is_temp = self._resolve_input_source(input_source)
+            input_type = "single_id" if is_temp else "file"
+        except ValueError as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "total_processed": 0,
+                "successful": 0,
+                "failed": 0,
+            }
+
+        try:
+            # Process the batch job
+            result = self.process_batch_job(
+                input_file=input_file,
+                job_type=BatchJobType.REINDEX_RECORD,
+                batch_size=batch_size,
+                progress_callback=progress_callback,
+                concurrency=concurrency,
+            )
+
+            # Add input metadata to result
+            result["input_type"] = input_type
+            result["total_ids"] = total_ids
+
+            return result
+
+        finally:
+            # Clean up temp file if we created one
+            if is_temp:
+                try:
+                    os.unlink(input_file)
+                except OSError:
+                    pass
