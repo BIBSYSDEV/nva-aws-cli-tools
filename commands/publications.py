@@ -240,8 +240,13 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
     default=10,
     help="Number of messages to send per batch (default: 10)",
 )
+@click.option(
+    "--concurrency",
+    default=3,
+    help="Number of concurrent batch senders (default: 3)",
+)
 @click.argument("input_file", type=click.Path(exists=True), required=True)
-def reindex(profile: str, batch_size: int, input_file: str) -> None:
+def reindex(profile: str, batch_size: int, concurrency: int, input_file: str) -> None:
     """
     Read publication IDs from a text file and send reindex messages to SQS queue.
 
@@ -251,9 +256,10 @@ def reindex(profile: str, batch_size: int, input_file: str) -> None:
     """
     # Initialize the batch job service
     service = ResourceBatchJobService(profile)
-    
+
     click.echo(f"📚 Reading publication IDs from {input_file}")
     click.echo(f"📦 Batch size: {batch_size}")
+    click.echo(f"⚡ Concurrency: {concurrency} concurrent senders")
 
     # Count the IDs for progress display
     with open(input_file, "r") as f:
@@ -261,7 +267,7 @@ def reindex(profile: str, batch_size: int, input_file: str) -> None:
 
     click.echo(f"📊 Found {total_ids} publication IDs to process")
     click.echo("🚀 Processing batch job...")
-    
+
     # Define progress callback for batch feedback
     def report_batch_progress(batch_successful, batch_size, total_sent, total_ids):
         click.echo(
@@ -269,9 +275,11 @@ def reindex(profile: str, batch_size: int, input_file: str) -> None:
             f"(Total progress: {total_sent}/{total_ids})"
         )
 
-    # Process the batch job with progress feedback
-    result = service.process_reindex_job(input_file, batch_size, report_batch_progress)
-    
+    # Process the batch job with progress feedback and concurrency
+    result = service.process_reindex_job(
+        input_file, batch_size, report_batch_progress, concurrency
+    )
+
     # Check if there was an error finding the queue
     if not result["success"] and result.get("error"):
         click.echo(f"❌ {result['error']}", err=True)

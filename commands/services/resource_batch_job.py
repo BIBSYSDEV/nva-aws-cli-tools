@@ -1,13 +1,15 @@
 import json
-import time
 from typing import Dict, List, Tuple, Optional, Callable
 from enum import Enum
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 import boto3
 
 
 class BatchJobType(Enum):
     """Supported batch job types for resource operations."""
+
     REINDEX_RECORD = "REINDEX_RECORD"
 
 
@@ -92,6 +94,7 @@ class ResourceBatchJobService:
         batch_size: int = 10,
         parameters: Optional[Dict] = None,
         progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
+        concurrency: int = 3,
     ) -> Dict:
         # Check if queue was found during initialization
         if not self._queue_url:
@@ -108,43 +111,69 @@ class ResourceBatchJobService:
             resource_ids = [line.strip() for line in f if line.strip()]
 
         total_ids = len(resource_ids)
-        total_sent = 0
-        failed_count = 0
-        all_failures = []
+
+        # Create batches
+        batches = []
         batch_messages = []
 
-        for i, resource_id in enumerate(resource_ids, 1):
-            # Create message for this resource
+        for resource_id in resource_ids:
             message = self._create_batch_job_message(
                 resource_id=resource_id, job_type=job_type, parameters=parameters
             )
             batch_messages.append(message)
 
-            # Send batch when it reaches the specified size or at the end
-            if len(batch_messages) >= batch_size or i == total_ids:
-                successful, failed, failures = self._send_batch(
-                    batch_messages, self._queue_url
-                )
+            if len(batch_messages) >= batch_size:
+                batches.append(batch_messages)
+                batch_messages = []
 
+        # Add remaining messages as final batch
+        if batch_messages:
+            batches.append(batch_messages)
+
+        # Thread-safe counters
+        total_sent = 0
+        failed_count = 0
+        all_failures = []
+        lock = Lock()
+
+        def send_batch_wrapper(batch_data):
+            """Wrapper to send a batch and handle results."""
+            _, messages = batch_data  # batch_num not needed currently
+            successful, failed, failures = self._send_batch(messages, self._queue_url)
+
+            with lock:
+                nonlocal total_sent, failed_count
                 total_sent += successful
                 failed_count += failed
                 all_failures.extend(failures)
-                
+
                 # Report progress if callback provided
                 if progress_callback:
-                    progress_callback(successful, len(batch_messages), total_sent, total_ids)
-                
+                    progress_callback(successful, len(messages), total_sent, total_ids)
+
                 # Report any failures for this batch
                 if failures:
                     for failure in failures:
-                        print(f"Failed to send message {failure.get('Id', 'unknown')}: {failure.get('Message', 'Unknown error')}")
+                        print(
+                            f"Failed to send message {failure.get('Id', 'unknown')}: {failure.get('Message', 'Unknown error')}"
+                        )
 
-                # Clear the batch for next iteration
-                batch_messages = []
+            return successful, failed
 
-                # Small delay to avoid throttling
-                if i < total_ids:
-                    time.sleep(0.1)
+        # Process batches concurrently
+        with ThreadPoolExecutor(max_workers=concurrency) as executor:
+            # Submit all batches with their index
+            futures = [
+                executor.submit(send_batch_wrapper, (i, batch))
+                for i, batch in enumerate(batches)
+            ]
+
+            # Wait for all batches to complete
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error processing batch: {str(e)}")
 
         return {
             "success": total_sent == total_ids,
@@ -160,10 +189,12 @@ class ResourceBatchJobService:
         input_file: str,
         batch_size: int = 10,
         progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
+        concurrency: int = 3,
     ) -> Dict:
         return self.process_batch_job(
             input_file=input_file,
             job_type=BatchJobType.REINDEX_RECORD,
             batch_size=batch_size,
             progress_callback=progress_callback,
+            concurrency=concurrency,
         )
