@@ -1,8 +1,5 @@
 import click
 import csv
-import json
-import time
-import boto3
 
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import (
@@ -11,6 +8,7 @@ from commands.services.aws_utils import (
     edit_and_diff,
 )
 from commands.services.dynamodb_publications import DynamodbPublications
+from commands.services.resource_batch_job import ResourceBatchJobService
 from boto3.dynamodb.conditions import Attr
 
 table_pattern = (
@@ -251,119 +249,56 @@ def reindex(profile: str, batch_size: int, input_file: str) -> None:
     0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12
     0198cc59dd10-5a7163aa-3dbd-4bcd-b8eb-1898559f5717
     """
-    session = boto3.Session(profile_name=profile)
-    sqs = session.client("sqs")
-
-    # Find the DynamodbResourceBatchJobWorkQueue
     click.echo("🔍 Looking for DynamodbResourceBatchJobWorkQueue...")
-
-    try:
-        response = sqs.list_queues()
-        all_queues = response.get("QueueUrls", [])
-
-        # Filter queues that match the pattern
-        matching_queues = [
-            q for q in all_queues if "DynamodbResourceBatchJobWorkQueue" in q
-        ]
-
-        if not matching_queues:
-            click.echo(
-                "❌ No queue found matching pattern *DynamodbResourceBatchJobWorkQueue*",
-                err=True,
-            )
-            return
-
-        if len(matching_queues) > 1:
-            click.echo(
-                f"⚠️  Found {len(matching_queues)} matching queues. Using the first one:",
-                err=True,
-            )
-            for q in matching_queues:
-                click.echo(f"  - {q}")
-
-        queue_url = matching_queues[0]
-        click.echo(f"✅ Found queue: {queue_url}")
-
-    except Exception as e:
-        click.echo(f"❌ Error finding queue: {str(e)}", err=True)
+    
+    # Initialize the batch job service
+    service = ResourceBatchJobService(profile)
+    
+    # Find the queue
+    queue_url = service.find_batch_job_queue()
+    if not queue_url:
+        click.echo(
+            "❌ No queue found matching pattern *DynamodbResourceBatchJobWorkQueue*",
+            err=True,
+        )
         return
-
-    total_sent = 0
-    failed_count = 0
-    batch_messages = []
-
+    
+    click.echo(f"✅ Found queue: {queue_url}")
     click.echo(f"📚 Reading publication IDs from {input_file}")
     click.echo(f"📦 Batch size: {batch_size}")
-
+    
+    # Count the IDs for progress display
     with open(input_file, "r") as f:
-        lines = [line.strip() for line in f if line.strip()]
-
-    total_ids = len(lines)
+        total_ids = sum(1 for line in f if line.strip())
+    
     click.echo(f"📊 Found {total_ids} publication IDs to process")
-
-    for i, publication_id in enumerate(lines, 1):
-        # Create the SQS message for reindexing
-        message_body = {
-            "dynamoDbKey": {
-                "partitionKey": f"Resource:{publication_id}",
-                "sortKey": f"Resource:{publication_id}",
-                "indexName": "ResourcesByIdentifier",
-            },
-            "jobType": "REINDEX_RECORD",
-            "parameters": {},
-        }
-
-        batch_messages.append(
-            {"Id": str(len(batch_messages)), "MessageBody": json.dumps(message_body)}
+    
+    # Process the batch job
+    result = service.process_reindex_job(input_file, batch_size)
+    
+    # Display progress during processing
+    if result["successful"] > 0 or result["failed"] > 0:
+        click.echo(
+            f"\n✅ Processed: {result['successful']}/{result['total_processed']} messages sent successfully"
         )
-
-        # Send batch when it reaches the specified size or at the end
-        if len(batch_messages) >= batch_size or i == total_ids:
-            try:
-                response = sqs.send_message_batch(
-                    QueueUrl=queue_url, Entries=batch_messages
-                )
-
-                # Check for successful sends
-                successful = len(response.get("Successful", []))
-                failed = response.get("Failed", [])
-
-                total_sent += successful
-                failed_count += len(failed)
-
-                if failed:
-                    for failure in failed:
-                        click.echo(
-                            f"❌ Failed to send message {failure['Id']}: {failure.get('Message', 'Unknown error')}",
-                            err=True,
-                        )
-
-                click.echo(
-                    f"✅ Sent batch: {successful}/{len(batch_messages)} messages "
-                    f"(Total progress: {total_sent}/{total_ids})"
-                )
-
-                # Clear the batch for next iteration
-                batch_messages = []
-
-                # Small delay to avoid throttling
-                if i < total_ids:
-                    time.sleep(0.1)
-
-            except Exception as e:
-                click.echo(f"❌ Error sending batch: {str(e)}", err=True)
-                failed_count += len(batch_messages)
-                batch_messages = []
-
+    
+    # Display any failures
+    if result.get("failures"):
+        for failure in result["failures"]:
+            click.echo(
+                f"❌ Failed to send message: {failure.get('Message', 'Unknown error')}",
+                err=True,
+            )
+    
     # Final summary
     click.echo("\n📈 Reindexing Summary:")
-    click.echo(f"   Total IDs processed: {total_ids}")
-    click.echo(f"   Successfully queued: {total_sent}")
-    click.echo(f"   Failed: {failed_count}")
-
-    if total_sent == total_ids:
+    click.echo(f"   Total IDs processed: {result['total_processed']}")
+    click.echo(f"   Successfully queued: {result['successful']}")
+    click.echo(f"   Failed: {result['failed']}")
+    
+    if result["success"]:
         click.echo("✨ All publications successfully queued for reindexing!")
-    elif failed_count > 0:
+    elif result["failed"] > 0:
         click.echo(
-            f"⚠️  {failed_count} messages failed to send. Check the errors above."
+            f"⚠️  {result['failed']} messages failed to send. Check the errors above."
         )
