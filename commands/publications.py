@@ -249,39 +249,34 @@ def reindex(profile: str, batch_size: int, input_file: str) -> None:
     0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12
     0198cc59dd10-5a7163aa-3dbd-4bcd-b8eb-1898559f5717
     """
-    click.echo("🔍 Looking for DynamodbResourceBatchJobWorkQueue...")
-    
     # Initialize the batch job service
     service = ResourceBatchJobService(profile)
     
-    # Find the queue
-    queue_url = service.find_batch_job_queue()
-    if not queue_url:
-        click.echo(
-            "❌ No queue found matching pattern *DynamodbResourceBatchJobWorkQueue*",
-            err=True,
-        )
-        return
-    
-    click.echo(f"✅ Found queue: {queue_url}")
     click.echo(f"📚 Reading publication IDs from {input_file}")
     click.echo(f"📦 Batch size: {batch_size}")
-    
+
     # Count the IDs for progress display
     with open(input_file, "r") as f:
         total_ids = sum(1 for line in f if line.strip())
-    
+
     click.echo(f"📊 Found {total_ids} publication IDs to process")
+    click.echo("🚀 Processing batch job...")
     
-    # Process the batch job
-    result = service.process_reindex_job(input_file, batch_size)
-    
-    # Display progress during processing
-    if result["successful"] > 0 or result["failed"] > 0:
+    # Define progress callback for batch feedback
+    def report_batch_progress(batch_successful, batch_size, total_sent, total_ids):
         click.echo(
-            f"\n✅ Processed: {result['successful']}/{result['total_processed']} messages sent successfully"
+            f"✅ Sent batch: {batch_successful}/{batch_size} messages "
+            f"(Total progress: {total_sent}/{total_ids})"
         )
+
+    # Process the batch job with progress feedback
+    result = service.process_reindex_job(input_file, batch_size, report_batch_progress)
     
+    # Check if there was an error finding the queue
+    if not result["success"] and result.get("error"):
+        click.echo(f"❌ {result['error']}", err=True)
+        return
+
     # Display any failures
     if result.get("failures"):
         for failure in result["failures"]:
@@ -289,13 +284,13 @@ def reindex(profile: str, batch_size: int, input_file: str) -> None:
                 f"❌ Failed to send message: {failure.get('Message', 'Unknown error')}",
                 err=True,
             )
-    
+
     # Final summary
     click.echo("\n📈 Reindexing Summary:")
     click.echo(f"   Total IDs processed: {result['total_processed']}")
     click.echo(f"   Successfully queued: {result['successful']}")
     click.echo(f"   Failed: {result['failed']}")
-    
+
     if result["success"]:
         click.echo("✨ All publications successfully queued for reindexing!")
     elif result["failed"] > 0:
