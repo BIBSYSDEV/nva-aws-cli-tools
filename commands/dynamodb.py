@@ -82,7 +82,9 @@ def purge(table: str, profile: str) -> None:
 
     try:
         total_deleted = service.purge_table(table_name)
-        click.echo(f"\n✓ Successfully deleted {total_deleted} items from '{table_name}'")
+        click.echo(
+            f"\n✓ Successfully deleted {total_deleted} items from '{table_name}'"
+        )
     except Exception as e:
         click.echo(f"\n✗ Error during deletion: {str(e)}")
         raise

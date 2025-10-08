@@ -1,5 +1,4 @@
 import boto3
-import re
 import click
 
 
@@ -28,7 +27,9 @@ class DynamoDBService:
             return table_pattern, self.dynamodb_resource.Table(table_pattern)
 
         # Try partial match
-        matching_tables = [name for name in table_names if table_pattern.lower() in name.lower()]
+        matching_tables = [
+            name for name in table_names if table_pattern.lower() in name.lower()
+        ]
 
         if not matching_tables:
             return None, None
@@ -72,8 +73,12 @@ class DynamoDBService:
         table = self.dynamodb_resource.Table(table_name)
         key_schema = table.key_schema
 
-        partition_key = next((k["AttributeName"] for k in key_schema if k["KeyType"] == "HASH"), None)
-        sort_key = next((k["AttributeName"] for k in key_schema if k["KeyType"] == "RANGE"), None)
+        partition_key = next(
+            (k["AttributeName"] for k in key_schema if k["KeyType"] == "HASH"), None
+        )
+        sort_key = next(
+            (k["AttributeName"] for k in key_schema if k["KeyType"] == "RANGE"), None
+        )
 
         return partition_key, sort_key
 
@@ -94,12 +99,16 @@ class DynamoDBService:
 
         # Initial scan
         response = table.scan()
-        total_deleted += self._delete_items(table, response["Items"], partition_key, sort_key)
+        total_deleted += self._delete_items(
+            table, response["Items"], partition_key, sort_key
+        )
 
         # Continue scanning if there are more items
         while "LastEvaluatedKey" in response:
             response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
-            total_deleted += self._delete_items(table, response["Items"], partition_key, sort_key)
+            total_deleted += self._delete_items(
+                table, response["Items"], partition_key, sort_key
+            )
             click.echo(f"Deletion in progress... {total_deleted} items deleted")
 
         return total_deleted
