@@ -3,6 +3,7 @@
 import click
 from commands.cognito import cognito
 from commands.dlq import dlq
+from commands.dynamodb import dynamodb
 from commands.handle import handle
 from commands.users import users
 from commands.customers import customers
@@ -20,6 +21,7 @@ def cli():
 
 cli.add_command(cognito)
 cli.add_command(dlq)
+cli.add_command(dynamodb)
 cli.add_command(handle)
 cli.add_command(users)
 cli.add_command(customers)
