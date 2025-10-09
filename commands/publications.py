@@ -8,6 +8,7 @@ from commands.services.aws_utils import (
     edit_and_diff,
 )
 from commands.services.dynamodb_publications import DynamodbPublications
+from commands.services.resource_batch_job import ResourceBatchJobService
 from boto3.dynamodb.conditions import Attr
 
 table_pattern = (
@@ -223,3 +224,96 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
 
     # Execute any remaining updates in the batch
     execute_batch()
+
+
+@publications.command(
+    help="Reindex publications by sending their IDs to SQS queue in batches. Takes a text file with publication IDs."
+)
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.option(
+    "--batch-size",
+    default=10,
+    help="Number of messages to send per batch (default: 10)",
+)
+@click.option(
+    "--concurrency",
+    default=3,
+    help="Number of concurrent batch senders (default: 3)",
+)
+@click.argument("input_source", required=True)
+def reindex(profile: str, batch_size: int, concurrency: int, input_source: str) -> None:
+    """
+    Send reindex messages to SQS queue for publication IDs.
+
+    INPUT_SOURCE can be either:
+    - A file path containing one publication ID per line
+    - A single publication ID (e.g., 0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12)
+
+    Examples:
+        # Reindex from file
+        cli.py publications reindex publication_ids.txt
+
+        # Reindex single publication
+        cli.py publications reindex 0198cc59d6e8-ca6c9264-31f3-4ab6-b5a5-6494e1ae0b12
+    """
+    import os
+
+    # Initialize the batch job service
+    service = ResourceBatchJobService(profile)
+
+    # Display input information based on type
+    if os.path.isfile(input_source):
+        click.echo(f"📚 Processing publication IDs from file: {input_source}")
+        # Count IDs for display
+        with open(input_source, "r") as f:
+            total_ids = sum(1 for line in f if line.strip())
+        click.echo(f"📊 Found {total_ids} publication IDs to process")
+    else:
+        click.echo(f"📄 Processing single publication ID: {input_source}")
+
+    click.echo(f"📦 Batch size: {batch_size}")
+    click.echo(f"⚡ Concurrency: {concurrency} concurrent senders")
+    click.echo("🚀 Processing batch job...")
+
+    # Define progress callback for batch feedback
+    def report_batch_progress(batch_successful, batch_size, total_sent, total_ids):
+        click.echo(
+            f"✅ Sent batch: {batch_successful}/{batch_size} messages "
+            f"(Total progress: {total_sent}/{total_ids})"
+        )
+
+    # Process the reindex job (service handles both file and single ID)
+    result = service.process_reindex_job(
+        input_source, batch_size, report_batch_progress, concurrency
+    )
+
+    # Check if there was an error
+    if not result["success"] and result.get("error"):
+        click.echo(f"❌ {result['error']}", err=True)
+        return
+
+    # Display any failures
+    if result.get("failures"):
+        for failure in result["failures"]:
+            click.echo(
+                f"❌ Failed to send message: {failure.get('Message', 'Unknown error')}",
+                err=True,
+            )
+
+    # Final summary
+    click.echo("\n📈 Reindexing Summary:")
+    click.echo(f"   Total IDs processed: {result['total_processed']}")
+    click.echo(f"   Successfully queued: {result['successful']}")
+    click.echo(f"   Failed: {result['failed']}")
+
+    if result["success"]:
+        click.echo("✨ All publications successfully queued for reindexing!")
+    elif result["failed"] > 0:
+        click.echo(
+            f"⚠️  {result['failed']} messages failed to send. Check the errors above."
+        )
