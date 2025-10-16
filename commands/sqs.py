@@ -102,6 +102,27 @@ def info(queue_name, profile):
 
 
 @sqs.command()
+@click.argument('folder_path', type=str)
+@click.option('--profile', type=str, help='AWS profile to use')
+def analyze(folder_path, profile):
+    """Analyze messages from drained SQS queue JSONL files.
+
+    This command analyzes the JSONL files created by the drain command to find:
+    - Exception types and error patterns
+    - Common message types
+    - Longest matching strings in errors
+    - Stack trace locations
+    - Message and attribute statistics
+    """
+    sqs_service = SqsService(profile=profile)
+    results = sqs_service.analyze_drained_messages(folder_path)
+
+    if not results:
+        console.print("[red]No analysis results[/red]")
+        raise click.Abort()
+
+
+@sqs.command()
 @click.option('--profile', type=str, help='AWS profile to use')
 @click.option('--filter', type=str, help='Filter queues by name pattern')
 def list(profile, filter):

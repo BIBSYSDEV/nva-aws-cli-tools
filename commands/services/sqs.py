@@ -1,8 +1,8 @@
 import json
-import random
+import re
 import signal
 import threading
-import time
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -162,7 +162,6 @@ class SqsService:
     def _drain_worker_thread(self, queue_url: str, base_dir: Path,
                             max_messages_per_file: int, delete_after_write: bool,
                             stop_event: threading.Event, stats: Dict[str, Any]) -> None:
-        """Worker thread that receives, writes, and deletes messages."""
         sqs_client = self.session.client('sqs')
 
         messages_buffer = []
@@ -261,7 +260,6 @@ class SqsService:
     def drain_queue(self, queue_name_partial: str, output_dir: Optional[str] = None,
                    max_messages_per_file: int = 1000, delete_after_write: bool = True,
                    num_threads: int = 5) -> bool:
-        """Drain all messages from a queue using multiple threads."""
         queue_url = self.find_queue_url(queue_name_partial)
         if not queue_url:
             return False
@@ -310,7 +308,7 @@ class SqsService:
 
         stop_event = threading.Event()
 
-        def signal_handler(*args):
+        def signal_handler(_signum, _frame):
             console.print("\n[yellow]Stopping... Please wait for threads to finish current batch[/yellow]")
             stop_event.set()
 
@@ -384,7 +382,6 @@ class SqsService:
     def _drain_single_thread(self, queue_url: str, queue_name: str,
                             output_dir: Optional[str], max_messages_per_file: int,
                             delete_after_write: bool) -> bool:
-        """Simple single-threaded drain implementation."""
         queue_attrs = self.get_queue_attributes(queue_url)
         if queue_attrs:
             approx_messages = int(queue_attrs.get('ApproximateNumberOfMessages', 0))
@@ -497,3 +494,351 @@ class SqsService:
         console.print(f"[cyan]Files created: {file_count}[/cyan]")
 
         return True
+
+    def analyze_drained_messages(self, folder_path: str) -> Dict[str, Any]:
+        folder = Path(folder_path)
+        if not folder.exists() or not folder.is_dir():
+            console.print(f"[red]Directory not found: {folder_path}[/red]")
+            return {}
+
+        console.print(f"[cyan]Analyzing messages in: {folder}[/cyan]\n")
+
+        total_messages = 0
+        exception_types = Counter()
+        message_types = Counter()
+        attribute_keys = Counter()
+        message_attribute_keys = Counter()
+        common_patterns = defaultdict(int)
+        stack_traces = []
+        exception_contexts = Counter()
+
+        exception_patterns = [
+            (r'([A-Z]\w*Exception)', 'exception_types'),
+            (r'([A-Z]\w*Error)', 'error_types'),
+            (r'(java\.\w+(?:\.\w+)*?[A-Z]\w*Exception)', 'java_exceptions'),
+            (r'(com\.\w+(?:\.\w+)*?[A-Z]\w*Exception)', 'custom_exceptions'),
+            (r'ERROR.*?:(.*?)(?:\n|$)', 'error_messages'),
+            (r'failed to ([\w\s]+)', 'failure_reasons'),
+            (r'Unable to ([\w\s]+)', 'unable_to'),
+            (r'Cannot ([\w\s]+)', 'cannot_do'),
+            (r'Missing ([\w\s]+)', 'missing_items'),
+            (r'Invalid ([\w\s]+)', 'invalid_items'),
+        ]
+
+        jsonl_files = list(folder.glob("messages_*.jsonl"))
+        if not jsonl_files:
+            console.print("[yellow]No message files found (looking for messages_*.jsonl)[/yellow]")
+            return {}
+
+        console.print(f"[green]Found {len(jsonl_files)} message files[/green]\n")
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]Analyzing messages...", total=len(jsonl_files))
+
+            for file_path in sorted(jsonl_files):
+                with open(file_path, 'r') as f:
+                    for line_num, line in enumerate(f, 1):
+                        try:
+                            msg = json.loads(line)
+                            total_messages += 1
+                            body = msg.get('Body', '')
+                            parsed_body = msg.get('ParsedBody')
+                            if parsed_body:
+                                body_text = json.dumps(parsed_body)
+                            else:
+                                body_text = str(body)
+
+                            seen_patterns_in_msg = set()
+                            for pattern, pattern_name in exception_patterns:
+                                matches = re.findall(pattern, body_text, re.IGNORECASE)
+                                for match in matches:
+                                    if isinstance(match, tuple):
+                                        match = match[0]
+
+                                    match = match.strip()[:100]
+                                    if match:
+
+                                        if pattern_name in ['exception_types', 'error_types', 'java_exceptions', 'custom_exceptions']:
+
+                                            base_match = match.split('.')[-1] if '.' in match else match
+                                            pattern_key = f"{pattern_name}:{base_match}"
+                                        else:
+                                            pattern_key = f"{pattern_name}:{match}"
+                                        if pattern_key not in seen_patterns_in_msg:
+                                            common_patterns[pattern_key] += 1
+                                            seen_patterns_in_msg.add(pattern_key)
+                            if 'exception' in body_text.lower() or 'error' in body_text.lower():
+
+                                exc_matches = re.findall(r'([A-Z][a-zA-Z]*(?:Exception|Error))', body_text)
+                                seen_in_message = set()
+                                for exc in exc_matches:
+
+                                    base_exc = exc.split('.')[-1] if '.' in exc else exc
+                                    if base_exc not in seen_in_message:
+                                        exception_types[base_exc] += 1
+                                        seen_in_message.add(base_exc)
+
+                                exception_context_patterns = [
+
+                                    r'([A-Z]\w*(?:Exception|Error))\[([^\]]{1,200})\](?:; nested: ([^;]{1,100}))?',
+
+                                    r'([A-Z]\w*(?:Exception|Error)):\s*([^\n]{1,200})',
+
+                                    r'Caused by:\s*([^:\n]+):\s*([^\n]{1,200})',
+                                ]
+
+                                for pattern in exception_context_patterns:
+                                    context_matches = re.findall(pattern, body_text)
+                                    for match in context_matches:
+                                        if isinstance(match, tuple) and len(match) >= 2:
+
+                                            if match[0] and match[1]:
+
+                                                context = f"{match[0]}: {match[1][:150].strip()}"
+                                                if len(match) > 2 and match[2]:
+                                                    context += f" [nested: {match[2][:50]}]"
+                                                exception_contexts[context] += 1
+                                if '\tat ' in body_text or 'Traceback' in body_text:
+                                    stack_traces.append({
+                                        'file': file_path.name,
+                                        'line': line_num,
+                                        'preview': body_text[:200]
+                                    })
+                            if 'Attributes' in msg:
+                                for key in msg['Attributes'].keys():
+                                    attribute_keys[key] += 1
+                            if 'MessageAttributes' in msg:
+                                for key in msg['MessageAttributes'].keys():
+                                    message_attribute_keys[key] += 1
+                            if parsed_body is not None:
+                                if isinstance(parsed_body, dict):
+
+                                    if 'eventType' in parsed_body:
+                                        message_types[parsed_body['eventType']] += 1
+                                    elif 'type' in parsed_body:
+                                        message_types[parsed_body['type']] += 1
+                                    elif 'action' in parsed_body:
+                                        message_types[f"action:{parsed_body['action']}"] += 1
+                                    elif 'error' in parsed_body:
+                                        message_types['error_message'] += 1
+                                    else:
+                                        message_types['generic_json'] += 1
+                                elif isinstance(parsed_body, (list, str, int, float, bool)):
+                                    message_types[f'json_{type(parsed_body).__name__}'] += 1
+                                else:
+                                    message_types['json_other'] += 1
+                            else:
+                                if 'exception' in body.lower() or 'error' in body.lower():
+                                    message_types['plain_text_error'] += 1
+                                elif body.strip().startswith('<?xml'):
+                                    message_types['xml'] += 1
+                                else:
+                                    message_types['plain_text'] += 1
+
+                        except json.JSONDecodeError:
+                            console.print(f"[yellow]Warning: Invalid JSON in {file_path.name}:{line_num}[/yellow]")
+                        except Exception as e:
+                            console.print(f"[red]Error processing {file_path.name}:{line_num}: {e}[/red]")
+
+                progress.update(task, advance=1)
+        console.print("\n" + "=" * 60)
+        console.print("[bold cyan]Message Analysis Results[/bold cyan]")
+        console.print("=" * 60 + "\n")
+
+        console.print(f"[bold]Total Messages:[/bold] {total_messages:,}\n")
+        all_exceptions = {}
+        for exc_type, count in exception_types.items():
+            all_exceptions[exc_type] = count
+        for pattern_key, count in common_patterns.items():
+            if 'exception' in pattern_key.lower() or 'error' in pattern_key.lower():
+                pattern_type, pattern_value = pattern_key.split(':', 1)
+                if 'Exception' in pattern_value or 'Error' in pattern_value:
+
+                    base_name = pattern_value.split('.')[-1] if '.' in pattern_value else pattern_value
+                    if base_name not in all_exceptions and (base_name.endswith('Exception') or base_name.endswith('Error')):
+                        all_exceptions[base_name] = count
+        if all_exceptions:
+            table = Table(title="Exceptions and Errors (Messages Containing)", show_header=True)
+            table.add_column("Exception/Error", style="red")
+            table.add_column("Messages", style="yellow", justify="right")
+            table.add_column("% of Total", style="green", justify="right")
+            sorted_exceptions = sorted(all_exceptions.items(), key=lambda x: x[1], reverse=True)
+            for exc_type, count in sorted_exceptions[:20]:
+                percentage = (count / total_messages) * 100
+
+                percentage = min(percentage, 100.0)
+                table.add_row(exc_type, f"{count:,}", f"{percentage:.1f}%")
+            console.print(table)
+            console.print()
+        if exception_contexts:
+
+            recurring_contexts = [(ctx, count) for ctx, count in exception_contexts.items() if count > 1]
+
+            if recurring_contexts:
+                recurring_contexts.sort(key=lambda x: x[1], reverse=True)
+
+                table = Table(title="Recurring Exception Patterns (Specific Error Messages)", show_header=True)
+                table.add_column("Exception Pattern", style="yellow", max_width=80)
+                table.add_column("Count", style="red", justify="right")
+                table.add_column("% of Msgs", style="green", justify="right")
+                for context, count in recurring_contexts[:15]:
+                    percentage = (count / total_messages) * 100
+
+                    display_context = context
+                    if len(context) > 80:
+                        display_context = context[:77] + "..."
+                    table.add_row(display_context, str(count), f"{percentage:.1f}%")
+
+                console.print(table)
+                console.print()
+        meaningful_patterns = defaultdict(list)
+        for pattern_key, count in common_patterns.items():
+            pattern_type, pattern_value = pattern_key.split(':', 1)
+
+            if pattern_type not in ['exception_types', 'error_types', 'java_exceptions',
+                                   'custom_exceptions', 'error_messages']:
+                if pattern_type in ['failure_reasons', 'cannot_do', 'missing_items', 'invalid_items']:
+                    meaningful_patterns[pattern_type].append((pattern_value, count))
+        if meaningful_patterns:
+            all_failures = []
+            for pattern_type, patterns in meaningful_patterns.items():
+                for pattern, count in patterns:
+                    all_failures.append((pattern_type.replace('_', ' ').title(), pattern, count))
+
+            if all_failures:
+                all_failures.sort(key=lambda x: x[2], reverse=True)
+                table = Table(title="Failure Patterns", show_header=True)
+                table.add_column("Type", style="cyan")
+                table.add_column("Pattern", style="yellow", max_width=50)
+                table.add_column("Count", style="magenta", justify="right")
+
+                for failure_type, pattern, count in all_failures[:15]:
+                    table.add_row(failure_type, pattern, str(count))
+                console.print(table)
+                console.print()
+        if attribute_keys:
+            table = Table(title="SQS Attributes Used", show_header=True)
+            table.add_column("Attribute", style="magenta")
+            table.add_column("Messages", style="yellow", justify="right")
+
+            for attr, count in attribute_keys.most_common():
+                table.add_row(attr, str(count))
+            console.print(table)
+            console.print()
+        if message_attribute_keys:
+            table = Table(title="Message Attributes Used", show_header=True)
+            table.add_column("Attribute", style="blue")
+            table.add_column("Messages", style="yellow", justify="right")
+
+            for attr, count in message_attribute_keys.most_common():
+                table.add_row(attr, str(count))
+            console.print(table)
+            console.print()
+        unique_types = len(message_types)
+        if unique_types > 1:
+            table = Table(title="Message Type Distribution", show_header=True)
+            table.add_column("Type", style="cyan")
+            table.add_column("Count", style="yellow", justify="right")
+            table.add_column("Percentage", style="green", justify="right")
+
+            for msg_type, count in message_types.most_common(10):
+                percentage = (count / total_messages) * 100
+
+                display_type = msg_type.replace('_', ' ').title()
+                if msg_type.startswith('json_'):
+                    display_type = f"JSON ({msg_type[5:]})"
+                elif msg_type.startswith('action:'):
+                    display_type = f"Action: {msg_type[7:]}"
+                table.add_row(display_type, str(count), f"{percentage:.1f}%")
+            console.print(table)
+            console.print()
+        if stack_traces:
+            percentage_with_traces = (len(stack_traces) / total_messages) * 100
+            console.print(f"[bold yellow]Stack Traces:[/bold yellow] {len(stack_traces):,} messages ({percentage_with_traces:.1f}%) contain stack traces")
+
+            if len(stack_traces) <= 10:
+                console.print("[dim]Locations:[/dim]")
+                for trace_info in stack_traces:
+                    console.print(f"  • {trace_info['file']}:{trace_info['line']}")
+            else:
+                console.print("[dim]Sample locations (first 5):[/dim]")
+                for trace_info in stack_traces[:5]:
+                    console.print(f"  • {trace_info['file']}:{trace_info['line']}")
+                    preview = trace_info['preview'][:100].replace('\n', ' ')
+                    console.print(f"    [dim]{preview}...[/dim]")
+            console.print()
+        console.print("[bold cyan]Summary Statistics:[/bold cyan]")
+        if all_exceptions:
+            top_exception = sorted_exceptions[0] if sorted_exceptions else ("None", 0)
+            console.print(f"  • Most common exception: [red]{top_exception[0]}[/red] ({top_exception[1]:,} occurrences)")
+
+        if stack_traces:
+            console.print(f"  • Messages with stack traces: {len(stack_traces):,} ({percentage_with_traces:.1f}%)")
+        if message_types and unique_types > 1:
+            dominant_type = message_types.most_common(1)[0]
+            dominant_percentage = (dominant_type[1] / total_messages) * 100
+
+            if dominant_percentage < 95:
+                console.print(f"  • Dominant message type: {dominant_type[0]} ({dominant_percentage:.1f}%)")
+
+        console.print()
+        if len(common_patterns) > 10 and total_messages > 100:
+            self._find_common_substrings(common_patterns)
+        return {
+            'total_messages': total_messages,
+            'exception_types': dict(exception_types),
+            'exception_contexts': dict(exception_contexts),
+            'message_types': dict(message_types),
+            'common_patterns': dict(common_patterns),
+            'stack_trace_count': len(stack_traces),
+            'attribute_keys': dict(attribute_keys),
+            'message_attribute_keys': dict(message_attribute_keys)
+        }
+
+    def _find_common_substrings(self, patterns: Dict[str, int], min_length: int = 20) -> None:
+        pattern_texts = list(patterns.keys())
+        if len(pattern_texts) < 2:
+            return
+
+        common_substrings = Counter()
+        for i in range(len(pattern_texts)):
+            for j in range(i + 1, min(i + 50, len(pattern_texts))):
+                text1 = pattern_texts[i].split(':', 1)[-1] if ':' in pattern_texts[i] else pattern_texts[i]
+                text2 = pattern_texts[j].split(':', 1)[-1] if ':' in pattern_texts[j] else pattern_texts[j]
+                lcs = self._longest_common_substring(text1, text2)
+                if len(lcs) >= min_length:
+                    common_substrings[lcs] += 1
+
+        if common_substrings:
+            table = Table(title="Common Error Patterns (Longest Common Substrings)", show_header=True)
+            table.add_column("Pattern", style="yellow", max_width=60)
+            table.add_column("Occurrences", style="cyan", justify="right")
+
+            for substring, count in common_substrings.most_common(10):
+                if count > 1:
+                    table.add_row(substring, str(count))
+
+            if table.rows:
+                console.print(table)
+                console.print()
+
+    def _longest_common_substring(self, s1: str, s2: str) -> str:
+        m = len(s1)
+        n = len(s2)
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        max_length = 0
+        ending_pos = 0
+
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if s1[i-1] == s2[j-1]:
+                    dp[i][j] = dp[i-1][j-1] + 1
+                    if dp[i][j] > max_length:
+                        max_length = dp[i][j]
+                        ending_pos = i
+
+        return s1[ending_pos - max_length:ending_pos]
