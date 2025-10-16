@@ -14,7 +14,6 @@ console = Console()
 
 class SqsService:
     def __init__(self, profile: Optional[str] = None):
-        """Initialize SQS service with optional AWS profile."""
         if profile:
             self.session = boto3.Session(profile_name=profile)
         else:
@@ -27,7 +26,6 @@ class SqsService:
             response = self.sqs_client.list_queues()
             queue_urls = response.get('QueueUrls', [])
 
-            # Filter queues by partial name match
             matching_queues = []
             for url in queue_urls:
                 queue_name = url.split('/')[-1]
@@ -43,7 +41,6 @@ class SqsService:
                 console.print(f"[green]Found queue: {queue_name}[/green]")
                 return matching_queues[0]
 
-            # Multiple matches - show options
             table = Table(title="Multiple queues found")
             table.add_column("Index", style="cyan")
             table.add_column("Queue Name", style="yellow")
@@ -93,7 +90,6 @@ class SqsService:
 
             messages = response.get('Messages', [])
 
-            # Process each message to include all data
             processed_messages = []
             for msg in messages:
                 processed_msg = {
@@ -106,7 +102,6 @@ class SqsService:
                     'MD5OfMessageAttributes': msg.get('MD5OfMessageAttributes')
                 }
 
-                # Try to parse body as JSON if possible
                 try:
                     processed_msg['ParsedBody'] = json.loads(msg.get('Body', '{}'))
                 except (json.JSONDecodeError, TypeError):
@@ -121,7 +116,6 @@ class SqsService:
             return []
 
     def delete_message(self, queue_url: str, receipt_handle: str) -> bool:
-        """Delete a message from the queue."""
         try:
             self.sqs_client.delete_message(
                 QueueUrl=queue_url,
@@ -170,7 +164,6 @@ class SqsService:
 
         queue_name = queue_url.split('/')[-1]
 
-        # Get queue attributes for additional info
         queue_attrs = self.get_queue_attributes(queue_url)
         if queue_attrs:
             approx_messages = int(queue_attrs.get('ApproximateNumberOfMessages', 0))
@@ -178,7 +171,6 @@ class SqsService:
         else:
             approx_messages = 0
 
-        # Create output directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         if output_dir:
             base_dir = Path(output_dir)
@@ -188,7 +180,6 @@ class SqsService:
         base_dir.mkdir(parents=True, exist_ok=True)
         console.print(f"[green]Output directory: {base_dir}[/green]")
 
-        # Write queue metadata
         metadata_file = base_dir / "metadata.json"
         with open(metadata_file, 'w') as f:
             json.dump({
@@ -218,7 +209,6 @@ class SqsService:
             max_empty_receives = 3  # Stop after 3 consecutive empty receives
 
             while consecutive_empty_receives < max_empty_receives:
-                # Receive messages
                 messages = self.receive_messages(queue_url, max_messages=10)
 
                 if not messages:
@@ -246,7 +236,6 @@ class SqsService:
 
                         console.print(f"[green]Wrote {len(messages_buffer)} messages to {output_file.name}[/green]")
 
-                        # Delete messages if requested
                         if delete_after_write:
                             deleted = self.delete_message_batch(queue_url, receipt_handles_buffer)
                             if deleted != len(receipt_handles_buffer):
@@ -257,7 +246,6 @@ class SqsService:
 
                 progress.update(task, description=f"[cyan]Draining queue {queue_name}... ({total_messages} messages processed)")
 
-            # Write remaining messages
             if messages_buffer:
                 file_count += 1
                 output_file = base_dir / f"messages_{file_count:04d}.jsonl"
@@ -270,13 +258,11 @@ class SqsService:
 
                 console.print(f"[green]Wrote {len(messages_buffer)} messages to {output_file.name}[/green]")
 
-                # Delete messages if requested
                 if delete_after_write:
                     deleted = self.delete_message_batch(queue_url, receipt_handles_buffer)
                     if deleted != len(receipt_handles_buffer):
                         console.print(f"[yellow]Warning: Only deleted {deleted}/{len(receipt_handles_buffer)} messages[/yellow]")
 
-        # Write summary
         summary_file = base_dir / "summary.json"
         with open(summary_file, 'w') as f:
             json.dump({

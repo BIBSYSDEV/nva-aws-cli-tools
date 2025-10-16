@@ -23,7 +23,6 @@ def sqs():
 def drain(queue_name, profile, output_dir, messages_per_file, no_delete, yes):
     sqs_service = SqsService(profile=profile)
 
-    # Find the queue first
     queue_url = sqs_service.find_queue_url(queue_name)
     if not queue_url:
         return
@@ -31,7 +30,6 @@ def drain(queue_name, profile, output_dir, messages_per_file, no_delete, yes):
     queue_full_name = queue_url.split('/')[-1]
     delete_after_write = not no_delete
 
-    # Show confirmation
     if not yes:
         console.print(f"\n[yellow]Queue: {queue_full_name}[/yellow]")
         console.print(f"[yellow]Profile: {sqs_service.profile}[/yellow]")
@@ -45,7 +43,6 @@ def drain(queue_name, profile, output_dir, messages_per_file, no_delete, yes):
             console.print("[red]Operation cancelled[/red]")
             return
 
-    # Drain the queue
     success = sqs_service.drain_queue(
         queue_name,
         output_dir=output_dir,
@@ -79,7 +76,6 @@ def info(queue_name, profile):
     console.print(f"[cyan]URL: {queue_url}[/cyan]")
     console.print(f"[cyan]Profile: {sqs_service.profile}[/cyan]\n")
 
-    # Display key metrics
     console.print("[bold]Message Statistics:[/bold]")
     console.print(f"  Approximate messages: {attrs.get('ApproximateNumberOfMessages', 0)}")
     console.print(f"  Messages in flight: {attrs.get('ApproximateNumberOfMessagesNotVisible', 0)}")
@@ -117,7 +113,6 @@ def list(profile, filter):
             console.print("[yellow]No queues found[/yellow]")
             return
 
-        # Apply filter if provided
         if filter:
             queue_urls = [url for url in queue_urls if filter.lower() in url.lower()]
 
