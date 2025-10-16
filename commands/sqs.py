@@ -19,8 +19,9 @@ def sqs():
 @click.option('--output-dir', type=str, help='Output directory for JSONL files')
 @click.option('--messages-per-file', type=int, default=1000, help='Max messages per JSONL file (default: 1000)')
 @click.option('--no-delete', is_flag=True, help='Do not delete messages after writing to file')
+@click.option('--threads', type=int, default=5, help='Number of threads for parallel processing (default: 5)')
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
-def drain(queue_name, profile, output_dir, messages_per_file, no_delete, yes):
+def drain(queue_name, profile, output_dir, messages_per_file, no_delete, threads, yes):
     sqs_service = SqsService(profile=profile)
 
     queue_url = sqs_service.find_queue_url(queue_name)
@@ -35,6 +36,7 @@ def drain(queue_name, profile, output_dir, messages_per_file, no_delete, yes):
         console.print(f"[yellow]Profile: {sqs_service.profile}[/yellow]")
         console.print(f"[yellow]Messages per file: {messages_per_file}[/yellow]")
         console.print(f"[yellow]Delete after write: {delete_after_write}[/yellow]")
+        console.print(f"[yellow]Threads: {threads}[/yellow]")
 
         if delete_after_write:
             console.print("\n[bold red]WARNING: Messages will be DELETED from the queue after writing![/bold red]")
@@ -47,7 +49,8 @@ def drain(queue_name, profile, output_dir, messages_per_file, no_delete, yes):
         queue_name,
         output_dir=output_dir,
         max_messages_per_file=messages_per_file,
-        delete_after_write=delete_after_write
+        delete_after_write=delete_after_write,
+        num_threads=threads
     )
 
     if not success:

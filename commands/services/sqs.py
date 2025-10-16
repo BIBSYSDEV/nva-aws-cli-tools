@@ -1,4 +1,8 @@
 import json
+import random
+import signal
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -82,10 +86,10 @@ class SqsService:
         try:
             response = self.sqs_client.receive_message(
                 QueueUrl=queue_url,
-                MaxNumberOfMessages=min(max_messages, 10),  # SQS max is 10
+                MaxNumberOfMessages=min(max_messages, 10),
                 MessageAttributeNames=['All'],
                 AttributeNames=['All'],
-                WaitTimeSeconds=20  # Long polling
+                WaitTimeSeconds=20
             )
 
             messages = response.get('Messages', [])
@@ -131,7 +135,6 @@ class SqsService:
             return 0
 
         deleted_count = 0
-        # Process in batches of 10 (SQS limit)
         for i in range(0, len(receipt_handles), 10):
             batch = receipt_handles[i:i+10]
             entries = [
@@ -156,20 +159,236 @@ class SqsService:
 
         return deleted_count
 
+    def _drain_worker_thread(self, queue_url: str, base_dir: Path,
+                            max_messages_per_file: int, delete_after_write: bool,
+                            stop_event: threading.Event, stats: Dict[str, Any]) -> None:
+        """Worker thread that receives, writes, and deletes messages."""
+        sqs_client = self.session.client('sqs')
+
+        messages_buffer = []
+        receipt_handles_buffer = []
+        consecutive_empty = 0
+
+        while not stop_event.is_set() and consecutive_empty < 3:
+            try:
+                response = sqs_client.receive_message(
+                    QueueUrl=queue_url,
+                    MaxNumberOfMessages=10,
+                    MessageAttributeNames=['All'],
+                    AttributeNames=['All'],
+                    WaitTimeSeconds=0
+                )
+
+                messages = response.get('Messages', [])
+
+                if not messages:
+                    consecutive_empty += 1
+                    if consecutive_empty >= 3 and messages_buffer:
+                        with stats['lock']:
+                            stats['file_counter'] += 1
+                            file_num = stats['file_counter']
+
+                        output_file = base_dir / f"messages_{file_num:04d}.jsonl"
+                        content = ''.join(
+                            json.dumps({k: v for k, v in msg.items() if k != 'ReceiptHandle'}, default=str) + '\n'
+                            for msg in messages_buffer
+                        )
+                        output_file.write_text(content)
+
+                        with stats['lock']:
+                            stats['written'] += len(messages_buffer)
+
+                        if delete_after_write and receipt_handles_buffer:
+                            deleted = self.delete_message_batch(queue_url, receipt_handles_buffer)
+                            with stats['lock']:
+                                stats['deleted'] += deleted
+
+                        messages_buffer = []
+                        receipt_handles_buffer = []
+                    continue
+
+                consecutive_empty = 0
+
+                for msg in messages:
+                    processed_msg = {
+                        'MessageId': msg.get('MessageId'),
+                        'ReceiptHandle': msg.get('ReceiptHandle'),
+                        'Body': msg.get('Body'),
+                        'Attributes': msg.get('Attributes', {}),
+                        'MessageAttributes': msg.get('MessageAttributes', {}),
+                        'MD5OfBody': msg.get('MD5OfBody'),
+                        'MD5OfMessageAttributes': msg.get('MD5OfMessageAttributes')
+                    }
+
+                    try:
+                        processed_msg['ParsedBody'] = json.loads(msg.get('Body', '{}'))
+                    except (json.JSONDecodeError, TypeError):
+                        processed_msg['ParsedBody'] = None
+
+                    messages_buffer.append(processed_msg)
+                    receipt_handles_buffer.append(msg['ReceiptHandle'])
+
+                    with stats['lock']:
+                        stats['received'] += 1
+
+                    if len(messages_buffer) >= max_messages_per_file:
+                        with stats['lock']:
+                            stats['file_counter'] += 1
+                            file_num = stats['file_counter']
+
+                        output_file = base_dir / f"messages_{file_num:04d}.jsonl"
+                        content = ''.join(
+                            json.dumps({k: v for k, v in msg.items() if k != 'ReceiptHandle'}, default=str) + '\n'
+                            for msg in messages_buffer
+                        )
+                        output_file.write_text(content)
+
+                        with stats['lock']:
+                            stats['written'] += len(messages_buffer)
+
+                        if delete_after_write:
+                            deleted = self.delete_message_batch(queue_url, receipt_handles_buffer)
+                            with stats['lock']:
+                                stats['deleted'] += deleted
+
+                        messages_buffer = []
+                        receipt_handles_buffer = []
+
+            except Exception:
+                if stop_event.is_set():
+                    break
+
     def drain_queue(self, queue_name_partial: str, output_dir: Optional[str] = None,
-                   max_messages_per_file: int = 1000, delete_after_write: bool = True) -> bool:
+                   max_messages_per_file: int = 1000, delete_after_write: bool = True,
+                   num_threads: int = 5) -> bool:
+        """Drain all messages from a queue using multiple threads."""
         queue_url = self.find_queue_url(queue_name_partial)
         if not queue_url:
             return False
 
         queue_name = queue_url.split('/')[-1]
 
+        if num_threads == 1:
+            console.print("[cyan]Using single-threaded mode[/cyan]")
+            return self._drain_single_thread(
+                queue_url, queue_name, output_dir, max_messages_per_file, delete_after_write
+            )
+
+        console.print(f"[cyan]Using {num_threads} parallel threads[/cyan]")
+
         queue_attrs = self.get_queue_attributes(queue_url)
         if queue_attrs:
             approx_messages = int(queue_attrs.get('ApproximateNumberOfMessages', 0))
             console.print(f"[cyan]Queue has approximately {approx_messages} messages[/cyan]")
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if output_dir:
+            base_dir = Path(output_dir)
         else:
-            approx_messages = 0
+            base_dir = Path(f"{self.profile}-{queue_name}-{timestamp}")
+
+        base_dir.mkdir(parents=True, exist_ok=True)
+        console.print(f"[green]Output directory: {base_dir}[/green]")
+
+        metadata_file = base_dir / "metadata.json"
+        metadata_file.write_text(json.dumps({
+            'queue_url': queue_url,
+            'queue_name': queue_name,
+            'profile': self.profile,
+            'timestamp': timestamp,
+            'attributes': queue_attrs or {},
+            'num_threads': num_threads
+        }, indent=2, default=str))
+
+        stats = {
+            'received': 0,
+            'written': 0,
+            'deleted': 0,
+            'file_counter': 0,
+            'lock': threading.Lock()
+        }
+
+        stop_event = threading.Event()
+
+        def signal_handler(*args):
+            console.print("\n[yellow]Stopping... Please wait for threads to finish current batch[/yellow]")
+            stop_event.set()
+
+        old_handler = signal.signal(signal.SIGINT, signal_handler)
+
+        try:
+            threads = []
+            for _ in range(num_threads):
+                thread = threading.Thread(
+                    target=self._drain_worker_thread,
+                    args=(queue_url, base_dir, max_messages_per_file,
+                          delete_after_write, stop_event, stats),
+                    daemon=False
+                )
+                thread.start()
+                threads.append(thread)
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task(
+                    f"[cyan]Draining queue {queue_name}...",
+                    total=None
+                )
+
+                last_written = 0
+                while any(t.is_alive() for t in threads):
+                    current_written = stats['written']
+                    if current_written != last_written or stats['received'] % 100 == 0:
+                        progress.update(
+                            task,
+                            description=f"[cyan]Draining... (received: {stats['received']}, "
+                                       f"written: {stats['written']}, files: {stats['file_counter']})"
+                        )
+                        last_written = current_written
+
+                    threading.Event().wait(0.1)
+
+                    if stop_event.is_set():
+                        break
+
+            for thread in threads:
+                thread.join(timeout=5)
+
+        finally:
+            signal.signal(signal.SIGINT, old_handler)
+
+        summary_file = base_dir / "summary.json"
+        summary_file.write_text(json.dumps({
+            'queue_name': queue_name,
+            'profile': self.profile,
+            'total_messages': stats['written'],
+            'files_created': stats['file_counter'],
+            'messages_deleted': delete_after_write,
+            'messages_deleted_count': stats['deleted'],
+            'num_threads': num_threads,
+            'timestamp_start': timestamp,
+            'timestamp_end': datetime.now().strftime("%Y%m%d_%H%M%S")
+        }, indent=2))
+
+        console.print(f"\n[bold green]✓ Drained {stats['written']} messages from {queue_name}[/bold green]")
+        console.print(f"[cyan]Output: {base_dir}[/cyan]")
+        console.print(f"[cyan]Files created: {stats['file_counter']}[/cyan]")
+        if delete_after_write:
+            console.print(f"[cyan]Messages deleted: {stats['deleted']}[/cyan]")
+
+        return True
+
+    def _drain_single_thread(self, queue_url: str, queue_name: str,
+                            output_dir: Optional[str], max_messages_per_file: int,
+                            delete_after_write: bool) -> bool:
+        """Simple single-threaded drain implementation."""
+        queue_attrs = self.get_queue_attributes(queue_url)
+        if queue_attrs:
+            approx_messages = int(queue_attrs.get('ApproximateNumberOfMessages', 0))
+            console.print(f"[cyan]Queue has approximately {approx_messages} messages[/cyan]")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         if output_dir:
@@ -206,7 +425,7 @@ class SqsService:
             )
 
             consecutive_empty_receives = 0
-            max_empty_receives = 3  # Stop after 3 consecutive empty receives
+            max_empty_receives = 3
 
             while consecutive_empty_receives < max_empty_receives:
                 messages = self.receive_messages(queue_url, max_messages=10)
@@ -222,14 +441,12 @@ class SqsService:
                     receipt_handles_buffer.append(msg['ReceiptHandle'])
                     total_messages += 1
 
-                    # Write to file when buffer is full
                     if len(messages_buffer) >= max_messages_per_file:
                         file_count += 1
                         output_file = base_dir / f"messages_{file_count:04d}.jsonl"
 
                         with open(output_file, 'w') as f:
                             for buffered_msg in messages_buffer:
-                                # Remove ReceiptHandle from saved data (it's temporary)
                                 saved_msg = {k: v for k, v in buffered_msg.items()
                                            if k != 'ReceiptHandle'}
                                 f.write(json.dumps(saved_msg, default=str) + '\n')
