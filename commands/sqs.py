@@ -14,13 +14,27 @@ def sqs():
 
 
 @sqs.command()
-@click.argument('queue_name', type=str)
-@click.option('--profile', type=str, help='AWS profile to use')
-@click.option('--output-dir', type=str, help='Output directory for JSONL files')
-@click.option('--messages-per-file', type=int, default=1000, help='Max messages per JSONL file (default: 1000)')
-@click.option('--delete', is_flag=True, help='Delete messages after writing to file (use with caution)')
-@click.option('--threads', type=int, default=5, help='Number of threads for parallel processing (default: 5)')
-@click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
+@click.argument("queue_name", type=str)
+@click.option("--profile", type=str, help="AWS profile to use")
+@click.option("--output-dir", type=str, help="Output directory for JSONL files")
+@click.option(
+    "--messages-per-file",
+    type=int,
+    default=1000,
+    help="Max messages per JSONL file (default: 1000)",
+)
+@click.option(
+    "--delete",
+    is_flag=True,
+    help="Delete messages after writing to file (use with caution)",
+)
+@click.option(
+    "--threads",
+    type=int,
+    default=5,
+    help="Number of threads for parallel processing (default: 5)",
+)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, yes):
     sqs_service = SqsService(profile=profile)
 
@@ -28,7 +42,7 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
     if not queue_url:
         return
 
-    queue_full_name = queue_url.split('/')[-1]
+    queue_full_name = queue_url.split("/")[-1]
     delete_after_write = delete
 
     if not yes:
@@ -39,7 +53,9 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
         console.print(f"[yellow]Threads: {threads}[/yellow]")
 
         if delete_after_write:
-            console.print("\n[bold red]WARNING: Messages will be DELETED from the queue after writing![/bold red]")
+            console.print(
+                "\n[bold red]WARNING: Messages will be DELETED from the queue after writing![/bold red]"
+            )
 
         if not Confirm.ask("\n[cyan]Proceed with draining the queue?[/cyan]"):
             console.print("[red]Operation cancelled[/red]")
@@ -50,7 +66,7 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
         output_dir=output_dir,
         max_messages_per_file=messages_per_file,
         delete_after_write=delete_after_write,
-        num_threads=threads
+        num_threads=threads,
     )
 
     if not success:
@@ -59,8 +75,8 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
 
 
 @sqs.command()
-@click.argument('queue_name', type=str)
-@click.option('--profile', type=str, help='AWS profile to use')
+@click.argument("queue_name", type=str)
+@click.option("--profile", type=str, help="AWS profile to use")
 def info(queue_name, profile):
     sqs_service = SqsService(profile=profile)
 
@@ -68,7 +84,7 @@ def info(queue_name, profile):
     if not queue_url:
         return
 
-    queue_full_name = queue_url.split('/')[-1]
+    queue_full_name = queue_url.split("/")[-1]
     attrs = sqs_service.get_queue_attributes(queue_url)
 
     if not attrs:
@@ -80,30 +96,45 @@ def info(queue_name, profile):
     console.print(f"[cyan]Profile: {sqs_service.profile}[/cyan]\n")
 
     console.print("[bold]Message Statistics:[/bold]")
-    console.print(f"  Approximate messages: {attrs.get('ApproximateNumberOfMessages', 0)}")
-    console.print(f"  Messages in flight: {attrs.get('ApproximateNumberOfMessagesNotVisible', 0)}")
-    console.print(f"  Delayed messages: {attrs.get('ApproximateNumberOfMessagesDelayed', 0)}")
+    console.print(
+        f"  Approximate messages: {attrs.get('ApproximateNumberOfMessages', 0)}"
+    )
+    console.print(
+        f"  Messages in flight: {attrs.get('ApproximateNumberOfMessagesNotVisible', 0)}"
+    )
+    console.print(
+        f"  Delayed messages: {attrs.get('ApproximateNumberOfMessagesDelayed', 0)}"
+    )
 
     console.print("\n[bold]Queue Configuration:[/bold]")
-    console.print(f"  Visibility timeout: {attrs.get('VisibilityTimeout', 'N/A')} seconds")
-    console.print(f"  Message retention: {attrs.get('MessageRetentionPeriod', 'N/A')} seconds")
+    console.print(
+        f"  Visibility timeout: {attrs.get('VisibilityTimeout', 'N/A')} seconds"
+    )
+    console.print(
+        f"  Message retention: {attrs.get('MessageRetentionPeriod', 'N/A')} seconds"
+    )
     console.print(f"  Max message size: {attrs.get('MaximumMessageSize', 'N/A')} bytes")
-    console.print(f"  Receive wait time: {attrs.get('ReceiveMessageWaitTimeSeconds', 'N/A')} seconds")
+    console.print(
+        f"  Receive wait time: {attrs.get('ReceiveMessageWaitTimeSeconds', 'N/A')} seconds"
+    )
 
-    if attrs.get('RedrivePolicy'):
+    if attrs.get("RedrivePolicy"):
         import json
-        redrive = json.loads(attrs['RedrivePolicy'])
+
+        redrive = json.loads(attrs["RedrivePolicy"])
         console.print("\n[bold]Dead Letter Queue:[/bold]")
         console.print(f"  Max receive count: {redrive.get('maxReceiveCount', 'N/A')}")
         console.print(f"  DLQ ARN: {redrive.get('deadLetterTargetArn', 'N/A')}")
 
     console.print(f"\n[dim]Created: {attrs.get('CreatedTimestamp', 'N/A')}[/dim]")
-    console.print(f"[dim]Last modified: {attrs.get('LastModifiedTimestamp', 'N/A')}[/dim]")
+    console.print(
+        f"[dim]Last modified: {attrs.get('LastModifiedTimestamp', 'N/A')}[/dim]"
+    )
 
 
 @sqs.command()
-@click.argument('folder_path', type=str)
-@click.option('--profile', type=str, help='AWS profile to use')
+@click.argument("folder_path", type=str)
+@click.option("--profile", type=str, help="AWS profile to use")
 def analyze(folder_path, profile):
     """Analyze messages from drained SQS queue JSONL files.
 
@@ -123,15 +154,15 @@ def analyze(folder_path, profile):
 
 
 @sqs.command()
-@click.option('--profile', type=str, help='AWS profile to use')
-@click.option('--filter', type=str, help='Filter queues by name pattern')
+@click.option("--profile", type=str, help="AWS profile to use")
+@click.option("--filter", type=str, help="Filter queues by name pattern")
 def list(profile, filter):
     """List all SQS queues in the account."""
     sqs_service = SqsService(profile=profile)
 
     try:
         response = sqs_service.sqs_client.list_queues()
-        queue_urls = response.get('QueueUrls', [])
+        queue_urls = response.get("QueueUrls", [])
 
         if not queue_urls:
             console.print("[yellow]No queues found[/yellow]")
@@ -140,10 +171,12 @@ def list(profile, filter):
         if filter:
             queue_urls = [url for url in queue_urls if filter.lower() in url.lower()]
 
-        console.print(f"\n[bold cyan]SQS Queues ({sqs_service.profile} profile):[/bold cyan]\n")
+        console.print(
+            f"\n[bold cyan]SQS Queues ({sqs_service.profile} profile):[/bold cyan]\n"
+        )
 
         for url in sorted(queue_urls):
-            queue_name = url.split('/')[-1]
+            queue_name = url.split("/")[-1]
             console.print(f"  • {queue_name}")
 
         console.print(f"\n[dim]Total: {len(queue_urls)} queue(s)[/dim]")
