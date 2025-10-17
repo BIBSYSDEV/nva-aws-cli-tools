@@ -15,6 +15,35 @@ from rich.table import Table
 
 console = Console()
 
+# Constants
+MAX_EMPTY_RECEIVES = 3
+SQS_MAX_BATCH_SIZE = 10
+THREAD_JOIN_TIMEOUT_SECONDS = 10
+LONG_POLL_WAIT_SECONDS = 20
+SHORT_POLL_WAIT_SECONDS = 0
+DEFAULT_THREADS = 5
+MAX_MESSAGES_PER_FILE = 1000
+
+# Compiled regex patterns for analysis
+EXCEPTION_PATTERNS = [
+    (re.compile(r'([A-Z]\w*Exception)'), 'exception_types'),
+    (re.compile(r'([A-Z]\w*Error)'), 'error_types'),
+    (re.compile(r'(java\.\w+(?:\.\w+)*?[A-Z]\w*Exception)'), 'java_exceptions'),
+    (re.compile(r'(com\.\w+(?:\.\w+)*?[A-Z]\w*Exception)'), 'custom_exceptions'),
+    (re.compile(r'ERROR.*?:(.*?)(?:\n|$)'), 'error_messages'),
+    (re.compile(r'failed to ([\w\s]+)'), 'failure_reasons'),
+    (re.compile(r'Unable to ([\w\s]+)'), 'unable_to'),
+    (re.compile(r'Cannot ([\w\s]+)'), 'cannot_do'),
+    (re.compile(r'Missing ([\w\s]+)'), 'missing_items'),
+    (re.compile(r'Invalid ([\w\s]+)'), 'invalid_items'),
+]
+
+EXCEPTION_CONTEXT_PATTERNS = [
+    re.compile(r'([A-Z]\w*(?:Exception|Error))\[([^\]]{1,200})\](?:; nested: ([^;]{1,100}))?'),
+    re.compile(r'([A-Z]\w*(?:Exception|Error)):\s*([^\n]{1,200})'),
+    re.compile(r'Caused by:\s*([^:\n]+):\s*([^\n]{1,200})'),
+]
+
 
 class SqsService:
     def __init__(self, profile: Optional[str] = None):
@@ -86,10 +115,10 @@ class SqsService:
         try:
             response = self.sqs_client.receive_message(
                 QueueUrl=queue_url,
-                MaxNumberOfMessages=min(max_messages, 10),
+                MaxNumberOfMessages=min(max_messages, SQS_MAX_BATCH_SIZE),
                 MessageAttributeNames=['All'],
                 AttributeNames=['All'],
-                WaitTimeSeconds=20
+                WaitTimeSeconds=LONG_POLL_WAIT_SECONDS
             )
 
             messages = response.get('Messages', [])
@@ -168,14 +197,14 @@ class SqsService:
         receipt_handles_buffer = []
         consecutive_empty = 0
 
-        while not stop_event.is_set() and consecutive_empty < 3:
+        while not stop_event.is_set() and consecutive_empty < MAX_EMPTY_RECEIVES:
             try:
                 response = sqs_client.receive_message(
                     QueueUrl=queue_url,
-                    MaxNumberOfMessages=10,
+                    MaxNumberOfMessages=SQS_MAX_BATCH_SIZE,
                     MessageAttributeNames=['All'],
                     AttributeNames=['All'],
-                    WaitTimeSeconds=0
+                    WaitTimeSeconds=SHORT_POLL_WAIT_SECONDS
                 )
 
                 messages = response.get('Messages', [])
@@ -253,9 +282,23 @@ class SqsService:
                         messages_buffer = []
                         receipt_handles_buffer = []
 
-            except Exception:
+            except Exception as e:
                 if stop_event.is_set():
+                    # Save any remaining messages before exiting
+                    if messages_buffer:
+                        with stats['lock']:
+                            stats['remaining_messages'].extend(messages_buffer)
+                            stats['remaining_receipts'].extend(receipt_handles_buffer)
                     break
+                console.print(f"[red]Error in worker thread: {e}[/red]")
+                with stats['lock']:
+                    stats['errors'] = stats.get('errors', 0) + 1
+
+        # Thread is ending - save any remaining messages
+        if messages_buffer:
+            with stats['lock']:
+                stats['remaining_messages'].extend(messages_buffer)
+                stats['remaining_receipts'].extend(receipt_handles_buffer)
 
     def drain_queue(self, queue_name_partial: str, output_dir: Optional[str] = None,
                    max_messages_per_file: int = 1000, delete_after_write: bool = True,
@@ -302,8 +345,11 @@ class SqsService:
             'received': 0,
             'written': 0,
             'deleted': 0,
+            'errors': 0,
             'file_counter': 0,
-            'lock': threading.Lock()
+            'lock': threading.Lock(),
+            'remaining_messages': [],
+            'remaining_receipts': []
         }
 
         stop_event = threading.Event()
@@ -353,7 +399,31 @@ class SqsService:
                         break
 
             for thread in threads:
-                thread.join(timeout=5)
+                thread.join(timeout=THREAD_JOIN_TIMEOUT_SECONDS)
+                if thread.is_alive():
+                    console.print(f"[yellow]Warning: Worker thread did not finish cleanly[/yellow]")
+
+            # Write any remaining messages from all threads
+            if stats['remaining_messages']:
+                with stats['lock']:
+                    stats['file_counter'] += 1
+                    file_num = stats['file_counter']
+
+                output_file = base_dir / f"messages_{file_num:04d}.jsonl"
+                content = ''.join(
+                    json.dumps({k: v for k, v in msg.items() if k != 'ReceiptHandle'}, default=str) + '\n'
+                    for msg in stats['remaining_messages']
+                )
+                output_file.write_text(content)
+
+                stats['written'] += len(stats['remaining_messages'])
+
+                if delete_after_write and stats['remaining_receipts']:
+                    try:
+                        deleted = self.delete_message_batch(queue_url, stats['remaining_receipts'])
+                        stats['deleted'] += deleted
+                    except Exception as e:
+                        console.print(f"[red]Error deleting final batch: {e}[/red]")
 
         finally:
             signal.signal(signal.SIGINT, old_handler)
@@ -376,6 +446,8 @@ class SqsService:
         console.print(f"[cyan]Files created: {stats['file_counter']}[/cyan]")
         if delete_after_write:
             console.print(f"[cyan]Messages deleted: {stats['deleted']}[/cyan]")
+        if stats.get('errors', 0) > 0:
+            console.print(f"[yellow]Warning: {stats['errors']} errors occurred during processing[/yellow]")
 
         return True
 
@@ -422,10 +494,9 @@ class SqsService:
             )
 
             consecutive_empty_receives = 0
-            max_empty_receives = 3
 
-            while consecutive_empty_receives < max_empty_receives:
-                messages = self.receive_messages(queue_url, max_messages=10)
+            while consecutive_empty_receives < MAX_EMPTY_RECEIVES:
+                messages = self.receive_messages(queue_url, max_messages=SQS_MAX_BATCH_SIZE)
 
                 if not messages:
                     consecutive_empty_receives += 1
@@ -512,18 +583,6 @@ class SqsService:
         stack_traces = []
         exception_contexts = Counter()
 
-        exception_patterns = [
-            (r'([A-Z]\w*Exception)', 'exception_types'),
-            (r'([A-Z]\w*Error)', 'error_types'),
-            (r'(java\.\w+(?:\.\w+)*?[A-Z]\w*Exception)', 'java_exceptions'),
-            (r'(com\.\w+(?:\.\w+)*?[A-Z]\w*Exception)', 'custom_exceptions'),
-            (r'ERROR.*?:(.*?)(?:\n|$)', 'error_messages'),
-            (r'failed to ([\w\s]+)', 'failure_reasons'),
-            (r'Unable to ([\w\s]+)', 'unable_to'),
-            (r'Cannot ([\w\s]+)', 'cannot_do'),
-            (r'Missing ([\w\s]+)', 'missing_items'),
-            (r'Invalid ([\w\s]+)', 'invalid_items'),
-        ]
 
         jsonl_files = list(folder.glob("messages_*.jsonl"))
         if not jsonl_files:
@@ -553,8 +612,8 @@ class SqsService:
                                 body_text = str(body)
 
                             seen_patterns_in_msg = set()
-                            for pattern, pattern_name in exception_patterns:
-                                matches = re.findall(pattern, body_text, re.IGNORECASE)
+                            for pattern, pattern_name in EXCEPTION_PATTERNS:
+                                matches = pattern.findall(body_text)
                                 for match in matches:
                                     if isinstance(match, tuple):
                                         match = match[0]
@@ -582,17 +641,8 @@ class SqsService:
                                         exception_types[base_exc] += 1
                                         seen_in_message.add(base_exc)
 
-                                exception_context_patterns = [
-
-                                    r'([A-Z]\w*(?:Exception|Error))\[([^\]]{1,200})\](?:; nested: ([^;]{1,100}))?',
-
-                                    r'([A-Z]\w*(?:Exception|Error)):\s*([^\n]{1,200})',
-
-                                    r'Caused by:\s*([^:\n]+):\s*([^\n]{1,200})',
-                                ]
-
-                                for pattern in exception_context_patterns:
-                                    context_matches = re.findall(pattern, body_text)
+                                for pattern in EXCEPTION_CONTEXT_PATTERNS:
+                                    context_matches = pattern.findall(body_text)
                                     for match in context_matches:
                                         if isinstance(match, tuple) and len(match) >= 2:
 
@@ -650,6 +700,20 @@ class SqsService:
         console.print("=" * 60 + "\n")
 
         console.print(f"[bold]Total Messages:[/bold] {total_messages:,}\n")
+
+        if total_messages == 0:
+            console.print("[yellow]No messages to analyze[/yellow]")
+            return {
+                'total_messages': 0,
+                'exception_types': {},
+                'exception_contexts': {},
+                'message_types': {},
+                'common_patterns': {},
+                'stack_trace_count': 0,
+                'attribute_keys': {},
+                'message_attribute_keys': {}
+            }
+
         all_exceptions = {}
         for exc_type, count in exception_types.items():
             all_exceptions[exc_type] = count
