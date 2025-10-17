@@ -451,7 +451,7 @@ class SqsService:
                 thread.join(timeout=THREAD_JOIN_TIMEOUT_SECONDS)
                 if thread.is_alive():
                     console.print(
-                        f"[yellow]Warning: Worker thread did not finish cleanly[/yellow]"
+                        "[yellow]Warning: Worker thread did not finish cleanly[/yellow]"
                     )
 
             # Write any remaining messages from all threads
