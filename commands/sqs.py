@@ -18,10 +18,10 @@ def sqs():
 @click.option('--profile', type=str, help='AWS profile to use')
 @click.option('--output-dir', type=str, help='Output directory for JSONL files')
 @click.option('--messages-per-file', type=int, default=1000, help='Max messages per JSONL file (default: 1000)')
-@click.option('--no-delete', is_flag=True, help='Do not delete messages after writing to file')
+@click.option('--delete', is_flag=True, help='Delete messages after writing to file (use with caution)')
 @click.option('--threads', type=int, default=5, help='Number of threads for parallel processing (default: 5)')
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
-def drain(queue_name, profile, output_dir, messages_per_file, no_delete, threads, yes):
+def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, yes):
     sqs_service = SqsService(profile=profile)
 
     queue_url = sqs_service.find_queue_url(queue_name)
@@ -29,7 +29,7 @@ def drain(queue_name, profile, output_dir, messages_per_file, no_delete, threads
         return
 
     queue_full_name = queue_url.split('/')[-1]
-    delete_after_write = not no_delete
+    delete_after_write = delete
 
     if not yes:
         console.print(f"\n[yellow]Queue: {queue_full_name}[/yellow]")
