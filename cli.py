@@ -12,6 +12,7 @@ from commands.pipelines import pipelines
 from commands.organization_migration import organization_migration
 from commands.cristin import cristin
 from commands.sqs import sqs
+from commands.search import search
 
 
 @click.group()
@@ -30,6 +31,7 @@ cli.add_command(pipelines)
 cli.add_command(organization_migration)
 cli.add_command(cristin)
 cli.add_command(sqs)
+cli.add_command(search)
 
 if __name__ == "__main__":
     cli()
