@@ -40,11 +40,14 @@ class DynamodbPublications:
         return dynamodb_resource.Table(table_name)
 
     def _iterate_batches_scan(self, condition, batch_size, custom_batch_processor):
-        response = self.table.scan(
-            Limit=batch_size,
-            FilterExpression=condition,
-            ReturnConsumedCapacity="TOTAL",
-        )
+        scan_params = {
+            "Limit": batch_size,
+            "ReturnConsumedCapacity": "TOTAL",
+        }
+        if condition:
+            scan_params["FilterExpression"] = condition
+
+        response = self.table.scan(**scan_params)
         items = response["Items"]
         batch = self._inflate_batch(items)
         custom_batch_processor(batch, self.batch_counter)
@@ -56,12 +59,8 @@ class DynamodbPublications:
         )
 
         while "LastEvaluatedKey" in response:
-            response = self.table.scan(
-                ExclusiveStartKey=response["LastEvaluatedKey"],
-                Limit=batch_size,
-                FilterExpression=condition,
-                ReturnConsumedCapacity="TOTAL",
-            )
+            scan_params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            response = self.table.scan(**scan_params)
             items = response["Items"]
             if items:
                 batch = self._inflate_batch(items)
@@ -146,6 +145,9 @@ class DynamodbPublications:
 
     def process_query(self, condition, batch_size, batch_action):
         self._iterate_batches_query(condition, batch_size, batch_action)
+
+    def process_scan(self, condition, batch_size, batch_action):
+        self._iterate_batches_scan(condition, batch_size, batch_action)
 
     def fetch_resource_by_identifier(self, identifier):
         response = self.table.query(

@@ -1,58 +1,72 @@
+import boto3
+
 class HandleTaskWriterService:
-    def __init__(self):
-        self.sikt_prefix = "//hdl.handle.net/11250"
-        self.sikt_prefix_test = "//hdl.handle.net/11250.1"
-        pass
+    NVA_SIKT_SOURCE_NAME = "nva@sikt"
 
-    def _is_sikt_handle(self, handle):
-        return self.sikt_prefix in handle or self.sikt_prefix_test in handle
+    def __init__(self, profile, controlled_prefixes=None):
+        if controlled_prefixes is None:
+            controlled_prefixes = ["11250", "11250.1"]
+        self.controlled_prefixes = controlled_prefixes
+        self.session = boto3.Session(profile_name=profile)
+        self.ssm = self.session.client("ssm")
+        self.application_domain = self._get_system_parameter("/NVA/ApplicationDomain")
 
-    def _get_sikt_additional_identifier_handle(self, publication):
-        for additionalIdentifier in publication.get("additionalIdentifiers", []):
-            if additionalIdentifier.get("type") == "HandleIdentifier" or (
-                additionalIdentifier.get("source") == "handle"
-                and additionalIdentifier.get("type") == "AdditionalIdentifier"
-            ):
-                handle = additionalIdentifier.get("value")
-                if self._is_sikt_handle(handle):
-                    return handle
-        return None
-
-    def _get_additional_identifier_handles(self, publication, prefix):
+        
+    def _is_controlled_handle(self, handle):
+        if not handle:
+            return False
+        return any(f"//hdl.handle.net/{prefix}" in handle for prefix in self.controlled_prefixes)
+    
+    def _get_all_handles(self, publication):
         handles = []
-        for additionalIdentifier in publication.get("additionalIdentifiers", []):
-            if additionalIdentifier.get("type") == "HandleIdentifier" or (
-                additionalIdentifier.get("source") == "handle"
-                and additionalIdentifier.get("type") == "AdditionalIdentifier"
-            ):
-                handle = additionalIdentifier.get("value")
-                if f"//hdl.handle.net/{prefix}" in handle:
-                    handles.append(handle)
+
+        top_handle = publication.get("handle")
+        if top_handle:
+            handles.append({
+                "value": top_handle,
+                "source_name": None,
+                "location": "top"
+            })
+
+        for additional_identifier in publication.get("additionalIdentifiers", []):
+            if additional_identifier.get("type") == "HandleIdentifier":
+                handle_value = additional_identifier.get("value")
+                source_name = additional_identifier.get("sourceName")
+                if handle_value:
+                    handles.append({
+                        "value": handle_value,
+                        "source_name": source_name,
+                        "location": "additional"
+                    })
+
         return handles
 
-    def process_item(self, publication, prefix):
-        task = {}
-        additional_identifier_handle = self._get_sikt_additional_identifier_handle(
-            publication
-        )
-        top_handle = publication.get("publication")
-        task["identifier"] = publication.get("identifier")
-        task["publication"] = publication
-        task["handles_to_import"] = self._get_additional_identifier_handles(
-            publication, prefix
-        )
+    def process_item(self, publication):
+        all_handles = self._get_all_handles(publication)
 
-        if top_handle and self._is_sikt_handle(top_handle):
-            task["action"] = "nop"  # all good, already sikt managed handle in place
-        elif top_handle and not self._is_sikt_handle(top_handle):
-            if additional_identifier_handle:
-                task["action"] = "move_top_to_additional_and_promote_additional"
-                task["top_handle"] = additional_identifier_handle
-            else:
-                task["action"] = "move_top_to_additional_and_create_new_top"
-        elif not top_handle and additional_identifier_handle:
-            task["action"] = "promote_additional"
-            task["top_handle"] = additional_identifier_handle
-        elif not top_handle and not additional_identifier_handle:
-            task["action"] = "create_new_top"
-        return task
+        handles_to_import = [
+            handle for handle in all_handles
+            if self._is_controlled_handle(handle["value"])
+            and handle["source_name"] != self.NVA_SIKT_SOURCE_NAME
+        ]
+
+        if not handles_to_import:
+            return []
+
+        tasks = []
+        for handle in handles_to_import:
+            task = {
+                "identifier": publication.get("identifier"),
+                "publication_uri": self._get_landing_page_uri(publication.get("identifier")),
+                "handle": handle["value"]
+            }
+            tasks.append(task)
+
+        return tasks
+    
+    def _get_landing_page_uri(self, publicationIdentifier):
+        return f"https://{self.application_domain}/registration/{publicationIdentifier}"
+    
+    def _get_system_parameter(self, name):
+        response = self.ssm.get_parameter(Name=name)
+        return response["Parameter"]["Value"]
