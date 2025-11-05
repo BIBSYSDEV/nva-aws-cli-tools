@@ -22,7 +22,7 @@ class CristinService:
             self.cristin_api = "https://api.cristin.no/v2"
         else:
             self.cristin_api = "https://api.cristin-test.uio.no/v2"
-            
+
         self.bypass_header = self._get_system_parameter(
             "CristinBotFilterBypassHeaderName"
         )
@@ -89,12 +89,14 @@ class CristinService:
         if not response.ok:
             print(response.text)
             return response.text
-        
+
         if len(response.json()) == 0:
             return None
 
         if len(response.json()) > 1:
-            sys.exit(f"Multiple persons found with national ID '{norwegian_national_id}': {response.text}")
+            sys.exit(
+                f"Multiple persons found with national ID '{norwegian_national_id}': {response.text}"
+            )
 
         return response.json()[0]
 
