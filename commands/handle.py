@@ -40,8 +40,8 @@ def handle():
     help="Output folder path. e.g. sikt-nva-sandbox-handle-tasks",
 )
 @click.option(
-    "--controlled-prefixes",
-    default="11250,11250.1,1956,10642,20.500.12199,20.500.12242,10037",
+    "--prefixes",
+    default="11250,11250.1,1956,10642,20.500.12199,20.500.12242",
     help="Comma-separated list of controlled handle prefixes",
 )
 def prepare(profile: str, input_file: str, output_folder: str, controlled_prefixes: str) -> None:
@@ -111,19 +111,56 @@ def prepare(profile: str, input_file: str, output_folder: str, controlled_prefix
     "-i",
     "--input-folder",
     required=True,
-    help="Input folder path. e.g. sikt-nva-sandbox-resources-ntnu@194.0.0.0-handle-tasks",
+    help="Input folder path. e.g. sikt-nva-sandbox-handle-tasks",
 )
-def execute(profile: str, input_folder: str) -> None:
+def create(profile: str, input_folder: str) -> None:
     complete_folder = os.path.join(input_folder, "complete")
     os.makedirs(complete_folder, exist_ok=True)
+
+    executor = HandleTaskExecutorService(profile, input_folder)
 
     for batch_file in os.listdir(input_folder):
         file_path = os.path.join(input_folder, batch_file)
         if os.path.isfile(file_path) and batch_file.endswith(".jsonl"):
+            print(f"Processing {batch_file}...")
             with open(file_path, "r") as infile:
                 batch = [json.loads(line) for line in infile]
-                HandleTaskExecutorService(profile, input_folder).execute(batch)
+                executor.execute_create(batch)
 
             # Move the file to the 'complete' folder after processing
             new_file_path = os.path.join(complete_folder, batch_file)
             shutil.move(file_path, new_file_path)
+            print(f"Completed {batch_file}")
+
+
+@handle.command()
+@click.option(
+    "--profile",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
+)
+@click.option(
+    "-i",
+    "--input-folder",
+    required=True,
+    help="Input folder path. e.g. sikt-nva-sandbox-handle-tasks",
+)
+def update(profile: str, input_folder: str) -> None:
+    complete_folder = os.path.join(input_folder, "complete")
+    os.makedirs(complete_folder, exist_ok=True)
+
+    executor = HandleTaskExecutorService(profile, input_folder)
+
+    for batch_file in os.listdir(input_folder):
+        file_path = os.path.join(input_folder, batch_file)
+        if os.path.isfile(file_path) and batch_file.endswith(".jsonl"):
+            print(f"Processing {batch_file}...")
+            with open(file_path, "r") as infile:
+                batch = [json.loads(line) for line in infile]
+                executor.execute_update(batch)
+
+            # Move the file to the 'complete' folder after processing
+            new_file_path = os.path.join(complete_folder, batch_file)
+            shutil.move(file_path, new_file_path)
+            print(f"Completed {batch_file}")
