@@ -1119,13 +1119,13 @@ class SqsService:
                 "Processing messages", total=max_batches, deleted=0, kept=0, skipped=0
             )
 
-            while True:
+            while processed_batches < max_batches:
                 response = self.sqs_client.receive_message(
                     QueueUrl=queue_url,
                     MaxNumberOfMessages=batch_size,
                     WaitTimeSeconds=1,
                     MessageAttributeNames=["All"],
-                    VisibilityTimeout=120,
+                    VisibilityTimeout=300,
                 )
 
                 messages = response.get("Messages", [])
@@ -1137,8 +1137,6 @@ class SqsService:
 
                 self._update_progress(progress, task, counts)
                 processed_batches += 1
-                if processed_batches >= max_batches:
-                    break
 
         self._print_duplicates_summary(counts)
 
@@ -1156,7 +1154,7 @@ class SqsService:
 
         identifier_attr = message_attributes.get("id")
         if not identifier_attr:
-            console.print("Skipping: Message missing 'id' attribute.")
+            console.print("Skipping message with missing 'id' attribute.")
             counts["skipped"] += 1
             return
 
@@ -1171,7 +1169,7 @@ class SqsService:
                 counts["kept_redelivery"] += 1
             else:
                 # Same id, different messageId -> Delete (duplicate resource)
-                console.print(f"Deleting: Duplicate message for {identifier=}")
+                console.print(f"Deleting duplicate message for {identifier=}")
                 counts["deleted"] += 1
                 self.delete_message(queue_url, receipt_handle)
         else:
