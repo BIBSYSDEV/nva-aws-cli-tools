@@ -2,11 +2,17 @@ import click
 import json
 import os
 import shutil
-from boto3.dynamodb.conditions import Attr
+import boto3
 from commands.services.aws_utils import get_account_alias
 from commands.services.handle_task_writer import HandleTaskWriterService
 from commands.services.handle_task_executor import HandleTaskExecutorService
-from commands.services.dynamodb_publications import DynamodbPublications
+
+
+def get_application_domain(profile):
+    session = boto3.Session(profile_name=profile)
+    ssm = session.client("ssm")
+    response = ssm.get_parameter(Name="/NVA/ApplicationDomain")
+    return response["Parameter"]["Value"]
 
 
 @click.group()
@@ -22,17 +28,24 @@ def handle():
     help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
 )
 @click.option(
+    "-i",
+    "--input-file",
+    required=True,
+    help="Input JSON file path with handle data. e.g. additional_identifier_handles.json",
+)
+@click.option(
     "-o",
     "--output-folder",
     required=False,
     help="Output folder path. e.g. sikt-nva-sandbox-handle-tasks",
 )
-def prepare(profile: str, output_folder: str) -> None:
-    table_pattern = "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
+@click.option(
+    "--controlled-prefixes",
+    default="11250,11250.1,1956,10642,20.500.12199,20.500.12242,10037",
+    help="Comma-separated list of controlled handle prefixes",
+)
+def prepare(profile: str, input_file: str, output_folder: str, controlled_prefixes: str) -> None:
     batch_size = 700
-    condition = Attr("PK2").begins_with("Customer:") & Attr("SK2").begins_with(
-        "a:Resource:"
-    )
 
     if not output_folder:
         output_folder = f"{get_account_alias(profile)}-handle-tasks"
@@ -40,8 +53,13 @@ def prepare(profile: str, output_folder: str) -> None:
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    task_writer = HandleTaskWriterService(profile)
-    
+    application_domain = get_application_domain(profile)
+    prefixes_list = [prefix.strip() for prefix in controlled_prefixes.split(",")]
+    task_writer = HandleTaskWriterService(application_domain, prefixes_list)
+
+    with open(input_file, 'r', encoding='utf-8') as f:
+        handle_data = json.load(f)
+
     processed_count = 0
     task_count = 0
     accumulated_tasks = []
@@ -59,28 +77,25 @@ def prepare(profile: str, output_folder: str) -> None:
             file_counter += 1
             accumulated_tasks = []
 
-    def process_batch(batch, _batch_counter):
-        nonlocal processed_count, task_count, accumulated_tasks
+    for handle_value, handle_info in handle_data.items():
+        processed_count += 1
 
-        for publication in batch:
-            processed_count += 1
-            tasks = task_writer.process_item(publication)
+        if processed_count % 10000 == 0:
+            print(f"Processed {processed_count} handles...")
 
-            for task in tasks:
-                accumulated_tasks.append(task)
-                task_count += 1
+        tasks = task_writer.process_handle_from_json(handle_value, handle_info)
 
-                if len(accumulated_tasks) >= batch_size:
-                    write_task_file()
+        for task in tasks:
+            accumulated_tasks.append(task)
+            task_count += 1
 
-    DynamodbPublications(profile, table_pattern).process_scan(
-        condition, batch_size, process_batch
-    )
+            if len(accumulated_tasks) >= batch_size:
+                write_task_file()
 
     write_task_file()
 
-    print(f"\nProcessed {processed_count} publications")
-    print(f"Found {task_count} handles to migrate")
+    print(f"\nProcessed {processed_count} handles")
+    print(f"Found {task_count} tasks to process")
     print(f"Controlled prefixes: {task_writer.controlled_prefixes}")
     print(f"Output Folder: {output_folder}")
 

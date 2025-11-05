@@ -1,43 +1,39 @@
-import boto3
-
 class HandleTaskWriterService:
     NVA_SIKT_SOURCE_NAME = "nva@sikt"
 
-    def __init__(self, profile, controlled_prefixes=None):
-        if controlled_prefixes is None:
-            controlled_prefixes = ["11250", "11250.1"]
+    def __init__(self, application_domain, controlled_prefixes):
         self.controlled_prefixes = controlled_prefixes
-        self.session = boto3.Session(profile_name=profile)
-        self.ssm = self.session.client("ssm")
-        self.application_domain = self._get_system_parameter("/NVA/ApplicationDomain")
+        self.application_domain = application_domain
 
-        
     def _is_controlled_handle(self, handle):
         if not handle:
             return False
-        return any(f"//hdl.handle.net/{prefix}" in handle for prefix in self.controlled_prefixes)
-    
+        return any(
+            f"//hdl.handle.net/{prefix}" in handle
+            for prefix in self.controlled_prefixes
+        )
+
     def _get_all_handles(self, publication):
         handles = []
 
         top_handle = publication.get("handle")
         if top_handle:
-            handles.append({
-                "value": top_handle,
-                "source_name": None,
-                "location": "top"
-            })
+            handles.append(
+                {"value": top_handle, "source_name": None, "location": "top"}
+            )
 
         for additional_identifier in publication.get("additionalIdentifiers", []):
             if additional_identifier.get("type") == "HandleIdentifier":
                 handle_value = additional_identifier.get("value")
                 source_name = additional_identifier.get("sourceName")
                 if handle_value:
-                    handles.append({
-                        "value": handle_value,
-                        "source_name": source_name,
-                        "location": "additional"
-                    })
+                    handles.append(
+                        {
+                            "value": handle_value,
+                            "source_name": source_name,
+                            "location": "additional",
+                        }
+                    )
 
         return handles
 
@@ -45,7 +41,8 @@ class HandleTaskWriterService:
         all_handles = self._get_all_handles(publication)
 
         handles_to_import = [
-            handle for handle in all_handles
+            handle
+            for handle in all_handles
             if self._is_controlled_handle(handle["value"])
             and handle["source_name"] != self.NVA_SIKT_SOURCE_NAME
         ]
@@ -57,16 +54,43 @@ class HandleTaskWriterService:
         for handle in handles_to_import:
             task = {
                 "identifier": publication.get("identifier"),
-                "publication_uri": self._get_landing_page_uri(publication.get("identifier")),
+                "publication_uri": self._get_landing_page_uri(
+                    publication.get("identifier")
+                ),
                 "handle": handle["value"]
             }
             tasks.append(task)
 
         return tasks
-    
+
+    def process_handle_from_json(self, handle_value, handle_info):
+        full_handle_url = f"https://hdl.handle.net/{handle_value}"
+
+        if not self._is_controlled_handle(full_handle_url):
+            return []
+
+        source_names = handle_info.get("sourceName", [])
+        if self.NVA_SIKT_SOURCE_NAME in source_names:
+            return []
+
+        nva_ids = handle_info.get("nvaIds", [])
+        if not nva_ids:
+            return []
+
+        if len(nva_ids) != 1:
+            return []
+
+        tasks = []
+
+        for nva_id in nva_ids:
+            task = {
+                "identifier": nva_id,
+                "publication_uri": self._get_landing_page_uri(nva_id),
+                "handle": full_handle_url
+            }
+            tasks.append(task)
+
+        return tasks
+
     def _get_landing_page_uri(self, publicationIdentifier):
         return f"https://{self.application_domain}/registration/{publicationIdentifier}"
-    
-    def _get_system_parameter(self, name):
-        response = self.ssm.get_parameter(Name=name)
-        return response["Parameter"]["Value"]
