@@ -113,11 +113,17 @@ def prepare(profile: str, input_file: str, output_folder: str, controlled_prefix
     required=True,
     help="Input folder path. e.g. sikt-nva-sandbox-handle-tasks",
 )
-def create(profile: str, input_folder: str) -> None:
+@click.option(
+    "--max-workers",
+    default=5,
+    type=int,
+    help="Maximum number of concurrent threads for network requests",
+)
+def create(profile: str, input_folder: str, max_workers: int) -> None:
     complete_folder = os.path.join(input_folder, "complete")
     os.makedirs(complete_folder, exist_ok=True)
 
-    executor = HandleTaskExecutorService(profile, input_folder)
+    executor = HandleTaskExecutorService(profile, input_folder, max_workers)
 
     for batch_file in os.listdir(input_folder):
         file_path = os.path.join(input_folder, batch_file)
@@ -146,11 +152,17 @@ def create(profile: str, input_folder: str) -> None:
     required=True,
     help="Input folder path. e.g. sikt-nva-sandbox-handle-tasks",
 )
-def update(profile: str, input_folder: str) -> None:
+@click.option(
+    "--max-workers",
+    default=5,
+    type=int,
+    help="Maximum number of concurrent threads for network requests",
+)
+def update(profile: str, input_folder: str, max_workers: int) -> None:
     complete_folder = os.path.join(input_folder, "complete")
     os.makedirs(complete_folder, exist_ok=True)
 
-    executor = HandleTaskExecutorService(profile, input_folder)
+    executor = HandleTaskExecutorService(profile, input_folder, max_workers)
 
     for batch_file in os.listdir(input_folder):
         file_path = os.path.join(input_folder, batch_file)
