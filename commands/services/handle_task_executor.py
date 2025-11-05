@@ -2,6 +2,7 @@ from .handle_api import HandleApiService
 import sqlite3
 from datetime import datetime
 import os
+import json
 
 
 class HandleTaskExecutorService:
@@ -11,7 +12,9 @@ class HandleTaskExecutorService:
         self.sqlite_cursor.execute("""
             CREATE TABLE IF NOT EXISTS done_tasks (
                 id TEXT PRIMARY KEY,
-                timestamp TEXT NOT NULL
+                timestamp TEXT NOT NULL,
+                success INTEGER NOT NULL,
+                output TEXT NOT NULL
             )
         """)
         self.sqlite_conn.commit()
@@ -21,14 +24,14 @@ class HandleTaskExecutorService:
         if self.sqlite_conn:
             self.sqlite_conn.close()
 
-    def log_task_done(self, task_id):
+    def log_task_done(self, task_id, success, output):
         now = datetime.now().isoformat()
         self.sqlite_cursor.execute(
             """
-            INSERT INTO done_tasks (id, timestamp)
-            VALUES (?, ?)
+            INSERT OR REPLACE INTO done_tasks (id, timestamp, success, output)
+            VALUES (?, ?, ?, ?)
         """,
-            (task_id, now),
+            (task_id, now, 1 if success else 0, output),
         )
         self.sqlite_conn.commit()
 
@@ -61,8 +64,16 @@ class HandleTaskExecutorService:
             print(f"Creating handle with value {publication_uri}")
 
         result = self.handle_service.create_handle(request_body)
+
+        if isinstance(result, dict) and "status" in result:
+            success = 200 <= result.get("status") < 300
+        else:
+            success = True
+
+        output = json.dumps(result)
+
         print(f"Handle created with result: {result}")
-        return result
+        return success, output
 
     def update_handle(self, task):
         handle_url = task.get("handle")
@@ -77,8 +88,16 @@ class HandleTaskExecutorService:
             "uri": publication_uri
         }
         result = self.handle_service.update_handle(prefix, suffix, request_body)
+
+        if isinstance(result, dict) and "status" in result:
+            success = 200 <= result.get("status") < 300
+        else:
+            success = True
+
+        output = json.dumps(result)
+
         print(f"Handle {prefix}/{suffix} updated with result: {result}")
-        return result
+        return success, output
 
     def execute_create(self, batch):
         for task in batch:
@@ -90,8 +109,8 @@ class HandleTaskExecutorService:
                 print(f"Task {task_id} already done, skipping.")
                 continue
 
-            self.create_handle(task)
-            self.log_task_done(task_id)
+            success, output = self.create_handle(task)
+            self.log_task_done(task_id, success, output)
 
     def execute_update(self, batch):
         for task in batch:
@@ -103,5 +122,5 @@ class HandleTaskExecutorService:
                 print(f"Task {task_id} already done, skipping.")
                 continue
 
-            self.update_handle(task)
-            self.log_task_done(task_id)
+            success, output = self.update_handle(task)
+            self.log_task_done(task_id, success, output)
