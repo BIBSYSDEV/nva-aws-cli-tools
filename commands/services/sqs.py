@@ -1097,6 +1097,7 @@ class SqsService:
 
         Args:
             queue_url (str): The URL of the SQS queue.
+            max_messages (int): The maximum number of messages to process.
         """
         id_to_message_id = {}
         processed_batches = 0
@@ -1153,12 +1154,12 @@ class SqsService:
         message_attributes = message.get("MessageAttributes", {})
 
         identifier_attr = message_attributes.get("id")
-        if not identifier_attr:
+        identifier = identifier_attr.get("StringValue")
+        if not identifier:
             console.print("Skipping message with missing 'id' attribute.")
             counts["skipped"] += 1
             return
 
-        identifier = identifier_attr.get("StringValue")
 
         # Check if we've seen this id before
         if identifier in id_to_message_id:
