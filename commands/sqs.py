@@ -39,7 +39,7 @@ def sqs():
 def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, yes):
     sqs_service = SqsService(profile=profile)
 
-    queue_url = sqs_service.find_queue_url(queue_name)
+    queue_url = get_queue_url(sqs_service, queue_name)
     queue_full_name = queue_url.split("/")[-1]
     delete_after_write = delete
 
@@ -78,7 +78,7 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
 def info(queue_name, profile):
     sqs_service = SqsService(profile=profile)
 
-    queue_url = sqs_service.find_queue_url(queue_name)
+    queue_url = get_queue_url(sqs_service, queue_name)
     show_queue_details(sqs_service, queue_url)
 
 
@@ -144,7 +144,7 @@ def list(profile, filter):
 )
 def delete_duplicates(queue_name: str, profile: str, max_messages: int):
     sqs_service = SqsService(profile=profile)
-    queue_url = sqs_service.find_queue_url(queue_name)
+    queue_url = get_queue_url(sqs_service, queue_name)
 
     show_queue_summary(sqs_service, queue_url)
     console.print(f"Maximum number of messages to process: {max_messages}")
@@ -204,3 +204,11 @@ def show_queue_details(sqs_service: SqsService, queue_url: str):
     console.print(
         f"[dim]Last modified: {attrs.get('LastModifiedTimestamp', 'N/A')}[/dim]"
     )
+
+
+def get_queue_url(sqs_service: SqsService, queue_name: str) -> str:
+    queue_url = sqs_service.find_queue_url(queue_name)
+    if not queue_url:
+        console.print(f"[red]Queue '{queue_name}' not found[/red]")
+        raise click.Abort()
+    return queue_url

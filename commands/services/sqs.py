@@ -63,7 +63,7 @@ class SqsService:
         self.sqs_client = self.session.client("sqs")
         self.profile = profile or "default"
 
-    def find_queue_url(self, queue_name_partial: str) -> str:
+    def find_queue_url(self, queue_name_partial: str) -> Optional[str]:
         try:
             response = self.sqs_client.list_queues()
             queue_urls = response.get("QueueUrls", [])
