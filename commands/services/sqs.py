@@ -1160,7 +1160,6 @@ class SqsService:
             counts["skipped"] += 1
             return
 
-
         # Check if we've seen this id before
         if identifier in id_to_message_id:
             stored_message_id = id_to_message_id[identifier]
