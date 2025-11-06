@@ -13,7 +13,7 @@ def customers():
 
 
 @customers.command(
-    help="Search customer references from users that does not exsist in the customer table"
+    help="Search customer references from users that does not exist in the customer table"
 )
 @click.option(
     "--profile",

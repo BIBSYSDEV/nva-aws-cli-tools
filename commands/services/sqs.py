@@ -162,7 +162,7 @@ class SqsService:
             console.print(f"[red]Error receiving messages: {e}[/red]")
             return []
 
-    def delete_message(self, queue_url: str, receipt_handle: str) -> bool:
+    def delete_message(self, queue_url: str, receipt_handle: str) -> None:
         self.sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
 
     def delete_message_batch(self, queue_url: str, receipt_handles: List[str]) -> int:
