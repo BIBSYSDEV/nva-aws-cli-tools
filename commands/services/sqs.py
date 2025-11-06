@@ -10,7 +10,14 @@ from typing import Any, Dict, List, Optional
 import boto3
 from botocore.exceptions import ClientError
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    MofNCompleteColumn,
+    TaskID,
+)
 from rich.table import Table
 
 console = Console()
@@ -104,9 +111,9 @@ class SqsService:
 
         except ClientError as e:
             console.print(f"[red]Error listing queues: {e}[/red]")
-            return None
+            raise e
 
-    def get_queue_attributes(self, queue_url: str) -> Optional[Dict[str, Any]]:
+    def get_queue_attributes(self, queue_url: str) -> Dict[str, Any]:
         try:
             response = self.sqs_client.get_queue_attributes(
                 QueueUrl=queue_url, AttributeNames=["All"]
@@ -114,7 +121,7 @@ class SqsService:
             return response.get("Attributes", {})
         except ClientError as e:
             console.print(f"[red]Error getting queue attributes: {e}[/red]")
-            return None
+            raise e
 
     def receive_messages(
         self, queue_url: str, max_messages: int = 10
@@ -155,15 +162,8 @@ class SqsService:
             console.print(f"[red]Error receiving messages: {e}[/red]")
             return []
 
-    def delete_message(self, queue_url: str, receipt_handle: str) -> bool:
-        try:
-            self.sqs_client.delete_message(
-                QueueUrl=queue_url, ReceiptHandle=receipt_handle
-            )
-            return True
-        except ClientError as e:
-            console.print(f"[red]Error deleting message: {e}[/red]")
-            return False
+    def delete_message(self, queue_url: str, receipt_handle: str) -> None:
+        self.sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
 
     def delete_message_batch(self, queue_url: str, receipt_handles: List[str]) -> int:
         if not receipt_handles:
@@ -1085,3 +1085,122 @@ class SqsService:
                         ending_pos = i
 
         return s1[ending_pos - max_length : ending_pos]
+
+    def delete_duplicate_messages(self, queue_url: str, max_messages: int) -> None:
+        """
+        Deletes duplicate messages from an SQS queue based on the 'id' message attribute.
+
+        Logic:
+        - Keeps the first message with a given 'id' attribute
+        - If a message has the same 'id' but DIFFERENT messageId: DELETE (duplicate resource)
+        - If a message has the same 'id' AND same messageId: KEEP (SQS redelivery, valid)
+
+        Args:
+            queue_url (str): The URL of the SQS queue.
+            max_messages (int): The maximum number of messages to process.
+        """
+        id_to_message_id = {}
+        processed_batches = 0
+        batch_size = 10
+        max_batches = max_messages // batch_size
+        counts = defaultdict(int)
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("•"),
+            TextColumn("[green]Kept: {task.fields[kept]}"),
+            TextColumn("[yellow]Skipped: {task.fields[skipped]}"),
+            TextColumn("[cyan]Deleted: {task.fields[deleted]}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task(
+                "Processing messages", total=max_batches, deleted=0, kept=0, skipped=0
+            )
+
+            while processed_batches < max_batches:
+                response = self.sqs_client.receive_message(
+                    QueueUrl=queue_url,
+                    MaxNumberOfMessages=batch_size,
+                    WaitTimeSeconds=1,
+                    MessageAttributeNames=["All"],
+                    VisibilityTimeout=300,
+                )
+
+                messages = response.get("Messages", [])
+                if not messages:
+                    break
+
+                for message in messages:
+                    self._process_message(message, id_to_message_id, counts, queue_url)
+
+                self._update_progress(progress, task, counts)
+                processed_batches += 1
+
+        self._print_duplicates_summary(counts)
+
+    def _process_message(
+        self,
+        message: dict,
+        id_to_message_id: dict,
+        counts: Dict[str, int],
+        queue_url: str,
+    ) -> None:
+        """Processes a single message for duplicate detection and deletion."""
+        message_id = message["MessageId"]
+        receipt_handle = message["ReceiptHandle"]
+        message_attributes = message.get("MessageAttributes", {})
+
+        identifier_attr = message_attributes.get("id")
+        identifier = identifier_attr.get("StringValue")
+        if not identifier:
+            console.print("Skipping message with missing 'id' attribute.")
+            counts["skipped"] += 1
+            return
+
+        # Check if we've seen this id before
+        if identifier in id_to_message_id:
+            stored_message_id = id_to_message_id[identifier]
+
+            if message_id == stored_message_id:
+                # Same id, same messageId -> Keep (valid redelivery)
+                counts["kept_redelivery"] += 1
+            else:
+                # Same id, different messageId -> Delete (duplicate resource)
+                console.print(f"Deleting duplicate message for {identifier=}")
+                counts["deleted"] += 1
+                self.delete_message(queue_url, receipt_handle)
+        else:
+            # First time seeing this id
+            counts["kept_first"] += 1
+            id_to_message_id[identifier] = message_id
+
+    def _update_progress(
+        self, progress: Progress, task: TaskID, counts: Dict[str, int]
+    ) -> None:
+        """Updates the progress bar with current counts."""
+        progress.update(
+            task,
+            advance=1,
+            deleted=counts["deleted"],
+            kept=counts["kept_first"] + counts["kept_redelivery"],
+            skipped=counts["skipped"],
+        )
+
+    def _print_duplicates_summary(self, counts: Dict[str, int]) -> None:
+        """Prints a summary table of the processing results."""
+        console.print("\n[bold green]Duplicate removal complete![/bold green]\n")
+
+        table = Table(title="Summary")
+        table.add_column("Category", style="cyan", no_wrap=True)
+        table.add_column("Count", justify="right", style="magenta")
+
+        table.add_row("Kept (first occurrence)", str(counts["kept_first"]))
+        table.add_row("Kept (valid redelivery)", str(counts["kept_redelivery"]))
+        table.add_row("Deleted (duplicates)", str(counts["deleted"]))
+        table.add_row("Skipped (no id)", str(counts["skipped"]))
+        table.add_row("Total processed", str(sum(counts.values())), style="bold")
+
+        console.print(table)
