@@ -41,10 +41,10 @@ def handle():
 )
 @click.option(
     "--prefixes",
-    default="11250,11250.1,1956,10642,20.500.12199,20.500.12242",
+    default="11250,11250.1,1956,10642,20.500.12199,20.500.12242,10037",
     help="Comma-separated list of controlled handle prefixes",
 )
-def prepare(profile: str, input_file: str, output_folder: str, controlled_prefixes: str) -> None:
+def prepare(profile: str, input_file: str, output_folder: str, prefixes: str) -> None:
     batch_size = 700
 
     if not output_folder:
@@ -54,7 +54,7 @@ def prepare(profile: str, input_file: str, output_folder: str, controlled_prefix
         os.makedirs(output_folder)
 
     application_domain = get_application_domain(profile)
-    prefixes_list = [prefix.strip() for prefix in controlled_prefixes.split(",")]
+    prefixes_list = [prefix.strip() for prefix in prefixes.split(",")]
     task_writer = HandleTaskWriterService(application_domain, prefixes_list)
 
     with open(input_file, 'r', encoding='utf-8') as f:
