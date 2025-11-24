@@ -6,6 +6,8 @@ from commands.services.pipelines import get_pipeline_details_for_account
 from rich.console import Console
 from rich.table import Table
 
+logger = logging.getLogger(__name__)
+
 
 @click.group()
 def pipelines():
