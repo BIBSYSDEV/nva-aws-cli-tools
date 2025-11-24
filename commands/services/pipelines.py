@@ -6,6 +6,8 @@ from rich.text import Text
 from typing import Optional
 import json
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ExecutionDetails:
