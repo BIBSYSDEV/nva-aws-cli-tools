@@ -1,4 +1,5 @@
 import boto3
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from rich.text import Text
@@ -203,6 +204,6 @@ def get_pipeline_details_for_account(profile: str) -> list[PipelineDetails]:
             if pipeline_details:
                 results.append(pipeline_details)
         except Exception as e:
-            print(f"Error fetching details for pipeline {pipeline_name}: {e}")
+            logger.error(f"Error fetching details for pipeline {pipeline_name}: {e}")
             continue
     return results
