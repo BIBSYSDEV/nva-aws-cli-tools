@@ -1,5 +1,6 @@
 import click
 import json
+import logging
 import os
 import shutil
 from boto3.dynamodb.conditions import Key
@@ -7,6 +8,8 @@ from commands.services.aws_utils import get_account_alias
 from commands.services.handle_task_writer import HandleTaskWriterService
 from commands.services.handle_task_executor import HandleTaskExecutorService
 from commands.services.dynamodb_publications import DynamodbPublications
+
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -75,9 +78,9 @@ def prepare(
         condition, batch_size, process_batch
     )
 
-    print("Action counts: ", action_counts)
-    print(f"Customer: {customer}")
-    print(f"Output Folder: {output_folder}")
+    logger.info(f"Action counts: {action_counts}")
+    logger.info(f"Customer: {customer}")
+    logger.info(f"Output Folder: {output_folder}")
 
 
 @handle.command()

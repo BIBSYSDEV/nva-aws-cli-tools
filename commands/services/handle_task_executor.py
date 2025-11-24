@@ -1,8 +1,11 @@
 from .handle_api import HandleApiService
 from .publication_api import PublicationApiService
+import logging
 import sqlite3
 from datetime import datetime
 import os
+
+logger = logging.getLogger(__name__)
 
 
 class HandleTaskExecutorService:
@@ -76,21 +79,21 @@ class HandleTaskExecutorService:
             suffix = path_segments.pop()  # Last segment
             prefix = path_segments.pop()  # Second last segment
             value = self.publication_service.get_uri(item.get("identifier"))
-            print(f"Create handle {prefix}/{suffix} with value " + value)
+            logger.info(f"Create handle {prefix}/{suffix} with value " + value)
             request_body = {
                 "uri": value,
                 "prefix": prefix,
                 "suffix": suffix,
             }
             result = self.handle_service.create_handle(request_body)
-            print(f"Handle {prefix}/{suffix} was created with result: {result}")
+            logger.info(f"Handle {prefix}/{suffix} was created with result: {result}")
         pass
 
     def execute(self, batch):
         for item in batch:
             task_id = item.get("identifier") + item.get("action")
             if self.is_task_done(task_id):
-                print(f"Task {task_id} already done, skipping.")
+                logger.info(f"Task {task_id} already done, skipping.")
                 continue
             action = item.get("action")
 
@@ -100,6 +103,6 @@ class HandleTaskExecutorService:
                 self.import_handles(item)
                 self.log_task_done(task_id)
             else:
-                print(f"Unknown action: {action}")
+                logger.error(f"Unknown action: {action}")
                 exit(1)
         pass

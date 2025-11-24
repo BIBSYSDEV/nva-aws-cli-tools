@@ -1,5 +1,8 @@
 import boto3
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class SearchApiService:
@@ -24,8 +27,5 @@ class SearchApiService:
         if response.status_code == 200:  # If the status code indicates success
             return response.json()
         else:
-            print(
-                f"Failed to search. {response.status_code}: {response.json()}",
-                response.status_code,
-            )
+            logger.error(f"Failed to search. {response.status_code}: {response.json()}")
             return None

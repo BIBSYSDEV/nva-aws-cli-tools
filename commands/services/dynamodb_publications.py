@@ -1,11 +1,14 @@
 import boto3
 import json
+import logging
 import os
 import base64
 import zlib
 import re
 from boto3.dynamodb.types import Binary
 from boto3.dynamodb.conditions import Key
+
+logger = logging.getLogger(__name__)
 
 
 class DynamodbPublications:
@@ -33,7 +36,7 @@ class DynamodbPublications:
         )
 
         if table_name is None:
-            print(f"No table found matching {self.table_pattern}")
+            logger.error(f"No table found matching {self.table_pattern}")
             return
 
         dynamodb_resource = self.session.resource("dynamodb")
@@ -51,7 +54,7 @@ class DynamodbPublications:
         self.batch_counter += 1
         total_count = len(items)
         total_consumed_capacity = response["ConsumedCapacity"]["CapacityUnits"]
-        print(
+        logger.info(
             f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
         )
 
@@ -69,7 +72,7 @@ class DynamodbPublications:
                 self.batch_counter += 1
                 total_count += len(items)
                 total_consumed_capacity += response["ConsumedCapacity"]["CapacityUnits"]
-                print(
+                logger.info(
                     f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
                 )
 
@@ -85,7 +88,7 @@ class DynamodbPublications:
         self.batch_counter += 1
         total_count = len(items)
         total_consumed_capacity = response["ConsumedCapacity"]["CapacityUnits"]
-        print(
+        logger.info(
             f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
         )
 
@@ -103,7 +106,7 @@ class DynamodbPublications:
                 self.batch_counter += 1
                 total_count += len(items)
                 total_consumed_capacity += response["ConsumedCapacity"]["CapacityUnits"]
-                print(
+                logger.info(
                     f"Processed {len(items)} items, Total: {total_count}, ConsumedCapacity: {total_consumed_capacity}"
                 )
 
