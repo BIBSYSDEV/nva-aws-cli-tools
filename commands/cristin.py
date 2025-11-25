@@ -301,7 +301,7 @@ def put_person_image(profile: str, user_id: str, image_file) -> None:
 
 
 @cristin.command(
-    help='Accept csv for a list of users with cristin ids, nins, and full names and sets name is exsist in "N/A".'
+    help='Accept csv for a list of users with cristin ids, nins, and full names and sets name is exist in "N/A".'
 )
 @click.argument("input_file", type=click.File("r"))
 @click.option(
