@@ -13,9 +13,12 @@ from commands.organization_migration import organization_migration
 from commands.cristin import cristin
 from commands.sqs import sqs
 
+from log_config import configure_logger
+
 
 @click.group()
 def cli():
+    configure_logger()
     pass
 
 
