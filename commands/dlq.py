@@ -1,6 +1,7 @@
 import click
 import boto3
 import logging
+import json
 from commands.services.dlq import (
     get_messages,
     summarize_messages,
@@ -43,9 +44,9 @@ def read(profile: str, queue: str, count: int) -> None:
     messages = get_messages(sqs_client, queue, count)
     by_sender, by_type = summarize_messages(messages)
     logger.info("Summary of messages by sender:")
-    logger.info(by_sender)
+    logger.info(json.dumps(by_sender, indent=2, default=str))
     logger.info("Summary of messages by body text:")
-    logger.info(by_type)
+    logger.info(json.dumps(by_type, indent=2, default=str))
 
 
 @dlq.command(
