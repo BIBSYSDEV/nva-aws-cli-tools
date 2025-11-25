@@ -14,9 +14,12 @@ from commands.cristin import cristin
 from commands.sqs import sqs
 from commands.search import search
 
+from log_config import configure_logger
+
 
 @click.group()
 def cli():
+    configure_logger()
     pass
 
 

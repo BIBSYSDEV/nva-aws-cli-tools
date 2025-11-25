@@ -1,9 +1,12 @@
 import click
+import logging
 from commands.services.aws_utils import get_account_alias
 from commands.services.pipelines import get_pipeline_details_for_account
 
 from rich.console import Console
 from rich.table import Table
+
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -29,9 +32,7 @@ def branches(profile: str) -> None:
 def show_summary_table(profile: str) -> None:
     console = Console()
     alias = get_account_alias(profile)
-    console.print(
-        f"[bold magenta]Fetching pipeline details for account: {alias} ({profile})...[/bold magenta]"
-    )
+    logger.info(f"Fetching pipeline details for account: {alias} ({profile})...")
     pipelines = get_pipeline_details_for_account(profile)
 
     # Define the table
