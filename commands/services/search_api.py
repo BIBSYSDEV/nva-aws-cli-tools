@@ -32,22 +32,6 @@ class SearchApiService:
         reraise=True,
     )
     def _make_search_request(self, url, headers, params, debug=False):
-        """
-        Make a search request with retry logic.
-
-        Args:
-            url: The API endpoint URL
-            headers: Request headers
-            params: Query parameters
-            debug: If True, print debug information
-
-        Returns:
-            Response object
-
-        Raises:
-            requests.exceptions.RequestException: On network errors
-            requests.exceptions.HTTPError: On HTTP errors (500, 502, 503, 504)
-        """
         if debug:
             print(f"[DEBUG] URL: {url}", file=sys.stderr)
             print(f"[DEBUG] Params: {params}", file=sys.stderr)
