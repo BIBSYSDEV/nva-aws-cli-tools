@@ -5,11 +5,6 @@ from rich.logging import RichHandler
 from pythonjsonlogger.json import JsonFormatter
 
 
-def get_log_level(verbose: bool):
-    if verbose:
-        return logging.DEBUG
-    return logging.INFO
-
 
 def get_json_handler(log_file: Path = Path("logs.jsonl")):
     json_formatter = JsonFormatter(
@@ -39,8 +34,7 @@ def get_rich_handler(log_level=logging.INFO):
     return console_handler
 
 
-def configure_logger(verbose=False) -> None:
-    log_level = get_log_level(verbose)
+def configure_logger(log_level=logging.INFO) -> None:
     logger = logging.getLogger()
     logger.setLevel(log_level)
     logger.addHandler(get_rich_handler(log_level))

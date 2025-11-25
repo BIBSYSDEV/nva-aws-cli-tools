@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import click
+import logging
 from commands.cognito import cognito
 from commands.dlq import dlq
 from commands.handle import handle
@@ -17,8 +18,15 @@ from log_config import configure_logger
 
 
 @click.group()
-def cli():
-    configure_logger()
+@click.option("--verbose", "-v", is_flag=True, help="Verbose log output")
+@click.option("--quiet", "-q", is_flag=True, help="Silence non-critical log output")
+def cli(verbose=False, quiet=False):
+    if verbose:
+        configure_logger(logging.DEBUG)
+    elif quiet:
+        configure_logger(logging.CRITICAL)
+    else:
+        configure_logger(logging.INFO)
     pass
 
 
