@@ -1,5 +1,7 @@
+import sys
 import boto3
 import requests
+from requests.exceptions import JSONDecodeError
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -47,8 +49,6 @@ class SearchApiService:
             requests.exceptions.HTTPError: On HTTP errors (500, 502, 503, 504)
         """
         if debug:
-            import sys
-
             print(f"[DEBUG] URL: {url}", file=sys.stderr)
             print(f"[DEBUG] Params: {params}", file=sys.stderr)
             print(f"[DEBUG] Headers: {headers}", file=sys.stderr)
@@ -56,15 +56,11 @@ class SearchApiService:
         response = requests.get(url, headers=headers, params=params, timeout=30)
 
         if debug:
-            import sys
-
             print(f"[DEBUG] Status: {response.status_code}", file=sys.stderr)
             print(f"[DEBUG] Full URL: {response.url}", file=sys.stderr)
 
         if response.status_code >= 500:
             if debug:
-                import sys
-
                 print(
                     f"[DEBUG] Server error {response.status_code}, will retry...",
                     file=sys.stderr,
@@ -104,8 +100,6 @@ class SearchApiService:
             try:
                 response = self._make_search_request(url, headers, params, debug)
             except requests.exceptions.HTTPError as e:
-                import sys
-
                 print(
                     f"Failed to search after retries. Status: {e.response.status_code}",
                     file=sys.stderr,
@@ -114,18 +108,14 @@ class SearchApiService:
                     try:
                         error_detail = e.response.json()
                         print(f"Error detail: {error_detail}", file=sys.stderr)
-                    except:
+                    except (ValueError, JSONDecodeError):
                         print(f"Error detail: {e.response.text}", file=sys.stderr)
                 break
             except requests.exceptions.RequestException as e:
-                import sys
-
                 print(f"Network error after retries: {e}", file=sys.stderr)
                 break
 
             if response.status_code != 200:
-                import sys
-
                 print(
                     f"Failed to search. {response.status_code}: {response.json()}",
                     file=sys.stderr,
