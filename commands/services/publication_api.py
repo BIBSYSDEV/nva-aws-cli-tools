@@ -1,7 +1,10 @@
 import boto3
+import logging
 import requests
 import json
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 """
 # example of usage
@@ -73,7 +76,9 @@ class PublicationApiService:
         if response.status_code == 200:  # If the status code indicates success
             return response.json()
         else:
-            print("Failed to fetch publication. Status code:", response.status_code)
+            logger.error(
+                f"Failed to fetch publication. Status code: {response.status_code}"
+            )
             return None
 
     def update_publication(self, publicationIdentifier, request_body):

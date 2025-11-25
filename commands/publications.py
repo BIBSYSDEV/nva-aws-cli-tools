@@ -1,5 +1,6 @@
 import click
 import csv
+import logging
 
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import (
@@ -10,6 +11,8 @@ from commands.services.aws_utils import (
 from commands.services.dynamodb_publications import DynamodbPublications
 from commands.services.resource_batch_job import ResourceBatchJobService
 from boto3.dynamodb.conditions import Attr
+
+logger = logging.getLogger(__name__)
 
 table_pattern = (
     "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
@@ -160,7 +163,7 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
 
     def execute_batch():
         if update_statements:
-            print(f"⬆️ Executing batch of {len(update_statements)} updates.")
+            logger.info(f"⬆️ Executing batch of {len(update_statements)} updates.")
             service.execute_batch_updates(update_statements)
             update_statements.clear()
 
@@ -172,7 +175,7 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                 publication_identifier = extract_publication_identifier(row["id"])
                 new_cristin_id = row["cristinIdentifier"]
 
-                print(
+                logger.info(
                     f"Processing publication: {publication_identifier} with new Cristin ID: {new_cristin_id}"
                 )
 
@@ -210,7 +213,7 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
                         f"🟢 prepared update for publication: {publication_identifier} with Cristin ID: {new_cristin_id}"
                     )
                 else:
-                    print(
+                    logger.info(
                         f"🔵 Identifier already exists: {publication_identifier} with Cristin ID: {new_cristin_id}"
                     )
 

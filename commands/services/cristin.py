@@ -1,9 +1,12 @@
 import sys
 from urllib.parse import quote_plus
 import boto3
+import logging
 import requests
 import json
 import base64
+
+logger = logging.getLogger(__name__)
 
 
 class CristinService:
@@ -49,7 +52,7 @@ class CristinService:
             },
         )
         if not response.ok:
-            print(response.text)
+            logger.error(response.text)
             return None
 
         return response.json()
@@ -68,7 +71,7 @@ class CristinService:
             },
         )
         if not response.ok:
-            print(response.text)
+            logger.error(response.text)
             return response.text
 
         return response.json()
@@ -87,7 +90,7 @@ class CristinService:
             },
         )
         if not response.ok:
-            print(response.text)
+            logger.error(response.text)
             return response.text
 
         if len(response.json()) == 0:
@@ -113,7 +116,7 @@ class CristinService:
             },
         )
         if not response.ok:
-            print(response.text)
+            logger.error(response.text)
             return response.text
 
         return response.json()
@@ -157,7 +160,7 @@ class CristinService:
             },
         )
         if not response.ok:
-            print(response.text)
+            logger.error(response.text)
             return response.text
 
         return response.json()
@@ -186,7 +189,9 @@ class CristinService:
             },
         )
         if not response.ok:
-            print(f"Error while updating project (ID: {project_id}): {response.text}")
+            logger.error(
+                f"Error while updating project (ID: {project_id}): {response.text}"
+            )
             return response.text
 
     def update_person(self, user_id, person):
@@ -211,7 +216,9 @@ class CristinService:
 
         # Handle HTTP response
         if not response.ok:
-            print(f"Error while updating person (ID: {user_id}): {response.text}")
+            logger.error(
+                f"Error while updating person (ID: {user_id}): {response.text}"
+            )
             return response.text
 
     def put_person_image(self, user_id, image_data):
@@ -229,7 +236,7 @@ class CristinService:
         )
 
         if not response.ok:
-            print(
+            logger.error(
                 f"Error while uploading image for person (ID: {user_id}): {response.text}"
             )
             return response.text

@@ -1,5 +1,6 @@
 import click
 import json
+import logging
 import uuid
 from deepdiff import DeepDiff
 
@@ -7,6 +8,8 @@ from commands.services.search_api import SearchApiService
 from commands.services.dynamodb_publications import DynamodbPublications
 from commands.services.aws_utils import prettify
 from commands.services.resource import Resource
+
+logger = logging.getLogger(__name__)
 
 table_pattern = (
     "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
@@ -80,8 +83,8 @@ def update_publications(
         )
 
         diff = DeepDiff(resource, bo.get_data(), ignore_order=True)
-        print(f"Updating {identifier}...")
-        print(diff.pretty())
+        logger.info(f"Updating {identifier}...")
+        logger.info(diff.pretty())
         database.update_resource(
             pk0, sk0, data=database.deflate_resource(bo.data), version=str(uuid.uuid4())
         )

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import tempfile
@@ -8,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 
 import boto3
+
+logger = logging.getLogger(__name__)
 
 
 class BatchJobType(Enum):
@@ -41,7 +44,7 @@ class ResourceBatchJobService:
                 self._queue_url = matching_queues[0]
 
         except Exception as e:
-            print(f"Error finding queue: {str(e)}")
+            logger.error(f"Error finding queue: {str(e)}")
 
     def _create_batch_job_message(
         self,
@@ -87,7 +90,7 @@ class ResourceBatchJobService:
             return successful, len(failed), failed
 
         except Exception as e:
-            print(f"Error sending batch: {str(e)}")
+            logger.error(f"Error sending batch: {str(e)}")
             return 0, len(messages), [{"Message": str(e)}]
 
     def process_batch_job(
@@ -157,7 +160,7 @@ class ResourceBatchJobService:
                 # Report any failures for this batch
                 if failures:
                     for failure in failures:
-                        print(
+                        logger.error(
                             f"Failed to send message {failure.get('Id', 'unknown')}: {failure.get('Message', 'Unknown error')}"
                         )
 
@@ -176,7 +179,7 @@ class ResourceBatchJobService:
                 try:
                     future.result()
                 except Exception as e:
-                    print(f"Error processing batch: {str(e)}")
+                    logger.error(f"Error processing batch: {str(e)}")
 
         return {
             "success": total_sent == total_ids,
