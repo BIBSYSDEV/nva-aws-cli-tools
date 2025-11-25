@@ -77,7 +77,7 @@ class PublicationApiService:
             return response.json()
         else:
             logger.error(
-                "Failed to fetch publication. Status code:", response.status_code
+                f"Failed to fetch publication. Status code: {response.status_code}"
             )
             return None
 
