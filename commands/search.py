@@ -159,20 +159,27 @@ def resources(
             key, value = q.split("=", 1)
             query_params[key] = value
         else:
-            console.print(f"[yellow]Warning: Ignoring invalid query parameter: {q}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Ignoring invalid query parameter: {q}[/yellow]"
+            )
 
     if not query_params:
-        console.print("[yellow]Warning: No query parameters specified. This may return many results.[/yellow]")
+        console.print(
+            "[yellow]Warning: No query parameters specified. This may return many results.[/yellow]"
+        )
 
     try:
         count = 0
-        for hit in search_service.resource_search(query_params, page_size, debug=debug, api_version=api_version):
+        for hit in search_service.resource_search(
+            query_params, page_size, debug=debug, api_version=api_version
+        ):
             if id_only:
                 identifier = hit.get("identifier")
                 if identifier:
                     print(identifier)
             else:
                 import json
+
                 print(json.dumps(hit, indent=2))
             count += 1
 

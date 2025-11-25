@@ -1,6 +1,11 @@
 import boto3
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 
 class SearchApiService:
@@ -19,7 +24,9 @@ class SearchApiService:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=2, max=30),
-        retry=retry_if_exception_type((requests.exceptions.RequestException, requests.exceptions.HTTPError)),
+        retry=retry_if_exception_type(
+            (requests.exceptions.RequestException, requests.exceptions.HTTPError)
+        ),
         reraise=True,
     )
     def _make_search_request(self, url, headers, params, debug=False):
@@ -41,6 +48,7 @@ class SearchApiService:
         """
         if debug:
             import sys
+
             print(f"[DEBUG] URL: {url}", file=sys.stderr)
             print(f"[DEBUG] Params: {params}", file=sys.stderr)
             print(f"[DEBUG] Headers: {headers}", file=sys.stderr)
@@ -49,18 +57,25 @@ class SearchApiService:
 
         if debug:
             import sys
+
             print(f"[DEBUG] Status: {response.status_code}", file=sys.stderr)
             print(f"[DEBUG] Full URL: {response.url}", file=sys.stderr)
 
         if response.status_code >= 500:
             if debug:
                 import sys
-                print(f"[DEBUG] Server error {response.status_code}, will retry...", file=sys.stderr)
+
+                print(
+                    f"[DEBUG] Server error {response.status_code}, will retry...",
+                    file=sys.stderr,
+                )
             response.raise_for_status()
 
         return response
 
-    def resource_search(self, query_parameters, page_size=100, debug=False, api_version="2024-12-01"):
+    def resource_search(
+        self, query_parameters, page_size=100, debug=False, api_version="2024-12-01"
+    ):
         """
         Search resources with automatic pagination.
 
@@ -90,6 +105,7 @@ class SearchApiService:
                 response = self._make_search_request(url, headers, params, debug)
             except requests.exceptions.HTTPError as e:
                 import sys
+
                 print(
                     f"Failed to search after retries. Status: {e.response.status_code}",
                     file=sys.stderr,
@@ -103,11 +119,13 @@ class SearchApiService:
                 break
             except requests.exceptions.RequestException as e:
                 import sys
+
                 print(f"Network error after retries: {e}", file=sys.stderr)
                 break
 
             if response.status_code != 200:
                 import sys
+
                 print(
                     f"Failed to search. {response.status_code}: {response.json()}",
                     file=sys.stderr,
@@ -129,4 +147,3 @@ class SearchApiService:
 
             if offset >= total_hits:
                 break
-
