@@ -1,7 +1,10 @@
 import boto3
 import json
+import logging
 
 from commands.services.aws_utils import get_account_alias
+
+logger = logging.getLogger(__name__)
 
 
 class LambdaService:
@@ -31,11 +34,11 @@ class LambdaService:
                             version["Version"] != function["Version"]
                             and version["Version"] not in alias_versions
                         ):
-                            print("  🥊 {}".format(arn))
+                            logger.info("  🥊 {}".format(arn))
                             if delete:
                                 client.delete_function(FunctionName=arn)
                         else:
-                            print("  💚 {}".format(arn))
+                            logger.info("  💚 {}".format(arn))
 
     def concurrency(self):
         session = boto3.Session(profile_name=self.profile)

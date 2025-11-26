@@ -1,4 +1,7 @@
 import copy
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Resource:
@@ -19,7 +22,7 @@ class Resource:
             for affiliation in affiliations:
                 aff_id = affiliation.get("id")
                 if aff_id and aff_id.endswith(old_identifier):
-                    print(
+                    logger.info(
                         f"Updating contributor.affiliation.id {aff_id} → ...{new_identifier}"
                     )
                     affiliation["id"] = aff_id[: -len(old_identifier)] + new_identifier
@@ -32,7 +35,7 @@ class Resource:
         )
 
         if owner_affiliation and owner_affiliation.endswith(old_identifier):
-            print(
+            logger.info(
                 f"Updating resourceOwner.ownerAffiliation {owner_affiliation} → ...{new_identifier}"
             )
             updated.get("resourceOwner", {})["ownerAffiliation"] = (

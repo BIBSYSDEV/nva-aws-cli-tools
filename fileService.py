@@ -1,9 +1,12 @@
 import boto3
 import argparse
+import logging
 import zlib
 import json
 from datetime import datetime, timedelta
 import pytz
+
+logger = logging.getLogger(__name__)
 
 UTC = pytz.UTC
 OneWeekAgo = UTC.localize(datetime.now() - timedelta(weeks=1))
@@ -44,29 +47,33 @@ def delete_untagged_files(s3_client, account_id):
                         )
                         report_delete_response(len(objects_to_delete), delete_response)
                         objects_to_delete.clear()
-                        print(f"Deleted 999 files missing metadata key {MetadataKey})")
+                        logger.info(
+                            f"Deleted 999 files missing metadata key {MetadataKey})"
+                        )
 
             evaluated_files = evaluated_files + 1
 
             if evaluated_files % 100 == 0:
-                print(f"Evaluated {evaluated_files} files, deleted {deleted_files}")
+                logger.info(
+                    f"Evaluated {evaluated_files} files, deleted {deleted_files}"
+                )
 
     if len(objects_to_delete) > 0:
         s3_client.delete_objects(
             Bucket=storage_bucket, Delete={"Objects": objects_to_delete}, Quiet=True
         )
 
-    print(f"Evaluated {evaluated_files} files, deleted {deleted_files}")
+    logger.info(f"Evaluated {evaluated_files} files, deleted {deleted_files}")
 
 
 def report_delete_response(expected_deletes, response):
     deleted = response["Deleted"]
-    print(f"Deleted {len(deleted)} of {expected_deletes}")
+    logger.info(f"Deleted {len(deleted)} of {expected_deletes}")
 
     if "Errors" in response:
         errors = response["Errors"]
         if len(errors) > 0:
-            print(errors)
+            logger.error(errors)
 
 
 def should_delete_object(obj, metadata):
@@ -111,12 +118,12 @@ def tag_referenced_files(dynamo_client, s3_resource, account_id, resources_table
                                     s3_resource, identifier, key, storage_bucket
                                 )
                                 if evaluated_files % 100 == 0:
-                                    print(
+                                    logger.info(
                                         f"Evaluated {evaluated_files} files, "
                                         + f"tagged {tagged_files}"
                                     )
 
-    print(f"Evaluated {evaluated_files} files, " + f"tagged {tagged_files}")
+    logger.info(f"Evaluated {evaluated_files} files, " + f"tagged {tagged_files}")
 
 
 def reset_tags(s3_client, s3_resource, accountId):
@@ -136,8 +143,8 @@ def reset_tags(s3_client, s3_resource, accountId):
                 MetadataDirective="REPLACE",
             )
             count = count + 1
-        print(f"Reset tags on {count} objects!")
-    print("Done!")
+        logger.info(f"Reset tags on {count} objects!")
+    logger.info("Done!")
 
 
 def extract_item_data(item):
@@ -158,7 +165,7 @@ def update_file_metadata(s3_resource, publication_identifier, file_key, bucket_n
             Metadata=target.metadata,
             MetadataDirective="REPLACE",
         )
-        print("Updated metadata for file " + file_key)
+        logger.info("Updated metadata for file " + file_key)
         return 1
 
 

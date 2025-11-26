@@ -1,9 +1,12 @@
+import logging
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
 
 
 def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, any]]:
     """Read messages from queue."""
-    print("Reading messages from the queue...")
+    logger.info("Reading messages from the queue...")
     all_messages: list[dict[str, any]] = []
     seen_message_ids: set[str] = set()
 
@@ -28,9 +31,9 @@ def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, any]]
 
         all_messages.extend(new_messages)
         seen_message_ids.update(msg["MessageId"] for msg in new_messages)
-        print(f"Received {len(new_messages)} new messages.")
+        logger.info(f"Received {len(new_messages)} new messages.")
 
-    print(f"Total messages read: {len(all_messages)}")
+    logger.info(f"Total messages read: {len(all_messages)}")
     return all_messages
 
 
@@ -61,7 +64,7 @@ def delete_messages_with_prefix(
     sqs_client, queue: str, prefix: str, max_count: int
 ) -> int:
     """Delete messages with specific prefix in body as we encounter them."""
-    print(f"Deleting messages with prefix '{prefix}'...")
+    logger.info(f"Deleting messages with prefix '{prefix}'...")
     deleted_count = 0
     processed_count = 0
     seen_message_ids: set[str] = set()
@@ -93,13 +96,15 @@ def delete_messages_with_prefix(
             body = msg.get("Body", "")
             if body.startswith(prefix):
                 try:
-                    print(f"Deleting message: {msg['MessageId']} - {body[:50]}...")
+                    logger.info(
+                        f"Deleting message: {msg['MessageId']} - {body[:50]}..."
+                    )
                     sqs_client.delete_message(
                         QueueUrl=queue, ReceiptHandle=msg["ReceiptHandle"]
                     )
                     deleted_count += 1
                 except Exception as e:
-                    print(f"Failed to delete message {msg['MessageId']}: {e}")
+                    logger.error(f"Failed to delete message {msg['MessageId']}: {e}")
             else:
                 # Reset visibility for non-matching messages
                 try:
@@ -109,8 +114,8 @@ def delete_messages_with_prefix(
                         VisibilityTimeout=0,
                     )
                 except Exception as e:
-                    print(
-                        f"Warning: Could not reset visibility for message {msg['MessageId']}: {e}"
+                    logger.warning(
+                        f"Could not reset visibility for message {msg['MessageId']}: {e}"
                     )
 
     return deleted_count

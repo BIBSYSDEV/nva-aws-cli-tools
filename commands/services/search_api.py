@@ -1,5 +1,5 @@
-import sys
 import boto3
+import logging
 import requests
 from requests.exceptions import JSONDecodeError
 from tenacity import (
@@ -8,6 +8,8 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SearchApiService:
@@ -31,30 +33,24 @@ class SearchApiService:
         ),
         reraise=True,
     )
-    def _make_search_request(self, url, headers, params, debug=False):
-        if debug:
-            print(f"[DEBUG] URL: {url}", file=sys.stderr)
-            print(f"[DEBUG] Params: {params}", file=sys.stderr)
-            print(f"[DEBUG] Headers: {headers}", file=sys.stderr)
+    def _make_search_request(self, url, headers, params):
+        logger.debug(f"[DEBUG] URL: {url}")
+        logger.debug(f"[DEBUG] Params: {params}")
+        logger.debug(f"[DEBUG] Headers: {headers}")
 
         response = requests.get(url, headers=headers, params=params, timeout=30)
 
-        if debug:
-            print(f"[DEBUG] Status: {response.status_code}", file=sys.stderr)
-            print(f"[DEBUG] Full URL: {response.url}", file=sys.stderr)
+        logger.debug(f"[DEBUG] Status: {response.status_code}")
+        logger.debug(f"[DEBUG] Full URL: {response.url}")
 
         if response.status_code >= 500:
-            if debug:
-                print(
-                    f"[DEBUG] Server error {response.status_code}, will retry...",
-                    file=sys.stderr,
-                )
+            logger.debug(f"[DEBUG] Server error {response.status_code}, will retry...")
             response.raise_for_status()
 
         return response
 
     def resource_search(
-        self, query_parameters, page_size=100, debug=False, api_version="2024-12-01"
+        self, query_parameters, page_size=100, api_version="2024-12-01"
     ):
         """
         Search resources with automatic pagination.
@@ -62,7 +58,6 @@ class SearchApiService:
         Args:
             query_parameters: Dictionary of query parameters (without 'from' and 'results')
             page_size: Number of results per page (default: 100)
-            debug: If True, print debug information including URLs
             api_version: API version to use in Accept header (default: 2024-12-01)
 
         Yields:
@@ -82,27 +77,25 @@ class SearchApiService:
             }
 
             try:
-                response = self._make_search_request(url, headers, params, debug)
+                response = self._make_search_request(url, headers, params)
             except requests.exceptions.HTTPError as e:
-                print(
+                logger.error(
                     f"Failed to search after retries. Status: {e.response.status_code}",
-                    file=sys.stderr,
                 )
                 if e.response.status_code >= 400:
                     try:
                         error_detail = e.response.json()
-                        print(f"Error detail: {error_detail}", file=sys.stderr)
+                        logger.error(f"Error detail: {error_detail}")
                     except (ValueError, JSONDecodeError):
-                        print(f"Error detail: {e.response.text}", file=sys.stderr)
+                        logger.error(f"Error detail: {e.response.text}")
                 break
             except requests.exceptions.RequestException as e:
-                print(f"Network error after retries: {e}", file=sys.stderr)
+                logger.error(f"Network error after retries: {e}")
                 break
 
             if response.status_code != 200:
-                print(
-                    f"Failed to search. {response.status_code}: {response.json()}",
-                    file=sys.stderr,
+                logger.error(
+                    f"Failed to search. {response.status_code}: {response.json()}"
                 )
                 break
 

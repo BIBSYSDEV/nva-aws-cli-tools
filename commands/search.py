@@ -1,9 +1,9 @@
 import click
-from rich.console import Console
+import logging
 
 from commands.services.search_api import SearchApiService
 
-console = Console(stderr=True)
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -84,11 +84,6 @@ def search():
     help="Additional query parameters in format key=value (can be used multiple times)",
 )
 @click.option(
-    "--debug",
-    is_flag=True,
-    help="Show debug information including URLs being called",
-)
-@click.option(
     "--api-version",
     type=str,
     default="2024-12-01",
@@ -109,7 +104,6 @@ def resources(
     sort,
     id_only,
     query,
-    debug,
     api_version,
 ):
     """Search NVA resources with flexible query parameters.
@@ -159,19 +153,15 @@ def resources(
             key, value = q.split("=", 1)
             query_params[key] = value
         else:
-            console.print(
-                f"[yellow]Warning: Ignoring invalid query parameter: {q}[/yellow]"
-            )
+            logger.warning(f"Ignoring invalid query parameter: {q}")
 
     if not query_params:
-        console.print(
-            "[yellow]Warning: No query parameters specified. This may return many results.[/yellow]"
-        )
+        logger.warning("No query parameters specified. This may return many results.")
 
     try:
         count = 0
         for hit in search_service.resource_search(
-            query_params, page_size, debug=debug, api_version=api_version
+            query_params, page_size, api_version=api_version
         ):
             if id_only:
                 identifier = hit.get("identifier")
@@ -183,9 +173,9 @@ def resources(
                 print(json.dumps(hit, indent=2))
             count += 1
 
-        if debug or count > 0:
-            console.print(f"[green]Total results: {count}[/green]")
+        if count > 0:
+            logger.info(f"Total results: {count}")
 
     except Exception as e:
-        console.print(f"[red]Error fetching resources: {e}[/red]")
+        logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
