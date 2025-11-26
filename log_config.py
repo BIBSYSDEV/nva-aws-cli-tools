@@ -1,8 +1,11 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from rich.console import Console
 from rich.logging import RichHandler
 from pythonjsonlogger.json import JsonFormatter
+
+log_console = Console(stderr=True)
 
 
 def get_log_level(verbose: bool):
@@ -29,6 +32,7 @@ def get_json_handler(log_file: Path = Path("logs.jsonl")):
 
 def get_rich_handler(log_level=logging.INFO):
     console_handler = RichHandler(
+        console=log_console,
         level=log_level,
         rich_tracebacks=True,
         log_time_format="%H:%M:%S",
