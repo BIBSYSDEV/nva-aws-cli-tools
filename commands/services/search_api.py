@@ -34,17 +34,17 @@ class SearchApiService:
         reraise=True,
     )
     def _make_search_request(self, url, headers, params):
-        logger.debug(f"[DEBUG] URL: {url}")
-        logger.debug(f"[DEBUG] Params: {params}")
-        logger.debug(f"[DEBUG] Headers: {headers}")
+        logger.debug(f"URL: {url}")
+        logger.debug(f"Params: {params}")
+        logger.debug(f"Headers: {headers}")
 
         response = requests.get(url, headers=headers, params=params, timeout=30)
 
-        logger.debug(f"[DEBUG] Status: {response.status_code}")
-        logger.debug(f"[DEBUG] Full URL: {response.url}")
+        logger.debug(f"Status: {response.status_code}")
+        logger.debug(f"Full URL: {response.url}")
 
         if response.status_code >= 500:
-            logger.debug(f"[DEBUG] Server error {response.status_code}, will retry...")
+            logger.debug(f"Server error {response.status_code}, will retry...")
             response.raise_for_status()
 
         return response
