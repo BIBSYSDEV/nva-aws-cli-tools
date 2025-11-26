@@ -8,7 +8,6 @@ from pythonjsonlogger.json import JsonFormatter
 log_console = Console(stderr=True)
 
 
-
 def get_json_handler(log_file: Path = Path("logs.jsonl")):
     json_formatter = JsonFormatter(
         fmt="%(asctime)s %(levelname)s %(message)s %(name)s",
