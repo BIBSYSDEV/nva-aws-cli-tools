@@ -19,7 +19,7 @@ class SearchApiService:
         return f"https://{self.api_domain}/search/{type}"
 
     def resource_search(self, queryParameters):
-        url = f"{self.get_uri("resources")}"
+        url = f"{self.get_uri('resources')}"
         headers = {
             "Accept": "application/json; version=2024-12-01",
         }

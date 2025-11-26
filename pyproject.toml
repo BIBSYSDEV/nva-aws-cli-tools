@@ -16,11 +16,11 @@ dependencies = [
     "python-json-logger>=4.0.0",
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.4.1",
-    "ruff>=0.6.9",
-]
-
 [tool.pytest.ini_options]
 pythonpath = "."
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "ruff>=0.14.6",
+]
