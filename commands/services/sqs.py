@@ -894,7 +894,7 @@ class SqsService:
                 table.add_column("Exception Pattern", style="yellow", max_width=120)
                 table.add_column("Count", style="red", justify="right")
                 table.add_column("% of Msgs", style="green", justify="right")
-                for context, count in recurring_contexts[:15]:
+                for context, count in recurring_contexts[:25]:
                     percentage = (count / total_messages) * 100
 
                     display_context = context
