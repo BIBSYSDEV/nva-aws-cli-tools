@@ -327,13 +327,12 @@ class SqsService:
 
     def drain_queue(
         self,
-        queue_name_partial: str,
+        queue_url: str,
         output_dir: Optional[str] = None,
         max_messages_per_file: int = 1000,
         delete_after_write: bool = True,
         num_threads: int = 5,
     ) -> bool:
-        queue_url = self.find_queue_url(queue_name_partial)
         if not queue_url:
             return False
 

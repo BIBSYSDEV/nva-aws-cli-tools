@@ -40,12 +40,10 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
     sqs_service = SqsService(profile=profile)
 
     queue_url = get_queue_url(sqs_service, queue_name)
-    queue_full_name = queue_url.split("/")[-1]
     delete_after_write = delete
 
     if not yes:
-        console.print(f"\n[yellow]Queue: {queue_full_name}[/yellow]")
-        console.print(f"[yellow]Profile: {sqs_service.profile}[/yellow]")
+        show_queue_summary(sqs_service, queue_url)
         console.print(f"[yellow]Messages per file: {messages_per_file}[/yellow]")
         console.print(f"[yellow]Delete after write: {delete_after_write}[/yellow]")
         console.print(f"[yellow]Threads: {threads}[/yellow]")
@@ -60,7 +58,7 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
             return
 
     success = sqs_service.drain_queue(
-        queue_name,
+        queue_url,
         output_dir=output_dir,
         max_messages_per_file=messages_per_file,
         delete_after_write=delete_after_write,
