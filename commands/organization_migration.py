@@ -4,6 +4,7 @@ import logging
 import uuid
 from deepdiff import DeepDiff
 
+from commands.utils import AppContext
 from commands.services.search_api import SearchApiService
 from commands.services.dynamodb_publications import DynamodbPublications
 from commands.services.aws_utils import prettify
@@ -17,27 +18,23 @@ table_pattern = (
 
 
 @click.group()
-def organization_migration():
+@click.pass_obj
+def organization_migration(ctx: AppContext):
     pass
 
 
 @organization_migration.command(help="List affected publications")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.option(
     "--filename",
     default="report.json",
     help="the file name for report of usage of organization identifier",
 )
 @click.argument("organization_identifier", required=True, nargs=1)
+@click.pass_obj
 def list_publications(
-    profile: str, organization_identifier: str, filename: str
+    ctx: AppContext, organization_identifier: str, filename: str
 ) -> dict:
-    service = SearchApiService(profile)
+    service = SearchApiService(ctx.profile)
     params = {"unit": organization_identifier}
     contributors_response = fetch_all(service, params)
     params = {"userAffiliation": organization_identifier}
@@ -52,20 +49,15 @@ def list_publications(
 
 @organization_migration.command(help="Update publications")
 @click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-@click.option(
     "--filename",
     default="report.json",
     help="file name of report in json",
 )
 @click.argument("old_organization_identifier", required=True, nargs=1)
 @click.argument("new_organization_identifier", required=True, nargs=1)
+@click.pass_obj
 def update_publications(
-    profile: str,
+    ctx: AppContext,
     old_organization_identifier: str,
     new_organization_identifier: str,
     filename: str,
@@ -73,7 +65,7 @@ def update_publications(
     with open(filename, "r") as file:
         report = json.load(file)
 
-    database = DynamodbPublications(profile, table_pattern)
+    database = DynamodbPublications(ctx.profile, table_pattern)
     contributors = report.get("contributors", [])
     for identifier in contributors:
         (pk0, sk0, resource) = database.fetch_resource_by_identifier(identifier)

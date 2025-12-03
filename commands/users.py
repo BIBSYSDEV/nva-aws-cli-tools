@@ -2,68 +2,49 @@ import json
 import click
 import sys
 
+from commands.utils import AppContext
 from commands.services.users_api import UsersAndRolesService
 from commands.services.aws_utils import prettify
 from commands.services.external_user import ExternalUserService
 
 
 @click.group()
-def users():
+@click.pass_obj
+def users(ctx: AppContext):
     pass
 
 
 @users.command(help="Search users by user values")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("search_term", required=True, nargs=-1)
-def search(profile: str, search_term: str) -> None:
+@click.pass_obj
+def search(ctx: AppContext, search_term: str) -> None:
     search_term = " ".join(search_term)
-    result = UsersAndRolesService(profile).search(search_term)
+    result = UsersAndRolesService(ctx.profile).search(search_term)
     click.echo(prettify(result))
 
 
 @users.command(help="Add user")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("user_data", type=click.File("r"), default=sys.stdin)
-def add_user(profile: str, user_data: str) -> None:
+@click.pass_obj
+def add_user(ctx: AppContext, user_data: str) -> None:
     if user_data.isatty():
         user_data_json = sys.stdin.read()
     else:
         user_data_json = user_data.read()
     user = json.loads(user_data_json)
-    result = UsersAndRolesService(profile).add_user(user)
+    result = UsersAndRolesService(ctx.profile).add_user(user)
     click.echo(prettify(result))
 
 
 @users.command(help="Approve user terms by passing cristin person ID (e.g. 2009968)")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("user_id", required=True)
-def approve_terms(profile: str, user_id: str) -> None:
-    result = UsersAndRolesService(profile).approve_terms(user_id)
+@click.pass_obj
+def approve_terms(ctx: AppContext, user_id: str) -> None:
+    result = UsersAndRolesService(ctx.profile).approve_terms(user_id)
     click.echo(prettify(result))
 
 
 @users.command(help="Add external API user")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.option(
     "-c",
     "--customer",
@@ -82,10 +63,11 @@ def approve_terms(profile: str, user_id: str) -> None:
     required=True,
     help="Comma-separated list of scopes without whitespace, e.g., https://api.nva.unit.no/scopes/third-party/publication-read,https://api.nva.unit.no/scopes/third-party/publication-upsert",
 )
+@click.pass_obj
 def create_external(
-    profile: str, customer: str, intended_purpose: str, scopes: str
+    ctx: AppContext, customer: str, intended_purpose: str, scopes: str
 ) -> None:
-    external_user = ExternalUserService(profile).create(
+    external_user = ExternalUserService(ctx.profile).create(
         customer, intended_purpose, scopes.split(",")
     )
     external_user.save_to_file()

@@ -2,6 +2,7 @@ import click
 import boto3
 import logging
 import json
+from commands.utils import AppContext
 from commands.services.dlq import (
     get_messages,
     summarize_messages,
@@ -12,19 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-def dlq():
+@click.pass_obj
+def dlq(
+    ctx: AppContext,
+):
     """Utility methods for working with SQS dead-letter queues (DLQ)."""
     pass
 
 
 @dlq.command(
     help="Read all messages in a queue and summarize them by sender and body text."
-)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g., sikt-nva-sandbox",
 )
 @click.option(
     "-q",
@@ -38,8 +36,9 @@ def dlq():
     default=100,
     help="Max number of messages to read",
 )
-def read(profile: str, queue: str, count: int) -> None:
-    session = boto3.Session(profile_name=profile)
+@click.pass_obj
+def read(ctx: AppContext, queue: str, count: int) -> None:
+    session = boto3.Session(profile_name=ctx.profile)
     sqs_client = session.client("sqs")
     messages = get_messages(sqs_client, queue, count)
     by_sender, by_type = summarize_messages(messages)
@@ -51,12 +50,6 @@ def read(profile: str, queue: str, count: int) -> None:
 
 @dlq.command(
     help="Deletes messages from a queue with a body that matches a specific prefix."
-)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g., sikt-nva-sandbox",
 )
 @click.option(
     "-q",
@@ -81,8 +74,8 @@ def read(profile: str, queue: str, count: int) -> None:
     is_flag=True,
     help="Show what would be deleted without actually deleting",
 )
-def purge(profile: str, queue: str, count: int, prefix: str, dry_run: bool) -> None:
-    session = boto3.Session(profile_name=profile)
+def purge(ctx: AppContext, queue: str, count: int, prefix: str, dry_run: bool) -> None:
+    session = boto3.Session(profile_name=ctx.profile)
     sqs_client = session.client("sqs")
 
     logger.info(f"Target queue: {queue}")

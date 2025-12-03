@@ -1,5 +1,6 @@
 import click
 
+from commands.utils import AppContext
 from commands.services.customers_api import (
     list_missing_customers,
     list_duplicate_customers,
@@ -8,31 +9,22 @@ from commands.services.aws_utils import prettify
 
 
 @click.group()
-def customers():
+@click.pass_obj
+def customers(ctx: AppContext):
     pass
 
 
 @customers.command(
     help="Search customer references from users that does not exist in the customer table"
 )
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def list_missing(profile) -> None:
-    result = list_missing_customers(profile)
+@click.pass_obj
+def list_missing(ctx: AppContext) -> None:
+    result = list_missing_customers(ctx.profile)
     click.echo(prettify(result))
 
 
 @customers.command(help="Search dubplicate customer references (same cristin id)")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def list_duplicate(profile: str) -> None:
-    result = list_duplicate_customers(profile)
+@click.pass_obj
+def list_duplicate(ctx: AppContext) -> None:
+    result = list_duplicate_customers(ctx.profile)
     click.echo(prettify(result))

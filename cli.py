@@ -13,21 +13,32 @@ from commands.pipelines import pipelines
 from commands.organization_migration import organization_migration
 from commands.cristin import cristin
 from commands.sqs import sqs
+from commands.utils import AppContext
 
 from log_config import configure_logger
 
 
 @click.group()
-@click.option("--verbose", "-v", is_flag=True, help="Verbose log output")
-@click.option("--quiet", "-q", is_flag=True, help="Silence non-critical log output")
-def cli(verbose=False, quiet=False):
-    if verbose:
-        configure_logger(logging.DEBUG)
-    elif quiet:
-        configure_logger(logging.CRITICAL)
-    else:
-        configure_logger(logging.INFO)
-    pass
+@click.option(
+    "--verbose", "-v", "log_level", flag_value=logging.DEBUG, help="Verbose output"
+)
+@click.option(
+    "--quiet", "-q", "log_level", flag_value=logging.CRITICAL, help="Quiet output"
+)
+@click.option(
+    "--normal", "log_level", flag_value=logging.INFO, default=True, hidden=True
+)
+@click.option(
+    "--profile",
+    "-p",
+    envvar="AWS_PROFILE",
+    default="default",
+    help="Name of the local AWS profile to use (default: AWS_PROFILE environment variable)",
+)
+@click.pass_context
+def cli(ctx: click.Context, log_level: int, profile: str):
+    configure_logger(log_level)
+    ctx.obj = AppContext(log_level=log_level, profile=profile)
 
 
 cli.add_command(cognito)

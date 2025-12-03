@@ -4,13 +4,15 @@ import json
 import os
 import csv
 
+from commands.utils import AppContext
 from commands.services.cristin import CristinService
 from commands.services.users_api import UsersAndRolesService
 from commands.services.aws_utils import prettify
 
 
 @click.group()
-def cristin():
+@click.pass_obj
+def cristin(ctx: AppContext):
     pass
 
 
@@ -18,13 +20,8 @@ def cristin():
     help="Add cristin user by passing user data as a JSON string from a file or stdin."
 )
 @click.argument("input_file", type=click.File("r"), default=sys.stdin)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def add_person(profile: str, input_file) -> None:
+@click.pass_obj
+def add_person(ctx: AppContext, input_file) -> None:
     """
     Adds a person to Cristin. Person data is read from INPUT_FILE (json).
     If INPUT_FILE is not provided, it reads from stdin.
@@ -34,51 +31,36 @@ def add_person(profile: str, input_file) -> None:
     else:
         user_data_json = input_file.read()
     user_data = json.loads(user_data_json)
-    result = CristinService(profile).add_person(user_data)
+    result = CristinService(ctx.profile).add_person(user_data)
     click.echo(prettify(result))
 
 
 @cristin.command(help="Update an existing person in Cristin.")
 @click.argument("user_id", required=True)
 @click.argument("input_file", type=click.File("r"), default=sys.stdin)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def update_person(profile: str, input_file, user_id) -> None:
+@click.pass_obj
+def update_person(ctx: AppContext, input_file, user_id) -> None:
     if input_file.isatty():
         user_data_json = sys.stdin.read()
     else:
         user_data_json = input_file.read()
     user_data = json.loads(user_data_json)
-    CristinService(profile).update_person(user_id, user_data)
+    CristinService(ctx.profile).update_person(user_id, user_data)
 
 
 @cristin.command(help="Get person from Cristin.")
 @click.argument("user_id", required=True)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def get_person(profile: str, user_id) -> None:
-    result = CristinService(profile).get_person(user_id)
+@click.pass_obj
+def get_person(ctx: AppContext, user_id) -> None:
+    result = CristinService(ctx.profile).get_person(user_id)
     click.echo(prettify(result))
 
 
 @cristin.command(help="Get person from Cristin by Norwegian National ID.")
 @click.argument("norwegian_national_id", required=True)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def get_person_by_nin(profile: str, norwegian_national_id: str) -> None:
-    result = CristinService(profile).get_person_by_nin(norwegian_national_id)
+@click.pass_obj
+def get_person_by_nin(ctx: AppContext, norwegian_national_id: str) -> None:
+    result = CristinService(ctx.profile).get_person_by_nin(norwegian_national_id)
     click.echo(prettify(result))
 
 
@@ -89,18 +71,13 @@ def get_person_by_nin(profile: str, norwegian_national_id: str) -> None:
     "folder_path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True),
 )
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def import_persons(profile: str, folder_path: str) -> None:
+@click.pass_obj
+def import_persons(ctx: AppContext, folder_path: str) -> None:
     """
     Adds users to Cristin from all JSON files in the specified folder and pre-approves their terms.
     """
-    user_service = UsersAndRolesService(profile)
-    cristin_service = CristinService(profile)
+    user_service = UsersAndRolesService(ctx.profile)
+    cristin_service = CristinService(ctx.profile)
     for filename in os.listdir(folder_path):
         if filename.endswith(".json"):
             file_path = os.path.join(folder_path, filename)
@@ -183,53 +160,38 @@ def import_persons(profile: str, folder_path: str) -> None:
 
 @cristin.command(help="Get project from Cristin.")
 @click.argument("project_id", required=True)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def get_project(profile: str, project_id) -> None:
-    result = CristinService(profile).get_project(project_id)
+@click.pass_obj
+def get_project(ctx: AppContext, project_id) -> None:
+    result = CristinService(ctx.profile).get_project(project_id)
     click.echo(prettify(result))
 
 
 @cristin.command(help="Add project to Cristin.")
 @click.argument("input_file", type=click.File("r"), default=sys.stdin)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def add_project(profile: str, input_file) -> None:
+@click.pass_obj
+def add_project(ctx: AppContext, input_file) -> None:
     if input_file.isatty():
         data = sys.stdin.read()
     else:
         data = input_file.read()
     project = json.loads(data)
 
-    result = CristinService(profile).add_project(project)
+    result = CristinService(ctx.profile).add_project(project)
     click.echo(prettify(result))
 
 
 @cristin.command(help="Update project in Cristin.")
 @click.argument("project_id", required=True)
 @click.argument("input_file", type=click.File("r"), default=sys.stdin)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def update_project(profile: str, project_id: str, input_file) -> None:
+@click.pass_obj
+def update_project(ctx: AppContext, project_id: str, input_file) -> None:
     if input_file.isatty():
         data = sys.stdin.read()
     else:
         data = input_file.read()
     project = json.loads(data)
 
-    CristinService(profile).update_project(project_id, project)
+    CristinService(ctx.profile).update_project(project_id, project)
     click.echo("Project updated successfully.")
 
 
@@ -238,14 +200,9 @@ def update_project(profile: str, project_id: str, input_file) -> None:
     "input_folder", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
 @click.argument("manager_id", required=True)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def import_projects(profile: str, input_folder: str, manager_id: str) -> None:
-    cristin_service = CristinService(profile)
+@click.pass_obj
+def import_projects(ctx: AppContext, input_folder: str, manager_id: str) -> None:
+    cristin_service = CristinService(ctx.profile)
     for filename in os.listdir(input_folder):
         if filename.endswith(".json"):
             file_path = os.path.join(input_folder, filename)
@@ -288,15 +245,10 @@ def import_projects(profile: str, input_folder: str, manager_id: str) -> None:
 @cristin.command(help="Upload a person's image to Cristin.")
 @click.argument("user_id", required=True)
 @click.argument("image_file", type=click.File("rb"), required=True)
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def put_person_image(profile: str, user_id: str, image_file) -> None:
+@click.pass_obj
+def put_person_image(ctx: AppContext, user_id: str, image_file) -> None:
     image_data = image_file.read()
-    CristinService(profile).put_person_image(user_id, image_data)
+    CristinService(ctx.profile).put_person_image(user_id, image_data)
     click.echo("OK")
 
 
@@ -304,14 +256,9 @@ def put_person_image(profile: str, user_id: str, image_file) -> None:
     help='Accept csv for a list of users with cristin ids, nins, and full names and sets name is exist in "N/A".'
 )
 @click.argument("input_file", type=click.File("r"))
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-def update_names_job(profile: str, input_file) -> None:
-    cristin = CristinService(profile)
+@click.pass_obj
+def update_names_job(ctx: AppContext, input_file) -> None:
+    cristin = CristinService(ctx.profile)
     # PERSONLOPENR;FORNAVN;ETTERNAVN;FODSELSDATO;PERSONNR;DATO_OPPRETTET;;NIN;NAME
     reader = csv.DictReader(input_file, delimiter=";")
 
