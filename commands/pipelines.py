@@ -1,5 +1,6 @@
 import click
 import logging
+from commands.utils import AppContext
 from commands.services.aws_utils import get_account_alias
 from commands.services.pipelines import get_pipeline_details_for_account
 
@@ -10,21 +11,17 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-def pipelines():
+@click.pass_obj
+def pipelines(ctx: AppContext):
     pass
 
 
 @pipelines.command(
     help="Check the current Git branch, repository name, and latest status of all CodePipelines"
 )
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g., sikt-nva-sandbox",
-)
-def branches(profile: str) -> None:
-    profiles = profile.split(",")
+@click.pass_obj
+def branches(ctx: AppContext) -> None:
+    profiles = ctx.profile.split(",")
     for single_profile in profiles:
         show_summary_table(single_profile.strip())
 

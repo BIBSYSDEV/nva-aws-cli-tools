@@ -52,23 +52,48 @@ Preqrequisites to use this project:
 Follow manual here:
 <https://platon.sikt.no/aws/account-access>
 
-To to skip --profile option, do `export AWS_PROFILE=LimitedAdmin-123456789000` with your prefered account number
+To skip the `--profile` option, do `export AWS_PROFILE=sikt-nva-sandbox` with your preferred profile name.
 
 ## CLI
 
-```
+```bash
 Usage: cli.py [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --help  Show this message and exit.
+  -v, --verbose       Verbose output
+  -q, --quiet         Quiet output
+  -p, --profile TEXT  Name of the local AWS profile to use
+                      (default: AWS_PROFILE environment variable or "default")
+  --help              Show this message and exit.
 
 Commands:
-  awslambda
-  cognito
-  customers
-  handle
-  users
-  organization-migration
+  awslambda               Manage AWS Lambda functions
+  cognito                 Search Cognito users
+  cristin                 Cristin integration commands
+  customers               Customer data validation
+  dlq                     Dead letter queue handling
+  handle                  Handle registration tasks
+  organization-migration  Publication organization migrations
+  pipelines               AWS pipeline management
+  publications            Publication CRUD, export, migration
+  sqs                     SQS queue management
+  users                   User search and management
+```
+
+### Global Options
+
+The `--profile` option is available at the root level and applies to all subcommands:
+
+```bash
+# Using the profile option
+uv run cli.py --profile sikt-nva-sandbox users search "john"
+
+# Using environment variable instead
+export AWS_PROFILE=sikt-nva-sandbox
+uv run cli.py users search "john"
+
+# The pipelines command supports comma-separated profiles
+uv run cli.py --profile sikt-nva-dev,sikt-nva-test pipelines branches
 ```
 
 ### **CLI Commands Summary**
@@ -78,7 +103,6 @@ Commands:
 - **Description**: Cleans old versions of AWS Lambda functions.
 
 * **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   * `--delete`: If set, deletes old Lambda function versions.
 
 ---
@@ -87,15 +111,9 @@ Commands:
 
 * **Description**: Searches for customer references in users that do not exist in the customer table.
 
-* **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
-
 #### **`customers list-duplicate`**
 
 * **Description**: Searches for duplicate customer references (same Cristin ID).
-
-* **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 
 ---
 
@@ -103,8 +121,6 @@ Commands:
 
 * **Description**: Searches for users by user values.
 
-* **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 * **Arguments**:
   * `search_term`: One or more terms to search for users.
 
@@ -113,7 +129,6 @@ Commands:
 * **Description**: Add external API user.
 
 * **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   * `--customer`: Customer UUID. e.g. bb3d0c0c-5065-4623-9b98-5810983c2478 [required]
   * `--intended_purpose`: The intended purpose. e.g. oslomet-thesis-integration  [required]
   * `--scopes`: Comma-separated list of scopes without whitespace, e.g., <https://api.nva.unit.no/scopes/third-party/publication-read,https://api.nva.unit.no/scopes/third-party/publication-upsert>  [required]
@@ -124,8 +139,6 @@ Commands:
 
 * **Description**: Searches for Cognito users by attribute values.
 
-* **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
 * **Arguments**:
   * `search_term`: One or more terms to search for users.
 
@@ -136,7 +149,6 @@ Commands:
 * **Description**: Prepares handle tasks based on DynamoDB data.
 
 * **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   * `--customer`: Customer UUID (required).
   * `--resource-owner`: Resource owner ID (required).
   * `--output-folder`: Path to save output files (optional).
@@ -146,7 +158,6 @@ Commands:
 * **Description**: Executes handle tasks from prepared files.
 
 * **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   * `--input-folder`: Path to the folder containing input files (required).
 
 ---
@@ -156,21 +167,19 @@ Commands:
 * **Description**: List all publication that are affected by an organization change for a given organization identifier either through contributor or resource owner affiliation.
 
 * **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   * `--filename`: The name of the file to write the report to. The default is `report.json`.
 
 * **Arguments**:
   * `organization identifier`, e.g. 7497.6.4.0 (required)
 
 * **Examples**:
-  * `> uv run cli.py organization-migration list-publications 7497.6.4.0 --filename=report-7497.6.4.0.json`
+  * `> uv run cli.py --profile sikt-nva-sandbox organization-migration list-publications 7497.6.4.0 --filename=report-7497.6.4.0.json`
 
 #### **`organization-migration update-publications`**
 
 * **Description**: Updates all publication based on a report generated by `list-publications`.
 
 * **Options**:
-  * `--profile`: Specifies the AWS profile to use (defaults to "default"). Will use the `AWS_PROFILE` environment variable if available.
   * `--filename`: The name of the file to read the report from. The default is `report.json`.
 
 * **Arguments**:
@@ -178,4 +187,4 @@ Commands:
   * `new organization identifier`, e.g. 7497.6.6.0 (required)
 
 * **Examples**:
-  * `> uv run cli.py organization-migration update-publications 7497.6.4.0 7497.6.6.0 --filename=report-7497.6.4.0.json`
+  * `> uv run cli.py --profile sikt-nva-sandbox organization-migration update-publications 7497.6.4.0 7497.6.6.0 --filename=report-7497.6.4.0.json`
