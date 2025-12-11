@@ -218,6 +218,7 @@ class SqsService:
                     MessageAttributeNames=["All"],
                     AttributeNames=["All"],
                     WaitTimeSeconds=SHORT_POLL_WAIT_SECONDS,
+                    VisibilityTimeout=300,
                 )
 
                 messages = response.get("Messages", [])
@@ -687,6 +688,7 @@ class SqsService:
         common_patterns = defaultdict(int)
         stack_traces = []
         exception_contexts = Counter()
+        identifier_counts: Dict[str, int] = defaultdict(int)
 
         jsonl_files = list(folder.glob("messages_*.jsonl"))
         if not jsonl_files:
@@ -712,6 +714,13 @@ class SqsService:
                         try:
                             msg = json.loads(line)
                             total_messages += 1
+
+                            identifier_field, identifier = find_identifier(msg)
+                            if identifier:
+                                identifier_counts[
+                                    f"{identifier_field}#{identifier}"
+                                ] += 1
+
                             body = msg.get("Body", "")
                             parsed_body = msg.get("ParsedBody")
                             if parsed_body:
@@ -1015,6 +1024,9 @@ class SqsService:
         console.print()
         if len(common_patterns) > 10 and total_messages > 100:
             self._find_common_substrings(common_patterns)
+
+        output_identifier_counts(identifier_counts, folder)
+
         return {
             "total_messages": total_messages,
             "exception_types": dict(exception_types),
@@ -1024,6 +1036,7 @@ class SqsService:
             "stack_trace_count": len(stack_traces),
             "attribute_keys": dict(attribute_keys),
             "message_attribute_keys": dict(message_attribute_keys),
+            "identifier_counts": dict(identifier_counts),
         }
 
     def _find_common_substrings(
@@ -1148,12 +1161,10 @@ class SqsService:
         """Processes a single message for duplicate detection and deletion."""
         message_id = message["MessageId"]
         receipt_handle = message["ReceiptHandle"]
-        message_attributes = message.get("MessageAttributes", {})
 
-        identifier_attr = message_attributes.get("id")
-        identifier = identifier_attr.get("StringValue")
+        _, identifier = find_identifier(message)
         if not identifier:
-            console.print("Skipping message with missing 'id' attribute.")
+            console.print("Skipping message with missing identifier attribute.")
             counts["skipped"] += 1
             return
 
@@ -1201,3 +1212,78 @@ class SqsService:
         table.add_row("Total processed", str(sum(counts.values())), style="bold")
 
         console.print(table)
+
+
+def find_identifier(message: dict[str, Any]) -> Optional[tuple[str, str]]:
+    """
+    Extract the first identifier found in message attributes.
+
+    Searches for common identifier field names in MessageAttributes and returns
+    both the field name and its string value from the first match found.
+
+    Args:
+        message: SQS message
+
+    Returns:
+        A tuple of (field_name, identifier_value) if an identifier is found,
+        or None if no identifier fields are present
+    """
+    # Define possible identifier field names in priority order
+    identifier_fields = [
+        "id",
+        "identifier",
+        "candidateIdentifier",
+        "publicationIdentifier",
+    ]
+
+    message_attributes = message.get("MessageAttributes", {})
+    for field in identifier_fields:
+        if field in message_attributes:
+            value = message_attributes[field]
+            if isinstance(value, dict) and "StringValue" in value:
+                return field, value["StringValue"]
+            elif isinstance(value, str):
+                return field, value
+    return None
+
+
+def output_identifier_counts(
+    identifier_counts: Dict[str, int],
+    output_folder: Path,
+    top_n: int = 25,
+) -> None:
+    """
+    Output identifier counts to file and console.
+
+    Args:
+        identifier_counts: Dict mapping identifier -> count
+        output_folder: Directory to write the output file
+        top_n: Number of top entries to show in console
+    """
+    if not identifier_counts:
+        console.print("[yellow]No identifier values found in messages[/yellow]")
+        return
+
+    sorted_counts = sorted(identifier_counts.items(), key=lambda x: x[1], reverse=True)
+
+    output_file = output_folder / "identifier_counts.csv"
+    with open(output_file, "w") as f:
+        f.write("identifier,count\n")
+        for identifier, count in sorted_counts:
+            f.write(f"{identifier},{count}\n")
+
+    console.print(
+        f"[green]Wrote {len(sorted_counts)} unique identifiers to {output_file}[/green]\n"
+    )
+
+    table = Table(
+        title=f"Top {min(top_n, len(sorted_counts))} identifier by message count"
+    )
+    table.add_column("Identifier", style="cyan", max_width=120)
+    table.add_column("Count", style="yellow", justify="right")
+
+    for identifier, count in sorted_counts[:top_n]:
+        table.add_row(identifier, str(count))
+
+    console.print(table)
+    console.print()
