@@ -218,6 +218,7 @@ class SqsService:
                     MessageAttributeNames=["All"],
                     AttributeNames=["All"],
                     WaitTimeSeconds=SHORT_POLL_WAIT_SECONDS,
+                    VisibilityTimeout=300,
                 )
 
                 messages = response.get("Messages", [])
