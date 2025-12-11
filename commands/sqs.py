@@ -3,20 +3,21 @@ import json
 from rich.console import Console
 from rich.prompt import Confirm
 
+from commands.utils import AppContext
 from commands.services.sqs import SqsService
 
 console = Console()
 
 
 @click.group()
-def sqs():
+@click.pass_obj
+def sqs(ctx: AppContext):
     """Manage SQS queues and messages."""
     pass
 
 
 @sqs.command()
 @click.argument("queue_name", type=str)
-@click.option("--profile", type=str, help="AWS profile to use")
 @click.option("--output-dir", type=str, help="Output directory for JSONL files")
 @click.option(
     "--messages-per-file",
@@ -36,8 +37,9 @@ def sqs():
     help="Number of threads for parallel processing (default: 5)",
 )
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
-def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, yes):
-    sqs_service = SqsService(profile=profile)
+@click.pass_obj
+def drain(ctx: AppContext, queue_name, output_dir, messages_per_file, delete, threads, yes):
+    sqs_service = SqsService(profile=ctx.profile)
 
     queue_url = get_queue_url(sqs_service, queue_name)
     delete_after_write = delete
@@ -72,9 +74,9 @@ def drain(queue_name, profile, output_dir, messages_per_file, delete, threads, y
 
 @sqs.command()
 @click.argument("queue_name", type=str)
-@click.option("--profile", type=str, help="AWS profile to use")
-def info(queue_name, profile):
-    sqs_service = SqsService(profile=profile)
+@click.pass_obj
+def info(ctx: AppContext, queue_name):
+    sqs_service = SqsService(profile=ctx.profile)
 
     queue_url = get_queue_url(sqs_service, queue_name)
     show_queue_details(sqs_service, queue_url)
@@ -82,8 +84,8 @@ def info(queue_name, profile):
 
 @sqs.command()
 @click.argument("folder_path", type=str)
-@click.option("--profile", type=str, help="AWS profile to use")
-def analyze(folder_path, profile):
+@click.pass_obj
+def analyze(ctx: AppContext, folder_path):
     """Analyze messages from drained SQS queue JSONL files.
 
     This command analyzes the JSONL files created by the drain command to find:
@@ -93,7 +95,7 @@ def analyze(folder_path, profile):
     - Stack trace locations
     - Message and attribute statistics
     """
-    sqs_service = SqsService(profile=profile)
+    sqs_service = SqsService(profile=ctx.profile)
     results = sqs_service.analyze_drained_messages(folder_path)
 
     if not results:
@@ -102,11 +104,11 @@ def analyze(folder_path, profile):
 
 
 @sqs.command()
-@click.option("--profile", type=str, help="AWS profile to use")
 @click.option("--filter", type=str, help="Filter queues by name pattern")
-def list(profile, filter):
+@click.pass_obj
+def list(ctx: AppContext, filter):
     """List all SQS queues in the account."""
-    sqs_service = SqsService(profile=profile)
+    sqs_service = SqsService(profile=ctx.profile)
 
     try:
         response = sqs_service.sqs_client.list_queues()
@@ -136,12 +138,12 @@ def list(profile, filter):
 
 @sqs.command()
 @click.argument("queue_name", type=str)
-@click.option("--profile", type=str, help="AWS profile to use")
 @click.option(
     "--max-messages", "-m", type=int, default=1000, help="Max messages to process"
 )
-def delete_duplicates(queue_name: str, profile: str, max_messages: int):
-    sqs_service = SqsService(profile=profile)
+@click.pass_obj
+def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int):
+    sqs_service = SqsService(profile=ctx.profile)
     queue_url = get_queue_url(sqs_service, queue_name)
 
     show_queue_summary(sqs_service, queue_url)
