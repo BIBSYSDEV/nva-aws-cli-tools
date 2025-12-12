@@ -96,3 +96,21 @@ def _get_table_name(profile, name):
             return table_name
 
     raise ValueError("No valid table found.")
+
+
+def get_all_customers(profile):
+    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+    dynamodb = session.resource("dynamodb")
+    customers_table = dynamodb.Table(_get_table_name(profile, "nva-customers"))
+    return _scan_table(customers_table)
+
+
+def build_customer_lookup(profile):
+    customers = get_all_customers(profile)
+    customer_lookup = {}
+    for customer in customers:
+        identifier = customer.get("identifier")
+        name = customer.get("name", "Unknown")
+        if identifier:
+            customer_lookup[identifier] = name
+    return customer_lookup
