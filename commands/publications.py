@@ -211,7 +211,9 @@ def migrate_by_dynamodb(ctx: AppContext, input: str) -> None:
 )
 @click.argument("input_source", required=True)
 @click.pass_obj
-def reindex(ctx: AppContext, batch_size: int, concurrency: int, input_source: str) -> None:
+def reindex(
+    ctx: AppContext, batch_size: int, concurrency: int, input_source: str
+) -> None:
     """
     Send reindex messages to SQS queue for publication IDs.
 
