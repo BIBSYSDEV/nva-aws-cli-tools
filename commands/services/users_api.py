@@ -3,7 +3,7 @@ import boto3
 import requests
 import json
 from datetime import datetime, timedelta, timezone
-from commands.services.models import User
+from commands.services.user_models import User
 
 
 class UsersAndRolesService:

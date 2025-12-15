@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 from commands.services.users_api import UsersAndRolesService
 from commands.services.customers_api import build_customer_lookup
-from commands.services.models import User, ExportResult
+from commands.services.user_models import User, ExportResult
 
 
 class UserExportService:

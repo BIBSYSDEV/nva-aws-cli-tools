@@ -1,7 +1,7 @@
 import boto3
 import re
 from typing import Optional
-from commands.services.models import Customer
+from commands.services.user_models import Customer
 
 
 def list_missing_customers(profile):
