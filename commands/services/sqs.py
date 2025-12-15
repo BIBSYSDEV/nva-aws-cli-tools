@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import signal
 import threading
@@ -21,6 +22,7 @@ from rich.progress import (
 from rich.table import Table
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 # Constants
 MAX_EMPTY_RECEIVES = 3
@@ -75,14 +77,14 @@ class SqsService:
                     matching_queues.append(url)
 
             if not matching_queues:
-                console.print(
-                    f"[red]No queues found matching '{queue_name_partial}'[/red]"
+                logger.error(
+                    f"No queues found matching '{queue_name_partial}'"
                 )
                 return None
 
             if len(matching_queues) == 1:
                 queue_name = matching_queues[0].split("/")[-1]
-                console.print(f"[green]Found queue: {queue_name}[/green]")
+                logger.info(f"Found queue: {queue_name}")
                 return matching_queues[0]
 
             table = Table(title="Multiple queues found")
@@ -110,7 +112,7 @@ class SqsService:
                     console.print("[red]Please enter a number or 'q' to quit.[/red]")
 
         except ClientError as e:
-            console.print(f"[red]Error listing queues: {e}[/red]")
+            logger.error(f"Error listing queues: {e}")
             raise e
 
     def get_queue_attributes(self, queue_url: str) -> Dict[str, Any]:
@@ -120,7 +122,7 @@ class SqsService:
             )
             return response.get("Attributes", {})
         except ClientError as e:
-            console.print(f"[red]Error getting queue attributes: {e}[/red]")
+            logger.error(f"Error getting queue attributes: {e}")
             raise e
 
     def receive_messages(
@@ -159,7 +161,7 @@ class SqsService:
             return processed_messages
 
         except ClientError as e:
-            console.print(f"[red]Error receiving messages: {e}[/red]")
+            logger.error(f"Error receiving messages: {e}")
             return []
 
     def delete_message(self, queue_url: str, receipt_handle: str) -> None:
@@ -186,12 +188,10 @@ class SqsService:
                 failed = response.get("Failed", [])
                 if failed:
                     for failure in failed:
-                        console.print(
-                            f"[yellow]Failed to delete message: {failure.get('Message')}[/yellow]"
-                        )
+                        logger.warning(f"Failed to delete message: {failure.get('Message')}")
 
             except ClientError as e:
-                console.print(f"[red]Error deleting message batch: {e}[/red]")
+                logger.error(f"Error deleting message batch: {e}")
 
         return deleted_count
 
@@ -316,7 +316,7 @@ class SqsService:
                             stats["remaining_messages"].extend(messages_buffer)
                             stats["remaining_receipts"].extend(receipt_handles_buffer)
                     break
-                console.print(f"[red]Error in worker thread: {e}[/red]")
+                logger.error(f"Error in worker thread: {e}")
                 with stats["lock"]:
                     stats["errors"] = stats.get("errors", 0) + 1
 
@@ -340,7 +340,7 @@ class SqsService:
         queue_name = queue_url.split("/")[-1]
 
         if num_threads == 1:
-            console.print("[cyan]Using single-threaded mode[/cyan]")
+            logger.info("Using single-threaded mode")
             return self._drain_single_thread(
                 queue_url,
                 queue_name,
@@ -349,14 +349,12 @@ class SqsService:
                 delete_after_write,
             )
 
-        console.print(f"[cyan]Using {num_threads} parallel threads[/cyan]")
+        logger.info(f"Using {num_threads} parallel threads")
 
         queue_attrs = self.get_queue_attributes(queue_url)
         if queue_attrs:
             approx_messages = int(queue_attrs.get("ApproximateNumberOfMessages", 0))
-            console.print(
-                f"[cyan]Queue has approximately {approx_messages} messages[/cyan]"
-            )
+            logger.info(f"Queue has approximately {approx_messages} messages")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         if output_dir:
@@ -365,7 +363,7 @@ class SqsService:
             base_dir = Path(f"{self.profile}-{queue_name}-{timestamp}")
 
         base_dir.mkdir(parents=True, exist_ok=True)
-        console.print(f"[green]Output directory: {base_dir}[/green]")
+        logger.info(f"Output directory: {base_dir}")
 
         metadata_file = base_dir / "metadata.json"
         metadata_file.write_text(
@@ -450,9 +448,7 @@ class SqsService:
             for thread in threads:
                 thread.join(timeout=THREAD_JOIN_TIMEOUT_SECONDS)
                 if thread.is_alive():
-                    console.print(
-                        "[yellow]Warning: Worker thread did not finish cleanly[/yellow]"
-                    )
+                    logger.warning("Worker thread did not finish cleanly")
 
             # Write any remaining messages from all threads
             if stats["remaining_messages"]:
@@ -480,7 +476,7 @@ class SqsService:
                         )
                         stats["deleted"] += deleted
                     except Exception as e:
-                        console.print(f"[red]Error deleting final batch: {e}[/red]")
+                        logger.error(f"Error deleting final batch: {e}")
 
         finally:
             signal.signal(signal.SIGINT, old_handler)
@@ -503,17 +499,13 @@ class SqsService:
             )
         )
 
-        console.print(
-            f"\n[bold green]✓ Drained {stats['written']} messages from {queue_name}[/bold green]"
-        )
-        console.print(f"[cyan]Output: {base_dir}[/cyan]")
-        console.print(f"[cyan]Files created: {stats['file_counter']}[/cyan]")
+        logger.info(f"Drained {stats['written']} messages from {queue_name}")
+        logger.info(f"Output: {base_dir}")
+        logger.info(f"Files created: {stats['file_counter']}")
         if delete_after_write:
-            console.print(f"[cyan]Messages deleted: {stats['deleted']}[/cyan]")
+            logger.info(f"Messages deleted: {stats['deleted']}")
         if stats.get("errors", 0) > 0:
-            console.print(
-                f"[yellow]Warning: {stats['errors']} errors occurred during processing[/yellow]"
-            )
+            logger.warning(f"{stats['errors']} errors occurred during processing")
 
         return True
 
@@ -528,9 +520,7 @@ class SqsService:
         queue_attrs = self.get_queue_attributes(queue_url)
         if queue_attrs:
             approx_messages = int(queue_attrs.get("ApproximateNumberOfMessages", 0))
-            console.print(
-                f"[cyan]Queue has approximately {approx_messages} messages[/cyan]"
-            )
+            logger.info(f"Queue has approximately {approx_messages} messages")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         if output_dir:
@@ -539,7 +529,7 @@ class SqsService:
             base_dir = Path(f"{self.profile}-{queue_name}-{timestamp}")
 
         base_dir.mkdir(parents=True, exist_ok=True)
-        console.print(f"[green]Output directory: {base_dir}[/green]")
+        logger.info(f"Output directory: {base_dir}")
 
         metadata_file = base_dir / "metadata.json"
         with open(metadata_file, "w") as f:
@@ -601,17 +591,15 @@ class SqsService:
                                 }
                                 f.write(json.dumps(saved_msg, default=str) + "\n")
 
-                        console.print(
-                            f"[green]Wrote {len(messages_buffer)} messages to {output_file.name}[/green]"
-                        )
+                        logger.info(f"Wrote {len(messages_buffer)} messages to {output_file.name}")
 
                         if delete_after_write:
                             deleted = self.delete_message_batch(
                                 queue_url, receipt_handles_buffer
                             )
                             if deleted != len(receipt_handles_buffer):
-                                console.print(
-                                    f"[yellow]Warning: Only deleted {deleted}/{len(receipt_handles_buffer)} messages[/yellow]"
+                                logger.warning(
+                                    f"Only deleted {deleted}/{len(receipt_handles_buffer)} messages"
                                 )
 
                         messages_buffer = []
@@ -635,17 +623,15 @@ class SqsService:
                         }
                         f.write(json.dumps(saved_msg, default=str) + "\n")
 
-                console.print(
-                    f"[green]Wrote {len(messages_buffer)} messages to {output_file.name}[/green]"
-                )
+                logger.info(f"Wrote {len(messages_buffer)} messages to {output_file.name}")
 
                 if delete_after_write:
                     deleted = self.delete_message_batch(
                         queue_url, receipt_handles_buffer
                     )
                     if deleted != len(receipt_handles_buffer):
-                        console.print(
-                            f"[yellow]Warning: Only deleted {deleted}/{len(receipt_handles_buffer)} messages[/yellow]"
+                        logger.warning(
+                            f"Only deleted {deleted}/{len(receipt_handles_buffer)} messages"
                         )
 
         summary_file = base_dir / "summary.json"
@@ -664,21 +650,19 @@ class SqsService:
                 indent=2,
             )
 
-        console.print(
-            f"\n[bold green]✓ Drained {total_messages} messages from {queue_name}[/bold green]"
-        )
-        console.print(f"[cyan]Output: {base_dir}[/cyan]")
-        console.print(f"[cyan]Files created: {file_count}[/cyan]")
+        logger.info(f"Drained {total_messages} messages from {queue_name}")
+        logger.info(f"Output: {base_dir}")
+        logger.info(f"Files created: {file_count}")
 
         return True
 
     def analyze_drained_messages(self, folder_path: str) -> Dict[str, Any]:
         folder = Path(folder_path)
         if not folder.exists() or not folder.is_dir():
-            console.print(f"[red]Directory not found: {folder_path}[/red]")
+            logger.error(f"Directory not found: {folder_path}")
             return {}
 
-        console.print(f"[cyan]Analyzing messages in: {folder}[/cyan]\n")
+        logger.info(f"Analyzing messages in: {folder}")
 
         total_messages = 0
         exception_types = Counter()
@@ -692,12 +676,10 @@ class SqsService:
 
         jsonl_files = list(folder.glob("messages_*.jsonl"))
         if not jsonl_files:
-            console.print(
-                "[yellow]No message files found (looking for messages_*.jsonl)[/yellow]"
-            )
+            logger.warning("No message files found (looking for messages_*.jsonl)")
             return {}
 
-        console.print(f"[green]Found {len(jsonl_files)} message files[/green]\n")
+        logger.info(f"Found {len(jsonl_files)} message files")
 
         with Progress(
             SpinnerColumn(),
@@ -827,13 +809,9 @@ class SqsService:
                                     message_types["plain_text"] += 1
 
                         except json.JSONDecodeError:
-                            console.print(
-                                f"[yellow]Warning: Invalid JSON in {file_path.name}:{line_num}[/yellow]"
-                            )
+                            logger.warning(f"Invalid JSON in {file_path.name}:{line_num}")
                         except Exception as e:
-                            console.print(
-                                f"[red]Error processing {file_path.name}:{line_num}: {e}[/red]"
-                            )
+                            logger.error(f"Error processing {file_path.name}:{line_num}: {e}")
 
                 progress.update(task, advance=1)
         console.print("\n" + "=" * 60)
@@ -843,7 +821,7 @@ class SqsService:
         console.print(f"[bold]Total Messages:[/bold] {total_messages:,}\n")
 
         if total_messages == 0:
-            console.print("[yellow]No messages to analyze[/yellow]")
+            logger.warning("No messages to analyze")
             return {
                 "total_messages": 0,
                 "exception_types": {},
@@ -1164,7 +1142,7 @@ class SqsService:
 
         _, identifier = find_identifier(message)
         if not identifier:
-            console.print("Skipping message with missing identifier attribute.")
+            logger.debug("Skipping message with missing identifier attribute")
             counts["skipped"] += 1
             return
 
@@ -1177,7 +1155,7 @@ class SqsService:
                 counts["kept_redelivery"] += 1
             else:
                 # Same id, different messageId -> Delete (duplicate resource)
-                console.print(f"Deleting duplicate message for {identifier=}")
+                logger.debug(f"Deleting duplicate message for {identifier=}")
                 counts["deleted"] += 1
                 self.delete_message(queue_url, receipt_handle)
         else:
@@ -1261,7 +1239,7 @@ def output_identifier_counts(
         top_n: Number of top entries to show in console
     """
     if not identifier_counts:
-        console.print("[yellow]No identifier values found in messages[/yellow]")
+        logger.warning("No identifier values found in messages")
         return
 
     sorted_counts = sorted(identifier_counts.items(), key=lambda x: x[1], reverse=True)
@@ -1272,9 +1250,7 @@ def output_identifier_counts(
         for identifier, count in sorted_counts:
             f.write(f"{identifier},{count}\n")
 
-    console.print(
-        f"[green]Wrote {len(sorted_counts)} unique identifiers to {output_file}[/green]\n"
-    )
+    logger.info(f"Wrote {len(sorted_counts)} unique identifiers to {output_file}")
 
     table = Table(
         title=f"Top {min(top_n, len(sorted_counts))} identifier by message count"
