@@ -77,9 +77,7 @@ class SqsService:
                     matching_queues.append(url)
 
             if not matching_queues:
-                logger.error(
-                    f"No queues found matching '{queue_name_partial}'"
-                )
+                logger.error(f"No queues found matching '{queue_name_partial}'")
                 return None
 
             if len(matching_queues) == 1:
@@ -188,7 +186,9 @@ class SqsService:
                 failed = response.get("Failed", [])
                 if failed:
                     for failure in failed:
-                        logger.warning(f"Failed to delete message: {failure.get('Message')}")
+                        logger.warning(
+                            f"Failed to delete message: {failure.get('Message')}"
+                        )
 
             except ClientError as e:
                 logger.error(f"Error deleting message batch: {e}")
@@ -395,8 +395,8 @@ class SqsService:
         stop_event = threading.Event()
 
         def signal_handler(_signum, _frame):
-            console.print(
-                "\n[yellow]Stopping... Please wait for threads to finish current batch[/yellow]"
+            logger.warning(
+                "Stopping... Please wait for threads to finish current batch"
             )
             stop_event.set()
 
@@ -591,7 +591,9 @@ class SqsService:
                                 }
                                 f.write(json.dumps(saved_msg, default=str) + "\n")
 
-                        logger.info(f"Wrote {len(messages_buffer)} messages to {output_file.name}")
+                        logger.info(
+                            f"Wrote {len(messages_buffer)} messages to {output_file.name}"
+                        )
 
                         if delete_after_write:
                             deleted = self.delete_message_batch(
@@ -623,7 +625,9 @@ class SqsService:
                         }
                         f.write(json.dumps(saved_msg, default=str) + "\n")
 
-                logger.info(f"Wrote {len(messages_buffer)} messages to {output_file.name}")
+                logger.info(
+                    f"Wrote {len(messages_buffer)} messages to {output_file.name}"
+                )
 
                 if delete_after_write:
                     deleted = self.delete_message_batch(
@@ -809,9 +813,13 @@ class SqsService:
                                     message_types["plain_text"] += 1
 
                         except json.JSONDecodeError:
-                            logger.warning(f"Invalid JSON in {file_path.name}:{line_num}")
+                            logger.warning(
+                                f"Invalid JSON in {file_path.name}:{line_num}"
+                            )
                         except Exception as e:
-                            logger.error(f"Error processing {file_path.name}:{line_num}: {e}")
+                            logger.error(
+                                f"Error processing {file_path.name}:{line_num}: {e}"
+                            )
 
                 progress.update(task, advance=1)
         console.print("\n" + "=" * 60)
@@ -1177,7 +1185,7 @@ class SqsService:
 
     def _print_duplicates_summary(self, counts: Dict[str, int]) -> None:
         """Prints a summary table of the processing results."""
-        console.print("\n[bold green]Duplicate removal complete![/bold green]\n")
+        logger.info("Duplicate removal complete")
 
         table = Table(title="Summary")
         table.add_column("Category", style="cyan", no_wrap=True)
