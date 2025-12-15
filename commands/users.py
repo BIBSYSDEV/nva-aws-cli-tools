@@ -116,5 +116,5 @@ def export_roles(ctx: AppContext, output: str, exclude_only_roles: str, include_
         include_roles=included_roles_list
     )
 
-    logger.info(f"Found {result['total_users']} users, exported {result['exported_users']} users.")
-    click.echo(f"Excel file saved to: {result['filename']}")
+    logger.info(f"Found {result.total_users} users, exported {result.exported_users} users.")
+    logger.info(f"Excel file saved to: {result.filename}")

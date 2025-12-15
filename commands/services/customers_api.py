@@ -1,5 +1,7 @@
 import boto3
 import re
+from typing import Optional
+from commands.services.models import Customer
 
 
 def list_missing_customers(profile):
@@ -98,19 +100,14 @@ def _get_table_name(profile, name):
     raise ValueError("No valid table found.")
 
 
-def get_all_customers(profile):
+def get_all_customers(profile: Optional[str]) -> list[Customer]:
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
     dynamodb = session.resource("dynamodb")
     customers_table = dynamodb.Table(_get_table_name(profile, "nva-customers"))
-    return _scan_table(customers_table)
+    raw_customers = _scan_table(customers_table)
+    return [Customer.from_dynamodb(item) for item in raw_customers]
 
 
-def build_customer_lookup(profile):
+def build_customer_lookup(profile: Optional[str]) -> dict[str, str]:
     customers = get_all_customers(profile)
-    customer_lookup = {}
-    for customer in customers:
-        identifier = customer.get("identifier")
-        name = customer.get("name", "Unknown")
-        if identifier:
-            customer_lookup[identifier] = name
-    return customer_lookup
+    return {customer.identifier: customer.name for customer in customers if customer.identifier}

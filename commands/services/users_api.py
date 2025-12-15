@@ -3,6 +3,7 @@ import boto3
 import requests
 import json
 from datetime import datetime, timedelta, timezone
+from commands.services.models import User
 
 
 class UsersAndRolesService:
@@ -209,17 +210,17 @@ class UsersAndRolesService:
             self.token = self._get_cognito_token()
         return self.token
 
-    def get_all_users(self):
+    def get_all_users(self) -> list[User]:
         table_name = self._get_users_table_name()
         table = self.dynamodb.Table(table_name)
 
-        all_users = []
+        raw_users = []
         response = table.scan(
             FilterExpression="begins_with(PrimaryKeyHashKey, :prefix)",
             ExpressionAttributeValues={":prefix": "USER#"},
         )
 
-        all_users.extend(response["Items"])
+        raw_users.extend(response["Items"])
 
         while "LastEvaluatedKey" in response:
             response = table.scan(
@@ -227,6 +228,6 @@ class UsersAndRolesService:
                 ExpressionAttributeValues={":prefix": "USER#"},
                 ExclusiveStartKey=response["LastEvaluatedKey"],
             )
-            all_users.extend(response["Items"])
+            raw_users.extend(response["Items"])
 
-        return all_users
+        return [User.from_dynamodb(item) for item in raw_users]
