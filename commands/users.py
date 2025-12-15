@@ -1,12 +1,15 @@
 import json
 import click
 import sys
+import logging
 
 from commands.utils import AppContext
 from commands.services.users_api import UsersAndRolesService
 from commands.services.aws_utils import prettify
 from commands.services.external_user import ExternalUserService
 from commands.services.user_export import UserExportService
+
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -99,12 +102,12 @@ def export_roles(ctx: AppContext, output: str, exclude_only_roles: str, include_
     included_roles_list = [role.strip() for role in include_roles.split(",")] if include_roles else None
 
     if excluded_roles_list:
-        click.echo(f"Excluding users with ONLY roles: {', '.join(excluded_roles_list)}")
+        logger.info(f"Excluding users with ONLY roles: {', '.join(excluded_roles_list)}")
     if included_roles_list:
-        click.echo(f"Including only users with roles: {', '.join(included_roles_list)}")
+        logger.info(f"Including only users with roles: {', '.join(included_roles_list)}")
 
-    click.echo("Fetching all users from DynamoDB...")
-    click.echo("Fetching customer data for institution names...")
+    logger.info("Fetching all users from DynamoDB...")
+    logger.info("Fetching customer data for institution names...")
 
     service = UserExportService(ctx.profile)
     result = service.export_to_excel(
@@ -113,5 +116,5 @@ def export_roles(ctx: AppContext, output: str, exclude_only_roles: str, include_
         include_roles=included_roles_list
     )
 
-    click.echo(f"Found {result['total_users']} users, exported {result['exported_users']} users.")
+    logger.info(f"Found {result['total_users']} users, exported {result['exported_users']} users.")
     click.echo(f"Excel file saved to: {result['filename']}")
