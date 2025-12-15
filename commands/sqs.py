@@ -38,7 +38,9 @@ def sqs(ctx: AppContext):
 )
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 @click.pass_obj
-def drain(ctx: AppContext, queue_name, output_dir, messages_per_file, delete, threads, yes):
+def drain(
+    ctx: AppContext, queue_name, output_dir, messages_per_file, delete, threads, yes
+):
     sqs_service = SqsService(profile=ctx.profile)
 
     queue_url = get_queue_url(sqs_service, queue_name)
