@@ -1,6 +1,6 @@
 import re
+import polars as pl
 from datetime import datetime
-from openpyxl import Workbook
 from commands.services.users_api import UsersAndRolesService
 from commands.services.customers_api import build_customer_lookup
 
@@ -60,10 +60,6 @@ class UserExportService:
         return filtered_users
 
     def _create_excel_file(self, users, output_filename):
-        workbook = Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Users and Roles"
-
         headers = [
             "Username",
             "Cristin ID",
@@ -76,14 +72,10 @@ class UserExportService:
             "Access Rights",
             "Viewing Scope - Included Units"
         ]
-        worksheet.append(headers)
+        rows = [self._build_user_row(user) for user in users]
+        df = pl.DataFrame(rows, schema=headers, orient="row")
 
-        for user in users:
-            row_data = self._build_user_row(user)
-            worksheet.append(row_data)
-
-        self._adjust_column_widths(worksheet)
-        workbook.save(output_filename)
+        df.write_excel(output_filename, worksheet="Users and Roles", autofit=True)
 
     def _build_user_row(self, user):
         username = user.get("username", "")
@@ -136,13 +128,3 @@ class UserExportService:
             ", ".join(sorted(access_rights)),
             ", ".join(included_units_list)
         ]
-
-    def _adjust_column_widths(self, worksheet):
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
