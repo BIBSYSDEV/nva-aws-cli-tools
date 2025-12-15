@@ -1244,7 +1244,7 @@ def find_identifier(message: dict[str, Any]) -> Optional[tuple[str, str]]:
                 return field, value["StringValue"]
             elif isinstance(value, str):
                 return field, value
-    return None
+    return None, None
 
 
 def output_identifier_counts(
