@@ -1,4 +1,3 @@
-import re
 import polars as pl
 from datetime import datetime
 from typing import Optional
@@ -66,50 +65,8 @@ class UserExportService:
         return filtered_users
 
     def _create_excel_file(self, users: list[User], output_filename: str) -> None:
-        headers = [
-            "Username",
-            "Cristin ID",
-            "Given Name",
-            "Family Name",
-            "Affiliation",
-            "Institution UUID",
-            "Institution Name",
-            "Roles",
-            "Access Rights",
-            "Viewing Scope - Included Units"
-        ]
-        rows = [self._build_user_row(user) for user in users]
-        df = pl.DataFrame(rows, schema=headers, orient="row")
+        excel_rows = [user.to_excel_row(self.customer_lookup) for user in users]
+        rows = [row.to_list() for row in excel_rows]
+        df = pl.DataFrame(rows, schema=User.ExcelRow.headers(), orient="row")
 
         df.write_excel(output_filename, worksheet="Users and Roles", autofit=True)
-
-    def _build_user_row(self, user: User) -> list[str]:
-        institution_uuid = ""
-        institution_name = ""
-        if user.institution:
-            uuid_match = re.search(r"(?<=customer/).+", user.institution)
-            if uuid_match:
-                institution_uuid = uuid_match.group()
-                institution_name = self.customer_lookup.get(institution_uuid, "Unknown")
-
-        role_names = [role.name for role in user.roles if role.name]
-        access_rights = set()
-        for role in user.roles:
-            access_rights.update(role.access_rights)
-
-        included_units_list = []
-        if user.viewing_scope and user.viewing_scope.included_units:
-            included_units_list = [str(unit) for unit in user.viewing_scope.included_units]
-
-        return [
-            user.username or "",
-            user.cristin_id or "",
-            user.given_name or "",
-            user.family_name or "",
-            user.affiliation or "",
-            institution_uuid,
-            institution_name,
-            ", ".join(role_names),
-            ", ".join(sorted(access_rights)),
-            ", ".join(included_units_list)
-        ]
