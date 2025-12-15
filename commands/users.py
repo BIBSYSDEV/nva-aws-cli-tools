@@ -1,11 +1,15 @@
 import json
 import click
 import sys
+import logging
 
 from commands.utils import AppContext
 from commands.services.users_api import UsersAndRolesService
 from commands.services.aws_utils import prettify
 from commands.services.external_user import ExternalUserService
+from commands.services.user_export import UserExportService
+
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -72,3 +76,45 @@ def create_external(
     )
     external_user.save_to_file()
     click.echo(prettify(external_user.client_data))
+
+
+@users.command(help="Export all users and their roles to Excel")
+@click.option(
+    "-o",
+    "--output",
+    help="Output filename (default: users-{profile}-YYYY-MM-DD-HHMMSS.xlsx)",
+)
+@click.option(
+    "--exclude-only-roles",
+    help="Comma-separated list of role names. Excludes users who have ONLY these roles and no other roles (e.g., 'Creator')",
+)
+@click.option(
+    "--include-roles",
+    help="Comma-separated list of role names to include in export (only these roles will be exported)",
+)
+@click.pass_obj
+def export_roles(ctx: AppContext, output: str, exclude_only_roles: str, include_roles: str) -> None:
+    if exclude_only_roles and include_roles:
+        click.echo("Error: Cannot use both --exclude-only-roles and --include-roles at the same time")
+        return
+
+    excluded_roles_list = [role.strip() for role in exclude_only_roles.split(",")] if exclude_only_roles else None
+    included_roles_list = [role.strip() for role in include_roles.split(",")] if include_roles else None
+
+    if excluded_roles_list:
+        logger.info(f"Excluding users with ONLY roles: {', '.join(excluded_roles_list)}")
+    if included_roles_list:
+        logger.info(f"Including only users with roles: {', '.join(included_roles_list)}")
+
+    logger.info("Fetching all users from DynamoDB...")
+    logger.info("Fetching customer data for institution names...")
+
+    service = UserExportService(ctx.profile)
+    result = service.export_to_excel(
+        output_filename=output,
+        exclude_only_roles=excluded_roles_list,
+        include_roles=included_roles_list
+    )
+
+    logger.info(f"Found {result.total_users} users, exported {result.exported_users} users.")
+    logger.info(f"Excel file saved to: {result.filename}")
