@@ -276,3 +276,50 @@ class DynamodbPublications:
 
     def execute_batch_updates(self, transact_items):
         self.dynamodb.transact_write_items(TransactItems=transact_items)
+
+    def fetch_log_entries(self, identifier: str) -> list[dict]:
+        """
+        Fetch all LogEntry items for a publication by its identifier.
+
+        LogEntry items share the same partition key (PK0) as the publication
+        and have sort keys prefixed with "LogEntry:".
+
+        Args:
+            identifier: Publication identifier (e.g., "019aa050798d-54f5e9a6-...")
+
+        Returns:
+            list: LogEntry items, or empty list if none found
+        """
+        if self.table is None:
+            logger.error("Table not initialized - check AWS profile and table pattern")
+            raise ValueError("Table not initialized")
+
+        logger.info(f"Querying log entries for publication: {identifier}")
+        log_entries = []
+        total_count = 0
+        partition_key = f"Resource:{identifier}"
+        condition = Key("PK0").eq(partition_key) & Key("SK0").begins_with("LogEntry:")
+
+        response = self.table.query(
+            KeyConditionExpression=condition,
+        )
+
+        items = response.get("Items", [])
+        if items:
+            log_entries.extend(items)
+            total_count += len(items)
+            logger.debug(f"Fetched {len(items)} items")
+
+        while "LastEvaluatedKey" in response:
+            response = self.table.query(
+                KeyConditionExpression=condition,
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+            )
+            items = response.get("Items", [])
+            if items:
+                log_entries.extend(items)
+                total_count += len(items)
+                logger.debug(f"Fetched {len(items)} more items (total: {total_count})")
+
+        logger.info(f"Found {total_count} log entries for publication {identifier}")
+        return log_entries

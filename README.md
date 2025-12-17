@@ -188,3 +188,30 @@ uv run cli.py --profile sikt-nva-dev,sikt-nva-test pipelines branches
 
 * **Examples**:
   * `> uv run cli.py --profile sikt-nva-sandbox organization-migration update-publications 7497.6.4.0 7497.6.6.0 --filename=report-7497.6.4.0.json`
+
+---
+
+#### **`publications logs`**
+
+* **Description**: Export log entries for a publication to a JSON file.
+
+* **Arguments**:
+  * `publication_identifier`: The publication identifier (required)
+
+* **Options**:
+  * `--output`: Output file path (default: `{identifier}.json` in current directory)
+
+* **Examples**:
+  * `> uv run cli.py --profile sikt-nva-sandbox publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db`
+  * `> uv run cli.py --profile sikt-nva-sandbox publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db --output /tmp/logs.json`
+
+* **Output**: JSON file with structure:
+
+  ```json
+  {
+    "identifier": "...",
+    "exportedAt": "2025-12-16T14:30:00Z",
+    "count": 15,
+    "logEntries": [...]
+  }
+  ```
