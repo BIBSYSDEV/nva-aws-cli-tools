@@ -312,10 +312,7 @@ def logs(ctx: AppContext, publication_identifier: str, output: str | None) -> No
         cli.py publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db --output /tmp/logs.json
     """
     service = DynamodbPublications(ctx.profile, table_pattern)
-
-    logger.info(f"Fetching log entries for publication: {publication_identifier}")
     log_entries = service.fetch_log_entries(publication_identifier)
-
     if len(log_entries) == 0:
         logger.warning(f"No log entries found for publication {publication_identifier}")
         return

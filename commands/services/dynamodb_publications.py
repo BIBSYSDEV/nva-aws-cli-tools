@@ -296,30 +296,22 @@ class DynamodbPublications:
 
         logger.info(f"Querying log entries for publication: {identifier}")
         log_entries = []
-        total_count = 0
-        partition_key = f"Resource:{identifier}"
-        condition = Key("PK0").eq(partition_key) & Key("SK0").begins_with("LogEntry:")
-
-        response = self.table.query(
-            KeyConditionExpression=condition,
+        paginator = self.table.meta.client.get_paginator("query")
+        pages = paginator.paginate(
+            TableName=self.table.name,
+            KeyConditionExpression="PK0 = :pk AND begins_with(SK0, :sk)",
+            ExpressionAttributeValues={
+                ":pk": f"Resource:{identifier}",
+                ":sk": "LogEntry:",
+            },
         )
+        for page in pages:
+            items = page.get("Items", [])
+            logger.debug(f"Fetched {len(items)} entries")
+            for item in items:
+                log_entries.append(item.get("data", item))
 
-        items = response.get("Items", [])
-        if items:
-            log_entries.extend(items)
-            total_count += len(items)
-            logger.debug(f"Fetched {len(items)} items")
-
-        while "LastEvaluatedKey" in response:
-            response = self.table.query(
-                KeyConditionExpression=condition,
-                ExclusiveStartKey=response["LastEvaluatedKey"],
-            )
-            items = response.get("Items", [])
-            if items:
-                log_entries.extend(items)
-                total_count += len(items)
-                logger.debug(f"Fetched {len(items)} more items (total: {total_count})")
-
-        logger.info(f"Found {total_count} log entries for publication {identifier}")
+        logger.info(
+            f"Found {len(log_entries)} log entries for publication {identifier}"
+        )
         return log_entries
