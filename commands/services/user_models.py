@@ -71,7 +71,11 @@ class User:
         roles = [Role.from_dynamodb(role_item) for role_item in item.get("roles", [])]
 
         viewing_scope_data = item.get("viewingScope")
-        viewing_scope = ViewingScope.from_dynamodb(viewing_scope_data) if viewing_scope_data else None
+        viewing_scope = (
+            ViewingScope.from_dynamodb(viewing_scope_data)
+            if viewing_scope_data
+            else None
+        )
 
         return cls(
             username=item.get("username", ""),
@@ -117,7 +121,7 @@ class User:
                 "Institution Name",
                 "Roles",
                 "Access Rights",
-                "Viewing Scope - Included Units"
+                "Viewing Scope - Included Units",
             ]
 
         def to_list(self) -> list[str]:
@@ -131,7 +135,7 @@ class User:
                 self.institution_name,
                 self.roles,
                 self.access_rights,
-                self.viewing_scope_included_units
+                self.viewing_scope_included_units,
             ]
 
     def to_excel_row(self, institution_name_lookup: dict[str, str]) -> ExcelRow:
@@ -143,7 +147,9 @@ class User:
             uuid_match = re.search(r"(?<=customer/).+", self.institution)
             if uuid_match:
                 institution_uuid = uuid_match.group()
-                institution_name = institution_name_lookup.get(institution_uuid, "Unknown")
+                institution_name = institution_name_lookup.get(
+                    institution_uuid, "Unknown"
+                )
 
         role_names = [role.name for role in self.roles if role.name]
         access_rights = set()
@@ -152,7 +158,9 @@ class User:
 
         included_units_list = []
         if self.viewing_scope and self.viewing_scope.included_units:
-            included_units_list = [str(unit) for unit in self.viewing_scope.included_units]
+            included_units_list = [
+                str(unit) for unit in self.viewing_scope.included_units
+            ]
 
         return User.ExcelRow(
             username=self.username or "",
@@ -164,7 +172,7 @@ class User:
             institution_name=institution_name,
             roles=", ".join(role_names),
             access_rights=", ".join(sorted(access_rights)),
-            viewing_scope_included_units=", ".join(included_units_list)
+            viewing_scope_included_units=", ".join(included_units_list),
         )
 
 

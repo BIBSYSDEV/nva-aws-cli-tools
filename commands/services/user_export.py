@@ -16,18 +16,18 @@ class UserExportService:
         self,
         output_filename: Optional[str] = None,
         exclude_only_roles: Optional[list[str]] = None,
-        include_roles: Optional[list[str]] = None
+        include_roles: Optional[list[str]] = None,
     ) -> ExportResult:
         all_users = self.users_service.get_all_users()
         self.customer_lookup = build_customer_lookup(self.profile)
 
-        excluded_only_roles_set = set(exclude_only_roles) if exclude_only_roles else set()
+        excluded_only_roles_set = (
+            set(exclude_only_roles) if exclude_only_roles else set()
+        )
         included_roles_set = set(include_roles) if include_roles else set()
 
         filtered_users = self._filter_users(
-            all_users,
-            excluded_only_roles_set,
-            included_roles_set
+            all_users, excluded_only_roles_set, included_roles_set
         )
 
         if not output_filename:
@@ -40,21 +40,24 @@ class UserExportService:
         return ExportResult(
             total_users=len(all_users),
             exported_users=len(filtered_users),
-            filename=output_filename
+            filename=output_filename,
         )
 
     def _filter_users(
         self,
         all_users: list[User],
         excluded_only_roles_set: set[str],
-        included_roles_set: set[str]
+        included_roles_set: set[str],
     ) -> list[User]:
         filtered_users = []
         for user in all_users:
             user_role_names = {role.name for role in user.roles if role.name}
 
             if excluded_only_roles_set:
-                if not (user_role_names and user_role_names.issubset(excluded_only_roles_set)):
+                if not (
+                    user_role_names
+                    and user_role_names.issubset(excluded_only_roles_set)
+                ):
                     filtered_users.append(user)
             elif included_roles_set:
                 if user_role_names.intersection(included_roles_set):

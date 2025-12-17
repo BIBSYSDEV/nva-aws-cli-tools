@@ -110,4 +110,8 @@ def get_all_customers(profile: Optional[str]) -> list[Customer]:
 
 def build_customer_lookup(profile: Optional[str]) -> dict[str, str]:
     customers = get_all_customers(profile)
-    return {customer.identifier: customer.name for customer in customers if customer.identifier}
+    return {
+        customer.identifier: customer.name
+        for customer in customers
+        if customer.identifier
+    }
