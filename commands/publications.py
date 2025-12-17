@@ -1,6 +1,8 @@
 import click
 import csv
+import json
 import logging
+from datetime import datetime, timezone
 
 from commands.utils import AppContext
 from commands.services.publication_api import PublicationApiService
@@ -284,3 +286,44 @@ def reindex(
         click.echo(
             f"⚠️  {result['failed']} messages failed to send. Check the errors above."
         )
+
+
+@publications.command(help="Export log entries for a publication to a JSON file")
+@click.argument("publication_identifier", required=True, nargs=1)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output file path (default: {identifier}.json in current directory)",
+)
+@click.pass_obj
+def logs(ctx: AppContext, publication_identifier: str, output: str | None) -> None:
+    """
+    Export log entries for a publication to a JSON file.
+
+    PUBLICATION_IDENTIFIER is the unique identifier for the publication
+    (e.g., 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db).
+
+    Examples:
+        # Export logs with default filename
+        cli.py publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db
+
+        # Export logs to specific file
+        cli.py publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db --output /tmp/logs.json
+    """
+    service = DynamodbPublications(ctx.profile, table_pattern)
+    log_entries = service.fetch_log_entries(publication_identifier)
+    if len(log_entries) == 0:
+        logger.warning(f"No log entries found for publication {publication_identifier}")
+        return
+
+    output_path = output if output else f"{publication_identifier}.json"
+    export_result = {
+        "identifier": publication_identifier,
+        "exportedAt": datetime.now(timezone.utc).isoformat(),
+        "entryCount": len(log_entries),
+        "logEntries": log_entries,
+    }
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(export_result, f, indent=2, ensure_ascii=False)
+    logger.info(f"Exported {len(log_entries)} log entries to {output_path}")
