@@ -93,18 +93,32 @@ def create_external(
     help="Comma-separated list of role names to include in export (only these roles will be exported)",
 )
 @click.pass_obj
-def export_roles(ctx: AppContext, output: str, exclude_only_roles: str, include_roles: str) -> None:
+def export_roles(
+    ctx: AppContext, output: str, exclude_only_roles: str, include_roles: str
+) -> None:
     if exclude_only_roles and include_roles:
-        click.echo("Error: Cannot use both --exclude-only-roles and --include-roles at the same time")
+        click.echo(
+            "Error: Cannot use both --exclude-only-roles and --include-roles at the same time"
+        )
         return
 
-    excluded_roles_list = [role.strip() for role in exclude_only_roles.split(",")] if exclude_only_roles else None
-    included_roles_list = [role.strip() for role in include_roles.split(",")] if include_roles else None
+    excluded_roles_list = (
+        [role.strip() for role in exclude_only_roles.split(",")]
+        if exclude_only_roles
+        else None
+    )
+    included_roles_list = (
+        [role.strip() for role in include_roles.split(",")] if include_roles else None
+    )
 
     if excluded_roles_list:
-        logger.info(f"Excluding users with ONLY roles: {', '.join(excluded_roles_list)}")
+        logger.info(
+            f"Excluding users with ONLY roles: {', '.join(excluded_roles_list)}"
+        )
     if included_roles_list:
-        logger.info(f"Including only users with roles: {', '.join(included_roles_list)}")
+        logger.info(
+            f"Including only users with roles: {', '.join(included_roles_list)}"
+        )
 
     logger.info("Fetching all users from DynamoDB...")
     logger.info("Fetching customer data for institution names...")
@@ -113,8 +127,10 @@ def export_roles(ctx: AppContext, output: str, exclude_only_roles: str, include_
     result = service.export_to_excel(
         output_filename=output,
         exclude_only_roles=excluded_roles_list,
-        include_roles=included_roles_list
+        include_roles=included_roles_list,
     )
 
-    logger.info(f"Found {result.total_users} users, exported {result.exported_users} users.")
+    logger.info(
+        f"Found {result.total_users} users, exported {result.exported_users} users."
+    )
     logger.info(f"Excel file saved to: {result.filename}")
