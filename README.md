@@ -18,6 +18,8 @@ uv python install
 # Install dependencies
 uv sync
 
+# Optional install step: in VS Code, CMD+shift+p and find "shell command: install..". This is useful for editing dynamodb records
+
 # Example: Add or remove dependencies from the project
 uv add boto3 click rich
 uv remove rich click
