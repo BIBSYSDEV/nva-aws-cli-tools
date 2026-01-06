@@ -167,3 +167,7 @@ cython_debug/
 
 # Custom logs
 logs.jsonl*
+
+# SpecKit artifacts (from local testing)
+.specify
+specs
