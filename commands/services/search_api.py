@@ -8,21 +8,22 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
+from typing import Dict, Any, Generator, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class SearchApiService:
-    def __init__(self, profile):
+    def __init__(self, profile: Optional[str]) -> None:
         self.session = boto3.Session(profile_name=profile)
         self.ssm = self.session.client("ssm")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
 
-    def _get_system_parameter(self, name):
+    def _get_system_parameter(self, name: str) -> str:
         response = self.ssm.get_parameter(Name=name)
         return response["Parameter"]["Value"]
 
-    def get_uri(self, type):
+    def get_uri(self, type: str) -> str:
         return f"https://{self.api_domain}/search/{type}"
 
     @retry(
@@ -33,7 +34,9 @@ class SearchApiService:
         ),
         reraise=True,
     )
-    def _make_search_request(self, url, headers, params):
+    def _make_search_request(
+        self, url: str, headers: Dict[str, str], params: Dict[str, Any]
+    ) -> requests.Response:
         logger.debug(f"URL: {url}")
         logger.debug(f"Params: {params}")
         logger.debug(f"Headers: {headers}")
@@ -44,14 +47,17 @@ class SearchApiService:
         logger.debug(f"Full URL: {response.url}")
 
         if response.status_code >= 500:
-            logger.debug(f"Server error {response.status_code}, will retry...")
+            logger.error(f"Server error {response.status_code}, will retry...")
             response.raise_for_status()
 
         return response
 
     def resource_search(
-        self, query_parameters, page_size=100, api_version="2024-12-01"
-    ):
+        self,
+        query_parameters: Dict[str, Any],
+        page_size: int = 100,
+        api_version: str = "2024-12-01",
+    ) -> Generator[Dict[str, Any], None, None]:
         """
         Search resources with automatic pagination.
 
@@ -63,7 +69,7 @@ class SearchApiService:
         Yields:
             Individual hits from the search results
         """
-        url = f"{self.get_uri('resources')}"
+        url = self.get_uri("resources")
         headers = {
             "Accept": f"application/json; version={api_version}",
         }

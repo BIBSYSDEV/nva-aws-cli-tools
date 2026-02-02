@@ -1,10 +1,70 @@
 import click
+import json
 import logging
+from dataclasses import dataclass
+from typing import Tuple
 
 from commands.services.search_api import SearchApiService
 from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SearchParams:
+    aggregation: str | None = None
+    year_to: str | None = None
+    year_from: str | None = None
+    unit: str | None = None
+    publisher: str | None = None
+    contributor: str | None = None
+    project: str | None = None
+    funding_source: str | None = None
+    funding_identifier: str | None = None
+    category: str | None = None
+    instance_type: str | None = None
+    order: str | None = None
+    sort: str = "relevance,identifier"
+
+    PARAM_MAPPING = {
+        "aggregation": "aggregation",
+        "year_to": "publicationYearBefore",
+        "year_from": "publicationYearSince",
+        "unit": "unit",
+        "publisher": "publisher",
+        "contributor": "contributor",
+        "project": "project",
+        "funding_source": "fundingSource",
+        "funding_identifier": "fundingIdentifier",
+        "category": "category",
+        "instance_type": "instanceType",
+        "order": "order",
+        "sort": "sort",
+    }
+
+    def to_query_params(self, api_domain: str) -> dict:
+        query_params = {}
+
+        for field_name, api_name in self.PARAM_MAPPING.items():
+            value = getattr(self, field_name)
+            if value:
+                query_params[api_name] = value
+
+        if "unit" in query_params and not query_params["unit"].startswith("http"):
+            unit_id = query_params["unit"]
+            query_params["unit"] = f"https://{api_domain}/cristin/organization/{unit_id}"
+
+        if "project" in query_params and not query_params["project"].startswith("http"):
+            project_id = query_params["project"]
+            query_params["project"] = f"https://{api_domain}/cristin/project/{project_id}"
+
+        return query_params
+
+    @classmethod
+    def from_kwargs(cls, **kwargs) -> "SearchParams":
+        field_names = {f for f in cls.PARAM_MAPPING.keys()}
+        filtered = {k: v for k, v in kwargs.items() if k in field_names}
+        return cls(**filtered)
 
 
 @click.group()
@@ -20,7 +80,12 @@ def search(ctx: AppContext):
     "--page-size",
     type=int,
     default=50,
-    help="Number of results per page (default: 100)",
+    help="Number of results per page (default: 50)",
+)
+@click.option(
+    "--limit",
+    type=int,
+    help="Maximum number of total results to return (default: unlimited)",
 )
 @click.option(
     "--aggregation",
@@ -108,24 +173,13 @@ def search(ctx: AppContext):
 )
 def resources(
     ctx: AppContext,
-    page_size,
-    aggregation,
-    year_to,
-    year_from,
-    unit,
-    publisher,
-    contributor,
-    project,
-    funding_source,
-    funding_identifier,
-    category,
-    instance_type,
-    order,
-    sort,
-    id_only,
-    query,
-    api_version,
-):
+    page_size: int,
+    limit: int | None,
+    id_only: bool,
+    query: Tuple[str, ...],
+    api_version: str,
+    **kwargs,
+) -> None:
     """Search NVA resources with flexible query parameters.
 
     This command provides automatic pagination and supports all search API parameters.
@@ -134,8 +188,8 @@ def resources(
         # Search by unit and year range
         uv run cli.py search resources --unit 1965.0.0.0 --year-from 2025 --year-to 2026
 
-        # Search by project
-        uv run cli.py search resources --project 2744839
+        # Search by project (limit to first 100 results)
+        uv run cli.py search resources --project 2744839 --limit 100
 
         # Search by funding source and identifier
         uv run cli.py search resources --funding-source NFR --funding-identifier 357438
@@ -147,41 +201,8 @@ def resources(
         uv run cli.py search resources --query "funding=some-id" --query "status=published" --aggregation all
     """
     search_service = SearchApiService(profile=ctx.profile)
-
-    query_params = {}
-
-    if aggregation:
-        query_params["aggregation"] = aggregation
-    if year_to:
-        query_params["publicationYearBefore"] = year_to
-    if year_from:
-        query_params["publicationYearSince"] = year_from
-    if unit:
-        if not unit.startswith("http"):
-            api_domain = search_service.api_domain
-            unit = f"https://{api_domain}/cristin/organization/{unit}"
-        query_params["unit"] = unit
-    if publisher:
-        query_params["publisher"] = publisher
-    if contributor:
-        query_params["contributor"] = contributor
-    if project:
-        if not project.startswith("http"):
-            api_domain = search_service.api_domain
-            project = f"https://{api_domain}/cristin/project/{project}"
-        query_params["project"] = project
-    if funding_source:
-        query_params["fundingSource"] = funding_source
-    if funding_identifier:
-        query_params["fundingIdentifier"] = funding_identifier
-    if category:
-        query_params["category"] = category
-    if instance_type:
-        query_params["instanceType"] = instance_type
-    if order:
-        query_params["order"] = order
-
-    query_params["sort"] = sort
+    search_params = SearchParams.from_kwargs(**kwargs)
+    query_params = search_params.to_query_params(search_service.api_domain)
 
     for q in query:
         if "=" in q:
@@ -189,9 +210,6 @@ def resources(
             query_params[key] = value
         else:
             logger.warning(f"Ignoring invalid query parameter: {q}")
-
-    if not query_params:
-        logger.warning("No query parameters specified. This may return many results.")
 
     try:
         count = 0
@@ -203,10 +221,11 @@ def resources(
                 if identifier:
                     print(identifier)
             else:
-                import json
-
                 print(json.dumps(hit, indent=2))
             count += 1
+
+            if limit and count >= limit:
+                break
 
         if count > 0:
             logger.info(f"Total results: {count}")
