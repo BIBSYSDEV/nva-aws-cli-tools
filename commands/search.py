@@ -57,6 +57,16 @@ def search():
     help="Project ID (e.g., 2744839 or full URL)",
 )
 @click.option(
+    "--funding-source",
+    type=str,
+    help="Funding source (e.g., NFR)",
+)
+@click.option(
+    "--funding-identifier",
+    type=str,
+    help="Funding identifier (e.g., 357438)",
+)
+@click.option(
     "--category",
     type=str,
     help="Category filter",
@@ -104,6 +114,8 @@ def resources(
     publisher,
     contributor,
     project,
+    funding_source,
+    funding_identifier,
     category,
     instance_type,
     order,
@@ -122,6 +134,9 @@ def resources(
 
         # Search by project
         uv run cli.py search resources --project 2744839
+
+        # Search by funding source and identifier
+        uv run cli.py search resources --funding-source NFR --funding-identifier 357438
 
         # Search by publisher (output only IDs)
         uv run cli.py search resources --publisher 08DC24C9-B7FF-4192-89AC-C629D93AD9CF --id-only
@@ -153,6 +168,10 @@ def resources(
             api_domain = search_service.api_domain
             project = f"https://{api_domain}/cristin/project/{project}"
         query_params["project"] = project
+    if funding_source:
+        query_params["fundingSource"] = funding_source
+    if funding_identifier:
+        query_params["fundingIdentifier"] = funding_identifier
     if category:
         query_params["category"] = category
     if instance_type:
