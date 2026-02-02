@@ -1,5 +1,6 @@
 publication_data/
 *.jsonl
+*.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -167,3 +168,7 @@ cython_debug/
 
 # Custom logs
 logs.jsonl*
+
+# SpecKit artifacts (from local testing)
+.specify
+specs

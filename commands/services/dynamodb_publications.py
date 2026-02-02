@@ -276,3 +276,42 @@ class DynamodbPublications:
 
     def execute_batch_updates(self, transact_items):
         self.dynamodb.transact_write_items(TransactItems=transact_items)
+
+    def fetch_log_entries(self, identifier: str) -> list[dict]:
+        """
+        Fetch all LogEntry items for a publication by its identifier.
+
+        LogEntry items share the same partition key (PK0) as the publication
+        and have sort keys prefixed with "LogEntry:".
+
+        Args:
+            identifier: Publication identifier (e.g., "019aa050798d-54f5e9a6-...")
+
+        Returns:
+            list: LogEntry items, or empty list if none found
+        """
+        if self.table is None:
+            logger.error("Table not initialized - check AWS profile and table pattern")
+            raise ValueError("Table not initialized")
+
+        logger.info(f"Querying log entries for publication: {identifier}")
+        log_entries = []
+        paginator = self.table.meta.client.get_paginator("query")
+        pages = paginator.paginate(
+            TableName=self.table.name,
+            KeyConditionExpression="PK0 = :pk AND begins_with(SK0, :sk)",
+            ExpressionAttributeValues={
+                ":pk": f"Resource:{identifier}",
+                ":sk": "LogEntry:",
+            },
+        )
+        for page in pages:
+            items = page.get("Items", [])
+            logger.debug(f"Fetched {len(items)} entries")
+            for item in items:
+                log_entries.append(item.get("data", item))
+
+        logger.info(
+            f"Found {len(log_entries)} log entries for publication {identifier}"
+        )
+        return log_entries

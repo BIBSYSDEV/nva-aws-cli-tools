@@ -2,18 +2,20 @@ import click
 import logging
 
 from commands.services.search_api import SearchApiService
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 
 
 @click.group()
-def search():
+@click.pass_obj
+def search(ctx: AppContext):
     """Search NVA resources."""
     pass
 
 
 @search.command()
-@click.option("--profile", type=str, help="AWS profile to use")
+@click.pass_obj
 @click.option(
     "--page-size",
     type=int,
@@ -105,7 +107,7 @@ def search():
     help="API version to use (default: 2024-12-01)",
 )
 def resources(
-    profile,
+    ctx: AppContext,
     page_size,
     aggregation,
     year_to,
@@ -144,7 +146,7 @@ def resources(
         # Use additional query parameters
         uv run cli.py search resources --query "funding=some-id" --query "status=published" --aggregation all
     """
-    search_service = SearchApiService(profile=profile)
+    search_service = SearchApiService(profile=ctx.profile)
 
     query_params = {}
 

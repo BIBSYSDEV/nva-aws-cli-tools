@@ -1,7 +1,10 @@
 import click
 import csv
+import json
 import logging
+from datetime import datetime, timezone
 
+from commands.utils import AppContext
 from commands.services.publication_api import PublicationApiService
 from commands.services.aws_utils import (
     extract_publication_identifier,
@@ -20,22 +23,18 @@ table_pattern = (
 
 
 @click.group()
-def publications():
+@click.pass_obj
+def publications(ctx: AppContext):
     pass
 
 
 @publications.command(
     help="Copy publication, clear assosiated artifacts and set to draft status"
 )
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("publication_identifier", required=True, nargs=1)
-def copy(profile: str, publication_identifier: str) -> None:
-    service = PublicationApiService(profile)
+@click.pass_obj
+def copy(ctx: AppContext, publication_identifier: str) -> None:
+    service = PublicationApiService(ctx.profile)
     original = service.fetch_publication(publication_identifier)
     original["associatedArtifacts"] = []
     original.pop("identifier")
@@ -49,19 +48,14 @@ def copy(profile: str, publication_identifier: str) -> None:
     help="Edit a publication by opening it in the chosen editor, e.g., VS Code and saving changes"
 )
 @click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-@click.option(
     "--editor",
     default="code",
     help="The editor to use for opening the publication, defaults to Visual Studio Code (use 'code')",
 )
 @click.argument("publication_identifier", required=True, nargs=1)
-def edit(profile: str, editor: str, publication_identifier: str) -> None:
-    service = PublicationApiService(profile)
+@click.pass_obj
+def edit(ctx: AppContext, editor: str, publication_identifier: str) -> None:
+    service = PublicationApiService(ctx.profile)
     publication = service.fetch_publication(publication_identifier)
     publication.pop("@context", None)
 
@@ -72,15 +66,10 @@ def edit(profile: str, editor: str, publication_identifier: str) -> None:
 
 
 @publications.command(help="Fetch a publication")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("publication_identifier", required=True, nargs=1)
-def fetch(profile: str, publication_identifier: str) -> None:
-    service = PublicationApiService(profile)
+@click.pass_obj
+def fetch(ctx: AppContext, publication_identifier: str) -> None:
+    service = PublicationApiService(ctx.profile)
     publication = service.fetch_publication(publication_identifier)
 
     if not publication:
@@ -93,48 +82,33 @@ def fetch(profile: str, publication_identifier: str) -> None:
 
 
 @publications.command(help="Export all publications")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.option("--folder", required=True, help="The folder to save the exported data.")
-def export(profile: str, folder: str) -> None:
+@click.pass_obj
+def export(ctx: AppContext, folder: str) -> None:
     condition = Attr("PK0").begins_with("Resource:") & Attr("SK0").begins_with(
         "Resource:"
     )
     batch_size = 700
-    DynamodbPublications(profile, table_pattern).save_to_folder(
+    DynamodbPublications(ctx.profile, table_pattern).save_to_folder(
         condition, batch_size, folder
     )
 
 
 @publications.command(help="Fetch single publication from DynamoDB")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("publication_identifier", required=True, nargs=1)
-def fetch_dynamodb(profile: str, publication_identifier: str) -> None:
+@click.pass_obj
+def fetch_dynamodb(ctx: AppContext, publication_identifier: str) -> None:
     _, _, resource = DynamodbPublications(
-        profile, table_pattern
+        ctx.profile, table_pattern
     ).fetch_resource_by_identifier(publication_identifier)
     click.echo(prettify(resource))
 
 
 @publications.command(help="Update publication in DynamoDB")
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("publication_identifier", required=True, nargs=1)
-def edit_dynamodb(profile: str, publication_identifier: str) -> None:
-    service = DynamodbPublications(profile, table_pattern)
+@click.pass_obj
+def edit_dynamodb(ctx: AppContext, publication_identifier: str) -> None:
+    service = DynamodbPublications(ctx.profile, table_pattern)
     pk0, sk0, resource = service.fetch_resource_by_identifier(publication_identifier)
 
     def update_callback(updated_publication):
@@ -148,15 +122,10 @@ def edit_dynamodb(profile: str, publication_identifier: str) -> None:
 @publications.command(
     help="Migrate Cristin IDs in DynamoDB. This add correct Cristin IDs provided in the CSV file."
 )
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.argument("input", type=click.Path(exists=True), required=True, nargs=1)
-def migrate_by_dynamodb(profile: str, input: str) -> None:
-    service = DynamodbPublications(profile, table_pattern)
+@click.pass_obj
+def migrate_by_dynamodb(ctx: AppContext, input: str) -> None:
+    service = DynamodbPublications(ctx.profile, table_pattern)
 
     update_statements = []
     batch_size = 15
@@ -233,12 +202,6 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
     help="Reindex publications by sending their IDs to SQS queue in batches. Takes a text file with publication IDs."
 )
 @click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-@click.option(
     "--batch-size",
     default=10,
     help="Number of messages to send per batch (default: 10)",
@@ -249,7 +212,10 @@ def migrate_by_dynamodb(profile: str, input: str) -> None:
     help="Number of concurrent batch senders (default: 3)",
 )
 @click.argument("input_source", required=True)
-def reindex(profile: str, batch_size: int, concurrency: int, input_source: str) -> None:
+@click.pass_obj
+def reindex(
+    ctx: AppContext, batch_size: int, concurrency: int, input_source: str
+) -> None:
     """
     Send reindex messages to SQS queue for publication IDs.
 
@@ -267,7 +233,7 @@ def reindex(profile: str, batch_size: int, concurrency: int, input_source: str) 
     import os
 
     # Initialize the batch job service
-    service = ResourceBatchJobService(profile)
+    service = ResourceBatchJobService(ctx.profile)
 
     # Display input information based on type
     if os.path.isfile(input_source):
@@ -320,3 +286,44 @@ def reindex(profile: str, batch_size: int, concurrency: int, input_source: str) 
         click.echo(
             f"⚠️  {result['failed']} messages failed to send. Check the errors above."
         )
+
+
+@publications.command(help="Export log entries for a publication to a JSON file")
+@click.argument("publication_identifier", required=True, nargs=1)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output file path (default: {identifier}.json in current directory)",
+)
+@click.pass_obj
+def logs(ctx: AppContext, publication_identifier: str, output: str | None) -> None:
+    """
+    Export log entries for a publication to a JSON file.
+
+    PUBLICATION_IDENTIFIER is the unique identifier for the publication
+    (e.g., 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db).
+
+    Examples:
+        # Export logs with default filename
+        cli.py publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db
+
+        # Export logs to specific file
+        cli.py publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db --output /tmp/logs.json
+    """
+    service = DynamodbPublications(ctx.profile, table_pattern)
+    log_entries = service.fetch_log_entries(publication_identifier)
+    if len(log_entries) == 0:
+        logger.warning(f"No log entries found for publication {publication_identifier}")
+        return
+
+    output_path = output if output else f"{publication_identifier}.json"
+    export_result = {
+        "identifier": publication_identifier,
+        "exportedAt": datetime.now(timezone.utc).isoformat(),
+        "entryCount": len(log_entries),
+        "logEntries": log_entries,
+    }
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(export_result, f, indent=2, ensure_ascii=False)
+    logger.info(f"Exported {len(log_entries)} log entries to {output_path}")

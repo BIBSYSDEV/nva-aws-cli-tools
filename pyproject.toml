@@ -5,23 +5,25 @@ description = "Python scripts using aws-cli"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "boto3>=1.35.36",
-    "click>=8.1.7",
-    "requests>=2.32.3",
-    "rich>=13.9.2",
+    "boto3>=1.42.11",
+    "click>=8.3.1",
+    "requests>=2.32.5",
+    "rich>=14.2.0",
     "tabulate>=0.9.0",
-    "tqdm>=4.66.5",
-    "deepdiff>=8.5.0",
+    "tqdm>=4.67.1",
+    "deepdiff>=8.6.1",
     "uuid>=1.30",
     "tenacity>=9.1.2",
     "python-json-logger>=4.0.0",
-]
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.4.1",
-    "ruff>=0.6.9",
+    "polars>=1.36.1",
+    "xlsxwriter>=3.2.9",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.9",
+]

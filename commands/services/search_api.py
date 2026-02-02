@@ -63,7 +63,7 @@ class SearchApiService:
         Yields:
             Individual hits from the search results
         """
-        url = f"{self.get_uri("resources")}"
+        url = f"{self.get_uri('resources')}"
         headers = {
             "Accept": f"application/json; version={api_version}",
         }

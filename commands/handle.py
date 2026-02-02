@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from boto3.dynamodb.conditions import Key
+from commands.utils import AppContext
 from commands.services.aws_utils import get_account_alias
 from commands.services.handle_task_writer import HandleTaskWriterService
 from commands.services.handle_task_executor import HandleTaskExecutorService
@@ -13,17 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-def handle():
+@click.pass_obj
+def handle(ctx: AppContext):
     pass
 
 
 @handle.command()
-@click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
 @click.option(
     "-c",
     "--customer",
@@ -47,8 +43,9 @@ def handle():
     required=False,
     help="handle.net prefix. e.g. 20.500.12242 that should be imported to NVA",
 )
+@click.pass_obj
 def prepare(
-    profile: str, customer: str, resource_owner: str, output_folder: str, prefix: str
+    ctx: AppContext, customer: str, resource_owner: str, output_folder: str, prefix: str
 ) -> None:
     table_pattern = "^nva-resources-master-pipelines-NvaPublicationApiPipeline-.*-nva-publication-api$"
     condition = Key("PK0").eq(f"Resource:{customer}:{resource_owner}")
@@ -56,7 +53,7 @@ def prepare(
 
     if not output_folder:
         output_folder = (
-            f"{get_account_alias(profile)}-resources-{resource_owner}-handle-tasks"
+            f"{get_account_alias(ctx.profile)}-resources-{resource_owner}-handle-tasks"
         )
 
     # Create output folder if not exists
@@ -74,7 +71,7 @@ def prepare(
                 json.dump(task, outfile)
                 outfile.write("\n")
 
-    DynamodbPublications(profile, table_pattern).process_query(
+    DynamodbPublications(ctx.profile, table_pattern).process_query(
         condition, batch_size, process_batch
     )
 
@@ -85,18 +82,13 @@ def prepare(
 
 @handle.command()
 @click.option(
-    "--profile",
-    envvar="AWS_PROFILE",
-    default="default",
-    help="The AWS profile to use. e.g. sikt-nva-sandbox, configure your profiles in ~/.aws/config",
-)
-@click.option(
     "-i",
     "--input-folder",
     required=True,
     help="Input folder path. e.g. sikt-nva-sandbox-resources-ntnu@194.0.0.0-handle-tasks",
 )
-def execute(profile: str, input_folder: str) -> None:
+@click.pass_obj
+def execute(ctx: AppContext, input_folder: str) -> None:
     complete_folder = os.path.join(input_folder, "complete")
     os.makedirs(complete_folder, exist_ok=True)
 
@@ -105,7 +97,7 @@ def execute(profile: str, input_folder: str) -> None:
         if os.path.isfile(file_path) and batch_file.endswith(".jsonl"):
             with open(file_path, "r") as infile:
                 batch = [json.loads(line) for line in infile]
-                HandleTaskExecutorService(profile, input_folder).execute(batch)
+                HandleTaskExecutorService(ctx.profile, input_folder).execute(batch)
 
             # Move the file to the 'complete' folder after processing
             new_file_path = os.path.join(complete_folder, batch_file)
