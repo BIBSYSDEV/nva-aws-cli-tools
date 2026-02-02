@@ -52,6 +52,11 @@ def search():
     help="Contributor ID",
 )
 @click.option(
+    "--project",
+    type=str,
+    help="Project ID (e.g., 2744839 or full URL)",
+)
+@click.option(
     "--category",
     type=str,
     help="Category filter",
@@ -98,6 +103,7 @@ def resources(
     unit,
     publisher,
     contributor,
+    project,
     category,
     instance_type,
     order,
@@ -113,6 +119,9 @@ def resources(
     Examples:
         # Search by unit and year range
         uv run cli.py search resources --unit 1965.0.0.0 --year-from 2025 --year-to 2026
+
+        # Search by project
+        uv run cli.py search resources --project 2744839
 
         # Search by publisher (output only IDs)
         uv run cli.py search resources --publisher 08DC24C9-B7FF-4192-89AC-C629D93AD9CF --id-only
@@ -139,6 +148,11 @@ def resources(
         query_params["publisher"] = publisher
     if contributor:
         query_params["contributor"] = contributor
+    if project:
+        if not project.startswith("http"):
+            api_domain = search_service.api_domain
+            project = f"https://{api_domain}/cristin/project/{project}"
+        query_params["project"] = project
     if category:
         query_params["category"] = category
     if instance_type:
