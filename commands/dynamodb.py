@@ -25,15 +25,16 @@ def dynamodb(ctx: AppContext):
 )
 @click.option(
     "--filter",
-    "filter_expression",
-    help="Filter expression (e.g., 'PK0:begins_with:Resource:'). Format: 'attribute:operator:value'",
+    "filter_expressions",
+    multiple=True,
+    help="Filter expression (e.g., 'PK0:begins_with:Resource:'). Format: 'attribute:operator:value'. Can be specified multiple times (combined with AND logic)",
 )
 @click.pass_obj
 def export(
     ctx: AppContext,
     table: str,
     folder: str | None,
-    filter_expression: str | None,
+    filter_expressions: tuple[str, ...],
 ) -> None:
     if folder is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -41,11 +42,26 @@ def export(
 
     condition = None
 
-    if filter_expression:
-        condition = _parse_filter_expression(filter_expression)
+    if filter_expressions:
+        condition = _parse_multiple_filters(filter_expressions)
 
     exporter = GenericDynamodbExporter(ctx.profile, table)
     exporter.export(folder, condition)
+
+
+def _parse_multiple_filters(filter_expressions: tuple[str, ...]) -> Attr:
+    """Parse multiple filter expressions and combine them with AND logic."""
+    if not filter_expressions:
+        return None
+
+    conditions = [_parse_filter_expression(expr) for expr in filter_expressions]
+
+    # Combine all conditions with AND logic
+    combined_condition = conditions[0]
+    for condition in conditions[1:]:
+        combined_condition = combined_condition & condition
+
+    return combined_condition
 
 
 def _parse_filter_expression(filter_expression: str) -> Attr:

@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import pytest
 from boto3.dynamodb.types import Binary
 
-from commands.dynamodb import _parse_filter_expression
+from commands.dynamodb import _parse_filter_expression, _parse_multiple_filters
 from commands.services.dynamodb_exporter import DynamoDBEncoder, GenericDynamodbExporter
 
 
@@ -316,6 +316,37 @@ def test_parse_filter_expression_invalid_format():
 def test_parse_filter_expression_unsupported_operator():
     with pytest.raises(ValueError, match="Unsupported operator"):
         _parse_filter_expression("field:invalid_op:value")
+
+
+def test_parse_multiple_filters_single_filter():
+    result = _parse_multiple_filters(("status:eq:PUBLISHED",))
+    assert result is not None
+    assert hasattr(result, "get_expression")
+
+
+def test_parse_multiple_filters_two_filters():
+    result = _parse_multiple_filters(
+        ("status:eq:PUBLISHED", "modifiedDate:gt:2025-01-01")
+    )
+    assert result is not None
+    assert hasattr(result, "get_expression")
+
+
+def test_parse_multiple_filters_three_filters():
+    result = _parse_multiple_filters(
+        (
+            "PK0:begins_with:Resource",
+            "status:eq:PUBLISHED",
+            "modifiedDate:gt:2025-01-01",
+        )
+    )
+    assert result is not None
+    assert hasattr(result, "get_expression")
+
+
+def test_parse_multiple_filters_empty_tuple():
+    result = _parse_multiple_filters(())
+    assert result is None
 
 
 def test_dynamodb_encoder_decimal_integer():
