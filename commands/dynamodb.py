@@ -21,7 +21,7 @@ def dynamodb(ctx: AppContext):
 )
 @click.option(
     "--folder",
-    help="The folder to save the exported data (default: dynamodb_export_{table}_{timestamp})",
+    help="The folder to save the exported data (default: dynamodb_export_{profile}_{table}_{timestamp})",
 )
 @click.option(
     "--filter",
@@ -38,7 +38,7 @@ def export(
 ) -> None:
     if folder is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        folder = f"dynamodb_export_{table}_{timestamp}"
+        folder = f"dynamodb_export_{ctx.profile}_{table}_{timestamp}"
 
     condition = None
 
