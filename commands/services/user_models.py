@@ -187,6 +187,7 @@ class Customer:
     cname: Optional[str] = None
     feideOrganizationDomain: Optional[str] = None
     customer_of: Optional[str] = None
+    nvi_institution: Optional[bool] = None
 
     @classmethod
     def from_dynamodb(cls, item: dict[str, Any]) -> "Customer":
@@ -200,6 +201,7 @@ class Customer:
             cname=item.get("cname"),
             feideOrganizationDomain=item.get("feideOrganizationDomain"),
             customer_of=item.get("customerOf"),
+            nvi_institution=item.get("nviInstitution"),
         )
 
 
