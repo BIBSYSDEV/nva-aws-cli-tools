@@ -19,6 +19,23 @@ def mock_session():
 
 
 @pytest.fixture
+def mock_exporter(mock_session):
+    mock_client = Mock()
+    mock_client.list_tables.return_value = {"TableNames": ["test-table"]}
+
+    mock_table = Mock()
+    mock_resource = Mock()
+    mock_resource.Table.return_value = mock_table
+
+    mock_session_instance = Mock()
+    mock_session_instance.client.return_value = mock_client
+    mock_session_instance.resource.return_value = mock_resource
+    mock_session.return_value = mock_session_instance
+
+    return GenericDynamodbExporter(None, "test-table")
+
+
+@pytest.fixture
 def sample_compressed_item():
     data = {"key": "value", "nested": {"field": "data"}}
     data_str = json.dumps(data)
@@ -74,220 +91,108 @@ def test_get_table_not_found(mock_session):
     mock_session_instance.client.return_value = mock_client
     mock_session.return_value = mock_session_instance
 
-    exporter = GenericDynamodbExporter("test-profile", "resources")
-
-    assert exporter.table is None
-    assert exporter.table_name is None
+    with pytest.raises(ValueError, match="No table found containing 'resources'"):
+        GenericDynamodbExporter("test-profile", "resources")
 
 
-def test_detect_compression_with_compressed_data(sample_compressed_item):
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+def test_decompress_data(mock_exporter):
+    original_data = {"key": "value", "nested": {"field": "data"}}
+    data_str = json.dumps(original_data)
+    compress_obj = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+    compressed_data = compress_obj.compress(data_str.encode()) + compress_obj.flush()
+    encoded_data = base64.b64encode(compressed_data).decode()
 
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
+    decompressed = mock_exporter._decompress_data(encoded_data)
 
-        is_compressed = exporter._detect_compression(sample_compressed_item)
-
-        assert is_compressed is True
+    assert decompressed == original_data
 
 
-def test_detect_compression_with_binary_type():
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+def test_process_item_with_compression(mock_exporter, sample_compressed_item):
+    processed = mock_exporter._process_item(sample_compressed_item)
 
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
-
-        data = {"key": "value", "nested": {"field": "data"}}
-        data_str = json.dumps(data)
-        compress_obj = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-        compressed_data = compress_obj.compress(data_str.encode()) + compress_obj.flush()
-        binary_data = Binary(compressed_data)
-
-        item_with_binary = {
-            "PK0": "Resource:789",
-            "SK0": "Resource:789",
-            "data": binary_data,
-        }
-
-        is_compressed = exporter._detect_compression(item_with_binary)
-
-        assert is_compressed is True
+    assert "@data_decompressed" in processed
+    assert processed["@data_decompressed"]["key"] == "value"
+    assert processed["PK0"] == "Resource:123"
+    assert processed["someField"] == "someValue"
 
 
-def test_detect_compression_with_uncompressed_data(sample_uncompressed_item):
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+def test_process_item_with_binary_compression(mock_exporter):
+    original_data = {"key": "value", "nested": {"field": "data"}}
+    data_str = json.dumps(original_data)
+    compress_obj = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+    compressed_data = compress_obj.compress(data_str.encode()) + compress_obj.flush()
+    binary_data = Binary(compressed_data)
 
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
+    item_with_binary = {
+        "PK0": "Resource:789",
+        "SK0": "Resource:789",
+        "data": binary_data,
+        "someField": "someValue",
+    }
 
-        is_compressed = exporter._detect_compression(sample_uncompressed_item)
+    processed = mock_exporter._process_item(item_with_binary)
 
-        assert is_compressed is False
-
-
-def test_decompress_data():
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
-
-        original_data = {"key": "value", "nested": {"field": "data"}}
-        data_str = json.dumps(original_data)
-        compress_obj = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-        compressed_data = compress_obj.compress(data_str.encode()) + compress_obj.flush()
-        encoded_data = base64.b64encode(compressed_data).decode()
-
-        decompressed = exporter._decompress_data(encoded_data)
-
-        assert decompressed == original_data
+    assert "@data_decompressed" in processed
+    assert processed["@data_decompressed"]["key"] == "value"
+    assert processed["@data_decompressed"]["nested"]["field"] == "data"
+    assert processed["PK0"] == "Resource:789"
+    assert processed["someField"] == "someValue"
 
 
-def test_process_item_with_compression(sample_compressed_item):
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+def test_process_item_without_compression(mock_exporter, sample_uncompressed_item):
+    processed = mock_exporter._process_item(sample_uncompressed_item)
 
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
-
-        processed = exporter._process_item(sample_compressed_item)
-
-        assert "@data_decompressed" in processed
-        assert processed["@data_decompressed"]["key"] == "value"
-        assert processed["PK0"] == "Resource:123"
-        assert processed["someField"] == "someValue"
+    assert "@data_decompressed" not in processed
+    assert processed == sample_uncompressed_item
 
 
-def test_process_item_with_binary_compression():
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+def test_save_items_to_file(mock_exporter, sample_uncompressed_item, tmp_path):
+    items = [sample_uncompressed_item]
+    mock_exporter._save_items_to_file(items, 1, str(tmp_path))
 
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
+    output_file = tmp_path / "batch_00001.jsonl"
+    assert output_file.exists()
 
-        original_data = {"key": "value", "nested": {"field": "data"}}
-        data_str = json.dumps(original_data)
-        compress_obj = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-        compressed_data = compress_obj.compress(data_str.encode()) + compress_obj.flush()
-        binary_data = Binary(compressed_data)
-
-        item_with_binary = {
-            "PK0": "Resource:789",
-            "SK0": "Resource:789",
-            "data": binary_data,
-            "someField": "someValue",
-        }
-
-        processed = exporter._process_item(item_with_binary)
-
-        assert "@data_decompressed" in processed
-        assert processed["@data_decompressed"]["key"] == "value"
-        assert processed["@data_decompressed"]["nested"]["field"] == "data"
-        assert processed["PK0"] == "Resource:789"
-        assert processed["someField"] == "someValue"
-
-
-def test_process_item_without_compression(sample_uncompressed_item):
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
-
-        processed = exporter._process_item(sample_uncompressed_item)
-
-        assert "@data_decompressed" not in processed
-        assert processed == sample_uncompressed_item
-
-
-def test_save_items_to_file(sample_uncompressed_item, tmp_path):
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
-
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
-        exporter.output_folder = str(tmp_path)
-
-        items = [sample_uncompressed_item]
-        exporter._save_items_to_file(items, 1)
-
-        output_file = tmp_path / "batch_00001.jsonl"
-        assert output_file.exists()
-
-        with open(output_file) as file:
-            lines = file.readlines()
-            assert len(lines) == 1
-            saved_item = json.loads(lines[0])
-            assert saved_item == sample_uncompressed_item
+    with open(output_file) as file:
+        lines = file.readlines()
+        assert len(lines) == 1
+        saved_item = json.loads(lines[0])
+        assert saved_item == sample_uncompressed_item
 
 
 def test_save_mixed_compressed_and_uncompressed_items(
-    sample_compressed_item, sample_uncompressed_item, tmp_path
+    mock_exporter, sample_compressed_item, sample_uncompressed_item, tmp_path
 ):
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock_session:
-        mock_client = Mock()
-        mock_client.list_tables.return_value = {"TableNames": []}
-        mock_session_instance = Mock()
-        mock_session_instance.client.return_value = mock_client
-        mock_session.return_value = mock_session_instance
+    items = [sample_compressed_item, sample_uncompressed_item]
+    mock_exporter._save_items_to_file(items, 1, str(tmp_path))
 
-        exporter = GenericDynamodbExporter(None, ".*")
-        exporter.table = Mock()
-        exporter.output_folder = str(tmp_path)
+    output_file = tmp_path / "batch_00001.jsonl"
+    assert output_file.exists()
 
-        items = [sample_compressed_item, sample_uncompressed_item]
-        exporter._save_items_to_file(items, 1)
+    with open(output_file) as file:
+        lines = file.readlines()
+        assert len(lines) == 2
 
-        output_file = tmp_path / "batch_00001.jsonl"
-        assert output_file.exists()
+        compressed_result = json.loads(lines[0])
+        assert "@data_decompressed" in compressed_result
+        assert compressed_result["@data_decompressed"]["key"] == "value"
+        assert compressed_result["PK0"] == "Resource:123"
 
-        with open(output_file) as file:
-            lines = file.readlines()
-            assert len(lines) == 2
+        uncompressed_result = json.loads(lines[1])
+        assert "@data_decompressed" not in uncompressed_result
+        assert uncompressed_result["PK0"] == "Resource:456"
 
-            compressed_result = json.loads(lines[0])
-            assert "@data_decompressed" in compressed_result
-            assert compressed_result["@data_decompressed"]["key"] == "value"
-            assert compressed_result["PK0"] == "Resource:123"
 
-            uncompressed_result = json.loads(lines[1])
-            assert "@data_decompressed" not in uncompressed_result
-            assert uncompressed_result["PK0"] == "Resource:456"
+def test_parse_filter_expression_exists():
+    result = _parse_filter_expression("someField:exists")
+    assert result is not None
+    assert hasattr(result, "get_expression")
+
+
+def test_parse_filter_expression_not_exists():
+    result = _parse_filter_expression("someField:not_exists")
+    assert result is not None
+    assert hasattr(result, "get_expression")
 
 
 def test_parse_filter_expression_begins_with():

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import click
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Attr, ConditionBase
 
 from commands.utils import AppContext
 from commands.services.dynamodb_exporter import GenericDynamodbExporter
@@ -10,6 +10,7 @@ from commands.services.dynamodb_exporter import GenericDynamodbExporter
 @click.group()
 @click.pass_obj
 def dynamodb(ctx: AppContext):
+    """Commands for managing DynamoDB tables."""
     pass
 
 
@@ -20,7 +21,7 @@ def dynamodb(ctx: AppContext):
     help="Substring to match in the table name (e.g., 'resources', 'users', 'import-candidates')",
 )
 @click.option(
-    "--folder",
+    "--output-dir",
     help="The folder to save the exported data (default: dynamodb_export_{profile}_{table}_{timestamp})",
 )
 @click.option(
@@ -29,16 +30,23 @@ def dynamodb(ctx: AppContext):
     multiple=True,
     help="Filter expression (e.g., 'PK0:begins_with:Resource:'). Format: 'attribute:operator:value'. Can be specified multiple times (combined with AND logic)",
 )
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Maximum number of items to export (useful for debugging/testing)",
+)
 @click.pass_obj
 def export(
     ctx: AppContext,
     table: str,
-    folder: str | None,
+    output_dir: str | None,
     filter_expressions: tuple[str, ...],
+    limit: int | None,
 ) -> None:
-    if folder is None:
+    if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        folder = f"dynamodb_export_{ctx.profile}_{table}_{timestamp}"
+        output_dir = f"dynamodb_export_{ctx.profile}_{table}_{timestamp}"
 
     condition = None
 
@@ -46,10 +54,10 @@ def export(
         condition = _parse_multiple_filters(filter_expressions)
 
     exporter = GenericDynamodbExporter(ctx.profile, table)
-    exporter.export(folder, condition)
+    exporter.export(output_dir, condition, limit)
 
 
-def _parse_multiple_filters(filter_expressions: tuple[str, ...]) -> Attr:
+def _parse_multiple_filters(filter_expressions: tuple[str, ...]) -> ConditionBase | None:
     """Parse multiple filter expressions and combine them with AND logic."""
     if not filter_expressions:
         return None
@@ -64,9 +72,12 @@ def _parse_multiple_filters(filter_expressions: tuple[str, ...]) -> Attr:
     return combined_condition
 
 
-def _parse_filter_expression(filter_expression: str) -> Attr:
+NO_VALUE_OPERATORS = {"exists", "not_exists"}
+
+
+def _parse_filter_expression(filter_expression: str) -> ConditionBase:
     parts = filter_expression.split(":")
-    if len(parts) < 3:
+    if len(parts) < 2:
         raise ValueError(
             "Filter expression must be in format 'attribute:operator:value' "
             "(e.g., 'PK0:begins_with:Resource:')"
@@ -74,7 +85,14 @@ def _parse_filter_expression(filter_expression: str) -> Attr:
 
     attribute = parts[0]
     operator = parts[1]
-    value = ":".join(parts[2:])
+
+    if operator not in NO_VALUE_OPERATORS and len(parts) < 3:
+        raise ValueError(
+            "Filter expression must be in format 'attribute:operator:value' "
+            "(e.g., 'PK0:begins_with:Resource:')"
+        )
+
+    value = ":".join(parts[2:]) if len(parts) > 2 else None
 
     attr = Attr(attribute)
 

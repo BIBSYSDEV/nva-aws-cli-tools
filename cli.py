@@ -16,6 +16,7 @@ from commands.cristin import cristin
 from commands.sqs import sqs
 from commands.search import search
 from commands.reports import reports
+from commands.sws import sws
 from commands.utils import AppContext
 
 from log_config import configure_logger
@@ -58,6 +59,7 @@ cli.add_command(cristin)
 cli.add_command(sqs)
 cli.add_command(search)
 cli.add_command(reports)
+cli.add_command(sws)
 
 if __name__ == "__main__":
     cli()
