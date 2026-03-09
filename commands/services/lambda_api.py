@@ -10,11 +10,30 @@ logger = logging.getLogger(__name__)
 class LambdaService:
     def __init__(self, profile):
         self.profile = profile
-        pass
+        session = boto3.Session(profile_name=self.profile)
+        self.client = session.client("lambda")
+
+    def invoke_function(self, function_name: str, payload: str | None = None) -> dict:
+        invoke_args = {
+            "FunctionName": function_name,
+            "InvocationType": "Event",
+        }
+        if payload:
+            invoke_args["Payload"] = payload
+
+        return self.client.invoke(**invoke_args)
+
+    def find_function_name(self, name_partial: str) -> list[str]:
+        matching_functions = []
+        paginator = self.client.get_paginator("list_functions")
+        for page in paginator.paginate():
+            for function in page["Functions"]:
+                if name_partial.lower() in function["FunctionName"].lower():
+                    matching_functions.append(function["FunctionName"])
+        return matching_functions
 
     def delete_old_versions(self, delete):
-        session = boto3.Session(profile_name=self.profile)
-        client = session.client("lambda")
+        client = self.client
 
         functions_paginator = client.get_paginator("list_functions")
         version_paginator = client.get_paginator("list_versions_by_function")
@@ -41,24 +60,21 @@ class LambdaService:
                             logger.info("  💚 {}".format(arn))
 
     def concurrency(self):
-        session = boto3.Session(profile_name=self.profile)
-        client = session.client("lambda")
-
         functions = []
 
-        paginator = client.get_paginator("list_functions")
+        paginator = self.client.get_paginator("list_functions")
 
         for page in paginator.paginate():
             for function in page["Functions"]:
                 function_name = function["FunctionName"]
                 try:
-                    concurrency = client.get_function_concurrency(
+                    concurrency = self.client.get_function_concurrency(
                         FunctionName=function_name
                     )
                     reserved_concurrency = concurrency.get(
                         "ReservedConcurrentExecutions", None
                     )
-                except client.exceptions.ResourceNotFoundException:
+                except self.client.exceptions.ResourceNotFoundException:
                     # If a function doesn't have reserved concurrency, AWS will raise a ResourceNotFoundException.
                     reserved_concurrency = None
                 functions.append(
