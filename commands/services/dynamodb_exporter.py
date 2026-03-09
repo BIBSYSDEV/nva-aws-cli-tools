@@ -36,10 +36,9 @@ class GenericDynamodbExporter:
         self.session = boto3.Session(profile_name=profile) if profile else boto3.Session()
         self.dynamodb = self.session.client("dynamodb")
         self.table = self._get_table()
-        self.table_name: str | None = self.table.name if self.table else None
-        self.output_folder: str | None = None
+        self.table_name: str = self.table.name
 
-    def _get_table(self) -> Any | None:
+    def _get_table(self) -> Any:
         response = self.dynamodb.list_tables()
         table_names = response["TableNames"]
         table_name = next(
@@ -47,31 +46,14 @@ class GenericDynamodbExporter:
         )
 
         if table_name is None:
-            logger.error(f"No table found containing '{self.table_name_substring}'")
-            return None
+            raise ValueError(f"No table found containing '{self.table_name_substring}'")
 
         dynamodb_resource = self.session.resource("dynamodb")
         return dynamodb_resource.Table(table_name)
 
-    def _detect_compression(self, item: dict[str, Any]) -> bool:
-        if "data" not in item:
-            return False
-
-        try:
-            data = item["data"]
-            if isinstance(data, Binary):
-                decoded_data = bytes(data)
-            elif isinstance(data, bytes):
-                decoded_data = data
-            else:
-                decoded_data = base64.b64decode(data)
-
-            zlib.decompress(decoded_data, -zlib.MAX_WBITS)
-            return True
-        except Exception:
-            return False
-
-    def _decompress_data(self, data_field: bytes | str | Binary) -> dict[str, Any] | None:
+    def _decompress_data(self, data_field: Any) -> dict[str, Any] | None:
+        if not isinstance(data_field, (bytes, str, Binary)):
+            return None
         try:
             if isinstance(data_field, Binary):
                 decoded_data = bytes(data_field)
@@ -88,17 +70,21 @@ class GenericDynamodbExporter:
             return None
 
     def _process_item(self, item: dict[str, Any]) -> dict[str, Any]:
-        if "data" in item and self._detect_compression(item):
-            decompressed_data = self._decompress_data(item["data"])
-            if decompressed_data:
-                return {**item, "@data_decompressed": decompressed_data}
+        if "data" not in item:
+            return item
+
+        decompressed_data = self._decompress_data(item["data"])
+        if decompressed_data:
+            return {**item, "@data_decompressed": decompressed_data}
 
         return item
 
-    def _save_items_to_file(self, items: list[dict[str, Any]], batch_count: int) -> None:
+    def _save_items_to_file(
+        self, items: list[dict[str, Any]], batch_count: int, output_folder: str
+    ) -> None:
         processed_items = [self._process_item(item) for item in items]
 
-        output_file = Path(self.output_folder) / f"batch_{batch_count:05d}.jsonl"
+        output_file = Path(output_folder) / f"batch_{batch_count:05d}.jsonl"
         with open(output_file, "w", encoding="utf-8") as file:
             for item in processed_items:
                 json.dump(item, file, cls=DynamoDBEncoder)
@@ -106,10 +92,12 @@ class GenericDynamodbExporter:
 
         logger.info(f"Saved {len(processed_items)} items to {output_file}")
 
+
     def _iterate_batches_scan(
         self,
         condition: ConditionBase | None,
         callback: Any,
+        limit: int | None = None,
     ) -> None:
         scan_kwargs = {}
         if condition:
@@ -126,12 +114,19 @@ class GenericDynamodbExporter:
         with tqdm(desc="Scanning table", unit="items") as progress_bar:
             while True:
                 if items:
+                    if limit is not None:
+                        remaining = limit - items_processed
+                        items = items[:remaining]
+
                     batch_count += 1
                     items_processed += len(items)
                     progress_bar.update(len(items))
                     callback(items, batch_count)
 
                 if "LastEvaluatedKey" not in response:
+                    break
+
+                if limit is not None and items_processed >= limit:
                     break
 
                 scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
@@ -144,14 +139,13 @@ class GenericDynamodbExporter:
         self,
         output_folder: str,
         condition: ConditionBase | None = None,
+        limit: int | None = None,
     ) -> None:
-        if not self.table:
-            logger.error("Table not found. Cannot export.")
-            return
-
-        self.output_folder = output_folder
         Path(output_folder).mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Starting export of table {self.table_name} to {output_folder}")
 
-        self._iterate_batches_scan(condition, self._save_items_to_file)
+        save_callback = lambda items, batch_count: self._save_items_to_file(
+            items, batch_count, output_folder
+        )
+        self._iterate_batches_scan(condition, save_callback, limit)
