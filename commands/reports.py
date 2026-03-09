@@ -20,19 +20,20 @@ def reports(ctx: AppContext):
 @reports.command(name="author-shares")
 @click.option("--institution-id", default=None, help="Cristin institution ID (e.g. 185.90.0.0). Omit to export all NVI institutions.")
 @click.option("--year", default=lambda: datetime.now().year, show_default="current year", type=int)
-@click.option("--output", default=None, help="Output filename (defaults to author_shares_<id>_<year>.xlsx or author_shares_all_<year>.xlsx)")
+@click.option("--output", default=None, help="Output filename (defaults to author_shares_<profile>_<id>_<year>_<timestamp>.xlsx or author_shares_<profile>_all_<year>_<timestamp>.xlsx)")
 @click.pass_obj
 def author_shares(ctx: AppContext, institution_id: str | None, year: int, output: str | None):
     service = ScientificIndexService(ctx.profile)
 
     if institution_id:
-        _export_single(service, institution_id, year, output)
+        _export_single(service, ctx.profile, institution_id, year, output)
     else:
         _export_all(ctx.profile, service, year, output)
 
 
-def _export_single(service: ScientificIndexService, institution_id: str, year: int, output: str | None) -> None:
-    filename = output or f"author_shares_{institution_id}_{year}.xlsx"
+def _export_single(service: ScientificIndexService, profile: str, institution_id: str, year: int, output: str | None) -> None:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = output or f"author_shares_{profile}_{institution_id}_{year}_{timestamp}.xlsx"
     click.echo(f"Fetching report for {institution_id} ({year})...")
     data = service.get_institution_report(institution_id, year)
     with open(filename, "wb") as file:
@@ -75,7 +76,8 @@ def _export_all(profile: str, service: ScientificIndexService, year: int, output
         click.echo("No reports fetched successfully.", err=True)
         sys.exit(1)
 
-    filename = output or f"author_shares_all_{year}.xlsx"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = output or f"author_shares_{profile}_all_{year}_{timestamp}.xlsx"
     merged = pl.concat(frames, how="diagonal")
     merged.write_excel(filename, autofit=True)
     click.echo(f"Merged {len(frames)} reports ({len(merged)} rows) into {filename}")
