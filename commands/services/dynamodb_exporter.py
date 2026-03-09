@@ -105,14 +105,17 @@ class GenericDynamodbExporter:
 
         batch_count = 0
         items_processed = 0
+        items_scanned = 0
 
         logger.info("Initiating table scan (this may take a while for large tables)...")
         response = self.table.scan(**scan_kwargs)
         items = response.get("Items", [])
-        logger.info(f"Received first batch with {len(items)} items")
 
         with tqdm(desc="Scanning table", unit="items") as progress_bar:
             while True:
+                items_scanned += response.get("ScannedCount", 0)
+                progress_bar.set_postfix(scanned=items_scanned, matched=items_processed)
+
                 if items:
                     if limit is not None:
                         remaining = limit - items_processed
