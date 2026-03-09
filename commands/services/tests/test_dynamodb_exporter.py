@@ -183,6 +183,18 @@ def test_save_mixed_compressed_and_uncompressed_items(
         assert uncompressed_result["PK0"] == "Resource:456"
 
 
+def test_parse_filter_expression_exists():
+    result = _parse_filter_expression("someField:exists")
+    assert result is not None
+    assert hasattr(result, "get_expression")
+
+
+def test_parse_filter_expression_not_exists():
+    result = _parse_filter_expression("someField:not_exists")
+    assert result is not None
+    assert hasattr(result, "get_expression")
+
+
 def test_parse_filter_expression_begins_with():
     result = _parse_filter_expression("PK0:begins_with:Resource:")
     assert result is not None
