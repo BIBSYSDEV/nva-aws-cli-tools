@@ -187,8 +187,8 @@ def redrive(ctx: AppContext, queue_name: str, destination: str, yes: bool):
             console.print("[red]Operation cancelled[/red]")
             return
 
-    task_handle = sqs_service.start_redrive(source_url, destination_url)
-    console.print(f"[green]Redrive started. Task handle: {task_handle}[/green]")
+    sqs_service.start_redrive(source_url, destination_url)
+    console.print("[green]Redrive started[/green]")
 
 
 def show_queue_summary(sqs_service: SqsService, queue_url: str):
