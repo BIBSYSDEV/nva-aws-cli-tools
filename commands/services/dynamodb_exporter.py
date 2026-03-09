@@ -148,7 +148,7 @@ class GenericDynamodbExporter:
 
         logger.info(f"Starting export of table {self.table_name} to {output_folder}")
 
-        save_callback = lambda items, batch_count: self._save_items_to_file(
-            items, batch_count, output_folder
-        )
+        def save_callback(items: list, batch_count: int) -> None:
+            self._save_items_to_file(items, batch_count, output_folder)
+
         self._iterate_batches_scan(condition, save_callback, limit)
