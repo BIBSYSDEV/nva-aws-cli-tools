@@ -159,6 +159,38 @@ def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int):
     sqs_service.delete_duplicate_messages(queue_url, max_messages)
 
 
+@sqs.command()
+@click.argument("queue_name", type=str)
+@click.option(
+    "--destination",
+    "-d",
+    required=True,
+    type=str,
+    help="Destination queue name to redrive messages to",
+)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
+@click.pass_obj
+def redrive(ctx: AppContext, queue_name: str, destination: str, yes: bool):
+    """Start a DLQ redrive, moving messages from source to destination queue."""
+    sqs_service = SqsService(profile=ctx.profile)
+
+    source_url = get_queue_url(sqs_service, queue_name)
+    destination_url = get_queue_url(sqs_service, destination)
+
+    if not yes:
+        show_queue_summary(sqs_service, source_url)
+        console.print(
+            f"\n[yellow]Destination: {destination_url.split('/')[-1]}[/yellow]"
+        )
+
+        if not Confirm.ask("\n[cyan]Start redrive?[/cyan]"):
+            console.print("[red]Operation cancelled[/red]")
+            return
+
+    task_handle = sqs_service.start_redrive(source_url, destination_url)
+    console.print(f"[green]Redrive started. Task handle: {task_handle}[/green]")
+
+
 def show_queue_summary(sqs_service: SqsService, queue_url: str):
     queue_full_name = queue_url.split("/")[-1]
     attrs = sqs_service.get_queue_attributes(queue_url)
