@@ -79,7 +79,7 @@ class ScientificIndexService:
         logger.info("Found %d NVI institutions. Fetching reports for %d...", len(nvi_customers), year)
         logging.getLogger("fastexcel").setLevel(logging.ERROR)
 
-        frames: list[pl.DataFrame] = []
+        frames: list[tuple[str, pl.DataFrame]] = []
         errors: list[str] = []
 
         for customer in tqdm(nvi_customers, desc="Fetching reports"):
@@ -88,7 +88,7 @@ class ScientificIndexService:
                 data = self.get_institution_report(cristin_short_id, year)
                 df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
                 if len(df) > 0:
-                    frames.append(df)
+                    frames.append((customer.name, df))
             except Exception as error:
                 errors.append(f"{customer.name} ({cristin_short_id}): {error}")
 
@@ -98,4 +98,15 @@ class ScientificIndexService:
         if not frames:
             raise ValueError("No reports fetched successfully")
 
-        return pl.concat(frames, how="diagonal_relaxed")
+        self._log_schema_conflicts(frames)
+        return pl.concat([df for _, df in frames], how="diagonal_relaxed")
+
+    def _log_schema_conflicts(self, frames: list[tuple[str, pl.DataFrame]]) -> None:
+        col_type_map: dict[str, dict[str, list[str]]] = {}
+        for name, df in frames:
+            for col, dtype in df.schema.items():
+                col_type_map.setdefault(col, {}).setdefault(str(dtype), []).append(name)
+        for col, type_map in col_type_map.items():
+            if len(type_map) > 1:
+                details = ", ".join(f"{dtype}: {names}" for dtype, names in type_map.items())
+                logger.debug("Schema conflict in column '%s': %s", col, details)
