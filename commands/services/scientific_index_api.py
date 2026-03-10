@@ -19,7 +19,6 @@ class ScientificIndexService:
         self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
         self.client_credentials = self._get_secret("BackendCognitoClientCredentials")
         self.token = self._get_cognito_token()
-        self.token_expiry_time = datetime.now()
 
     def _get_system_parameter(self, name: str) -> str:
         response = self.ssm.get_parameter(Name=name)
