@@ -18,7 +18,7 @@ def reports(ctx: AppContext):
 
 
 @reports.command(name="author-shares")
-@click.option("--institution-id", default=None, help="Cristin institution ID (e.g. 185.90.0.0). Omit to export all NVI institutions.")
+@click.option("--institution-id", "-i", default=None, help="Cristin institution ID (e.g. 185.90.0.0). Omit to export all NVI institutions.")
 @click.option("--year", default=lambda: datetime.now().year, show_default="current year", type=int)
 @click.option("--output", default=None, help="Output filename (defaults to author_shares_<profile>_<id>_<year>_<timestamp>.xlsx or author_shares_<profile>_all_<year>_<timestamp>.xlsx)")
 @click.pass_obj
