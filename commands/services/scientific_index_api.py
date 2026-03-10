@@ -7,6 +7,7 @@ import requests
 from datetime import datetime, timedelta
 
 import polars as pl
+from tqdm import tqdm
 
 from commands.services.customers_api import get_all_customers
 
@@ -80,7 +81,7 @@ class ScientificIndexService:
         frames: list[pl.DataFrame] = []
         errors: list[str] = []
 
-        for customer in nvi_customers:
+        for customer in tqdm(nvi_customers, desc="Fetching reports"):
             cristin_short_id = customer.cristin_id.rsplit("/", 1)[-1]
             try:
                 data = self.get_institution_report(cristin_short_id, year)
