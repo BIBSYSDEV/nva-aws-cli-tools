@@ -45,5 +45,5 @@ def author_shares_all(ctx: AppContext, year: int, output: str | None):
     filename = output or f"author_shares_{ctx.profile}_all_{year}_{timestamp}.xlsx"
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
-    merged.write_excel(filename, autofit=True)
+    merged.write_excel(filename, autofit=True, autofilter=True)
     click.echo(f"Merged {len(merged)} rows into {filename}")
