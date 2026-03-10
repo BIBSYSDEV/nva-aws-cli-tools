@@ -32,6 +32,9 @@ class SwsService:
 
         self._access_token: Optional[str] = None
 
+    def clear_token(self) -> None:
+        self._access_token = None
+
     def _get_secret(self, name: str) -> dict:
         response = self.secretsmanager.get_secret_value(SecretId=name)
         secret_string = response["SecretString"]
