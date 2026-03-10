@@ -123,6 +123,16 @@ class SqsService:
             logger.error(f"Error getting queue attributes: {e}")
             raise e
 
+    def start_redrive(self, source_queue_url: str, destination_queue_url: str) -> str:
+        source_arn = self.get_queue_attributes(source_queue_url).get("QueueArn")
+        destination_arn = self.get_queue_attributes(destination_queue_url).get("QueueArn")
+
+        response = self.sqs_client.start_message_move_task(
+            SourceArn=source_arn,
+            DestinationArn=destination_arn,
+        )
+        return response["TaskHandle"]
+
     def receive_messages(
         self, queue_url: str, max_messages: int = 10
     ) -> List[Dict[str, Any]]:

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import click
 from rich.console import Console
+from rich.json import JSON
 from rich.prompt import Confirm
 from rich.table import Table
 
@@ -48,7 +49,11 @@ def invoke(ctx: AppContext, function_name: str, body: str, body_file: str, yes: 
 
     if not yes:
         console.print(f"\n[bold cyan]Function: {resolved_name}[/bold cyan]")
-        console.print(f"[yellow]Payload: {payload=}[/yellow]")
+        if payload:
+            console.print("[yellow]Payload:[/yellow]")
+            console.print(JSON(payload))
+        else:
+            console.print("[yellow]Payload: (none)[/yellow]")
 
         if not Confirm.ask("\n[cyan]Invoke function?[/cyan]"):
             console.print("[red]Operation cancelled[/red]")
