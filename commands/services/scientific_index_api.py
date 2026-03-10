@@ -21,14 +21,15 @@ class ScientificIndexService:
         self.session = boto3.Session(profile_name=profile)
         self.ssm = self.session.client("ssm")
         self.secretsmanager = self.session.client("secretsmanager")
-        self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
-        self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
+        params = self._get_system_parameters(["/NVA/ApiDomain", "/NVA/CognitoUri"])
+        self.api_domain = params["/NVA/ApiDomain"]
+        self.cognito_uri = params["/NVA/CognitoUri"]
         self.client_credentials = self._get_secret("BackendCognitoClientCredentials")
         self.token = self._get_cognito_token()
 
-    def _get_system_parameter(self, name: str) -> str:
-        response = self.ssm.get_parameter(Name=name)
-        return response["Parameter"]["Value"]
+    def _get_system_parameters(self, names: list[str]) -> dict[str, str]:
+        response = self.ssm.get_parameters(Names=names)
+        return {param["Name"]: param["Value"] for param in response["Parameters"]}
 
     def _get_secret(self, name: str) -> dict:
         response = self.secretsmanager.get_secret_value(SecretId=name)
