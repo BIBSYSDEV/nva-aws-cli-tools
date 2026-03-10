@@ -1,3 +1,4 @@
+import logging
 import warnings
 from datetime import datetime
 
@@ -42,7 +43,7 @@ def author_shares_all(ctx: AppContext, year: int, output: str | None):
         raise click.Abort()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = output or f"author_shares_{ctx.profile}_all_{year}_{timestamp}.xlsx"
-    with warnings.catch_warnings():
+    if not logging.getLogger().isEnabledFor(logging.DEBUG):
         warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
-        merged.write_excel(filename, autofit=True)
+    merged.write_excel(filename, autofit=True)
     click.echo(f"Merged {len(merged)} rows into {filename}")

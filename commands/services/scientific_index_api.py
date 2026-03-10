@@ -77,7 +77,8 @@ class ScientificIndexService:
             raise ValueError("No NVI institutions found")
 
         logger.info("Found %d NVI institutions. Fetching reports for %d...", len(nvi_customers), year)
-        logging.getLogger("fastexcel").setLevel(logging.ERROR)
+        if not logger.isEnabledFor(logging.DEBUG):
+            logging.getLogger("fastexcel").setLevel(logging.ERROR)
 
         frames: list[tuple[str, pl.DataFrame]] = []
         errors: list[str] = []
