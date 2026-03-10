@@ -1,5 +1,4 @@
 import io
-import sys
 from datetime import datetime
 
 import click
@@ -50,7 +49,7 @@ def _export_all(profile: str, service: ScientificIndexService, year: int, output
 
     if not nvi_customers:
         click.echo("No NVI institutions found.", err=True)
-        sys.exit(1)
+        raise click.Abort()
 
     click.echo(f"Found {len(nvi_customers)} NVI institutions. Fetching reports for {year}...")
 
@@ -74,7 +73,7 @@ def _export_all(profile: str, service: ScientificIndexService, year: int, output
 
     if not frames:
         click.echo("No reports fetched successfully.", err=True)
-        sys.exit(1)
+        raise click.Abort()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = output or f"author_shares_{profile}_all_{year}_{timestamp}.xlsx"
