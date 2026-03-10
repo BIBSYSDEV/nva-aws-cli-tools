@@ -15,6 +15,7 @@ from commands.organization_migration import organization_migration
 from commands.cristin import cristin
 from commands.sqs import sqs
 from commands.search import search
+from commands.reports import reports
 from commands.sws import sws
 from commands.utils import AppContext
 
@@ -57,6 +58,7 @@ cli.add_command(organization_migration)
 cli.add_command(cristin)
 cli.add_command(sqs)
 cli.add_command(search)
+cli.add_command(reports)
 cli.add_command(sws)
 
 if __name__ == "__main__":
