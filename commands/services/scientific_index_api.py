@@ -88,8 +88,10 @@ class ScientificIndexService:
             try:
                 data = self.get_institution_report(cristin_short_id, year)
                 df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
-                if len(df) > 0:
+                if len(df) > 0 and self._has_valid_headers(df):
                     frames.append((customer.name, df))
+                elif len(df) > 0:
+                    logger.debug("Skipping %s (%s): unexpected column headers %s", customer.name, cristin_short_id, list(df.columns[:3]))
             except Exception as error:
                 errors.append(f"{customer.name} ({cristin_short_id}): {error}")
 
@@ -101,6 +103,9 @@ class ScientificIndexService:
 
         self._log_schema_conflicts(frames)
         return pl.concat([df for _, df in frames], how="diagonal_relaxed")
+
+    def _has_valid_headers(self, df: pl.DataFrame) -> bool:
+        return df.columns[0].isalpha() or "_" in df.columns[0]
 
     def _log_schema_conflicts(self, frames: list[tuple[str, pl.DataFrame]]) -> None:
         col_type_map: dict[str, dict[str, list[str]]] = {}
