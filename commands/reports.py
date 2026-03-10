@@ -17,17 +17,22 @@ def reports(ctx: AppContext):
 
 
 @reports.command(name="author-shares")
-@click.option("--institution-id", "-i", default=None, help="Cristin institution ID (e.g. 185.90.0.0). Omit to export all NVI institutions.")
+@click.option("--institution-id", "-i", required=True, help="Cristin institution ID (e.g. 185.90.0.0).")
 @click.option("--year", default=lambda: datetime.now().year, show_default="current year", type=int)
-@click.option("--output", default=None, help="Output filename (defaults to author_shares_<profile>_<id>_<year>_<timestamp>.xlsx or author_shares_<profile>_all_<year>_<timestamp>.xlsx)")
+@click.option("--output", default=None, help="Output filename (defaults to author_shares_<profile>_<id>_<year>_<timestamp>.xlsx)")
 @click.pass_obj
-def author_shares(ctx: AppContext, institution_id: str | None, year: int, output: str | None):
+def author_shares(ctx: AppContext, institution_id: str, year: int, output: str | None):
     service = ScientificIndexService(ctx.profile)
+    _export_single(service, ctx.profile, institution_id, year, output)
 
-    if institution_id:
-        _export_single(service, ctx.profile, institution_id, year, output)
-    else:
-        _export_all(ctx.profile, service, year, output)
+
+@reports.command(name="author-shares-all")
+@click.option("--year", default=lambda: datetime.now().year, show_default="current year", type=int)
+@click.option("--output", default=None, help="Output filename (defaults to author_shares_<profile>_all_<year>_<timestamp>.xlsx)")
+@click.pass_obj
+def author_shares_all(ctx: AppContext, year: int, output: str | None):
+    service = ScientificIndexService(ctx.profile)
+    _export_all(ctx.profile, service, year, output)
 
 
 def _export_single(service: ScientificIndexService, profile: str, institution_id: str, year: int, output: str | None) -> None:
