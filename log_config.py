@@ -42,3 +42,4 @@ def configure_logger(log_level=logging.INFO) -> None:
     logger.setLevel(log_level)
     logger.addHandler(get_rich_handler(log_level))
     logger.addHandler(get_json_handler())
+    logging.getLogger("botocore.tokens").setLevel(logging.WARNING)
