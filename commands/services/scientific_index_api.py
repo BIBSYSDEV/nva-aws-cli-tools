@@ -2,7 +2,6 @@ import boto3
 import io
 import json
 import logging
-import warnings
 import requests
 from datetime import datetime, timedelta
 
@@ -77,6 +76,7 @@ class ScientificIndexService:
             raise ValueError("No NVI institutions found")
 
         logger.info("Found %d NVI institutions. Fetching reports for %d...", len(nvi_customers), year)
+        logging.getLogger("fastexcel").setLevel(logging.ERROR)
 
         frames: list[pl.DataFrame] = []
         errors: list[str] = []
@@ -85,9 +85,7 @@ class ScientificIndexService:
             cristin_short_id = customer.cristin_id.rsplit("/", 1)[-1]
             try:
                 data = self.get_institution_report(cristin_short_id, year)
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", message="Could not determine dtype")
-                    df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
+                df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
                 if len(df) > 0:
                     frames.append(df)
             except Exception as error:
