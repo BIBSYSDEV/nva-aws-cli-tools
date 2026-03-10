@@ -1,8 +1,10 @@
+import io
 import logging
 import warnings
 from datetime import datetime
 
 import click
+import polars as pl
 
 from commands.services.scientific_index_api import ScientificIndexService
 from commands.utils import AppContext
@@ -25,8 +27,9 @@ def author_shares(ctx: AppContext, institution_id: str, year: int, output: str |
     filename = output or f"author_shares_{ctx.profile}_{institution_id}_{year}_{timestamp}.xlsx"
     click.echo(f"Fetching report for {institution_id} ({year})...")
     data = service.get_institution_report(institution_id, year)
-    with open(filename, "wb") as file:
-        file.write(data)
+    if not logging.getLogger().isEnabledFor(logging.DEBUG):
+        warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
+    pl.read_excel(io.BytesIO(data)).write_excel(filename, autofit=True, table_style="Table Style Medium 9")
     click.echo(f"Saved to {filename}")
 
 
@@ -45,5 +48,5 @@ def author_shares_all(ctx: AppContext, year: int, output: str | None):
     filename = output or f"author_shares_{ctx.profile}_all_{year}_{timestamp}.xlsx"
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
-    merged.write_excel(filename, autofit=True, autofilter=True)
+    merged.write_excel(filename, autofit=True, table_style="Table Style Medium 9")
     click.echo(f"Merged {len(merged)} rows into {filename}")
