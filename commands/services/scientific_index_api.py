@@ -109,5 +109,5 @@ class ScientificIndexService:
                 col_type_map.setdefault(col, {}).setdefault(str(dtype), []).append(name)
         for col, type_map in col_type_map.items():
             if len(type_map) > 1:
-                details = ", ".join(f"{dtype}: {names}" for dtype, names in type_map.items())
-                logger.debug("Schema conflict in column '%s': %s", col, details)
+                details = ", ".join(f"{dtype} ({len(names)} institutions)" for dtype, names in type_map.items())
+                logger.warning("Schema conflict in column '%s': %s", col, details)
