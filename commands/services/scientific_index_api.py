@@ -98,4 +98,4 @@ class ScientificIndexService:
         if not frames:
             raise ValueError("No reports fetched successfully")
 
-        return pl.concat(frames, how="diagonal")
+        return pl.concat(frames, how="diagonal_relaxed")
