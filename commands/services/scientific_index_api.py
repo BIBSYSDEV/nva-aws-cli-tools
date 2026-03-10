@@ -1,8 +1,13 @@
 import boto3
+import io
 import json
 import logging
 import requests
 from datetime import datetime, timedelta
+
+import polars as pl
+
+from commands.services.customers_api import get_all_customers
 
 logger = logging.getLogger(__name__)
 
@@ -58,3 +63,36 @@ class ScientificIndexService:
         response = requests.get(url, headers=headers, params={"institutionId": cristin_id})
         response.raise_for_status()
         return response.content
+
+    def get_all_institution_reports(self, profile: str, year: int) -> pl.DataFrame:
+        nvi_customers = [
+            customer
+            for customer in get_all_customers(profile)
+            if customer.nvi_institution and customer.cristin_id
+        ]
+
+        if not nvi_customers:
+            raise ValueError("No NVI institutions found")
+
+        logger.info("Found %d NVI institutions. Fetching reports for %d...", len(nvi_customers), year)
+
+        frames: list[pl.DataFrame] = []
+        errors: list[str] = []
+
+        for customer in nvi_customers:
+            cristin_short_id = customer.cristin_id.rsplit("/", 1)[-1]
+            try:
+                data = self.get_institution_report(cristin_short_id, year)
+                df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
+                if len(df) > 0:
+                    frames.append(df)
+            except Exception as error:
+                errors.append(f"{customer.name} ({cristin_short_id}): {error}")
+
+        if errors:
+            logger.warning("Failed to fetch %d reports:\n%s", len(errors), "\n".join(f"  {e}" for e in errors))
+
+        if not frames:
+            raise ValueError("No reports fetched successfully")
+
+        return pl.concat(frames, how="diagonal")

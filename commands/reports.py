@@ -1,11 +1,7 @@
-import io
 from datetime import datetime
 
 import click
-import polars as pl
-from tqdm import tqdm
 
-from commands.services.customers_api import get_all_customers
 from commands.services.scientific_index_api import ScientificIndexService
 from commands.utils import AppContext
 
@@ -23,7 +19,13 @@ def reports(ctx: AppContext):
 @click.pass_obj
 def author_shares(ctx: AppContext, institution_id: str, year: int, output: str | None):
     service = ScientificIndexService(ctx.profile)
-    _export_single(service, ctx.profile, institution_id, year, output)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = output or f"author_shares_{ctx.profile}_{institution_id}_{year}_{timestamp}.xlsx"
+    click.echo(f"Fetching report for {institution_id} ({year})...")
+    data = service.get_institution_report(institution_id, year)
+    with open(filename, "wb") as file:
+        file.write(data)
+    click.echo(f"Saved to {filename}")
 
 
 @reports.command(name="author-shares-all")
@@ -32,56 +34,12 @@ def author_shares(ctx: AppContext, institution_id: str, year: int, output: str |
 @click.pass_obj
 def author_shares_all(ctx: AppContext, year: int, output: str | None):
     service = ScientificIndexService(ctx.profile)
-    _export_all(ctx.profile, service, year, output)
-
-
-def _export_single(service: ScientificIndexService, profile: str, institution_id: str, year: int, output: str | None) -> None:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = output or f"author_shares_{profile}_{institution_id}_{year}_{timestamp}.xlsx"
-    click.echo(f"Fetching report for {institution_id} ({year})...")
-    data = service.get_institution_report(institution_id, year)
-    with open(filename, "wb") as file:
-        file.write(data)
-    click.echo(f"Saved to {filename}")
-
-
-def _export_all(profile: str, service: ScientificIndexService, year: int, output: str | None) -> None:
-    nvi_customers = [
-        customer
-        for customer in get_all_customers(profile)
-        if customer.nvi_institution and customer.cristin_id
-    ]
-
-    if not nvi_customers:
-        click.echo("No NVI institutions found.", err=True)
+    try:
+        merged = service.get_all_institution_reports(ctx.profile, year)
+    except ValueError as error:
+        click.echo(str(error), err=True)
         raise click.Abort()
-
-    click.echo(f"Found {len(nvi_customers)} NVI institutions. Fetching reports for {year}...")
-
-    frames: list[pl.DataFrame] = []
-    errors: list[str] = []
-
-    for customer in tqdm(nvi_customers, desc="Fetching reports"):
-        cristin_short_id = customer.cristin_id.rsplit("/", 1)[-1]
-        try:
-            data = service.get_institution_report(cristin_short_id, year)
-            df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
-            if len(df) > 0:
-                frames.append(df)
-        except Exception as error:
-            errors.append(f"{customer.name} ({cristin_short_id}): {error}")
-
-    if errors:
-        click.echo(f"\nFailed to fetch {len(errors)} reports:", err=True)
-        for error in errors:
-            click.echo(f"  {error}", err=True)
-
-    if not frames:
-        click.echo("No reports fetched successfully.", err=True)
-        raise click.Abort()
-
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = output or f"author_shares_{profile}_all_{year}_{timestamp}.xlsx"
-    merged = pl.concat(frames, how="diagonal")
+    filename = output or f"author_shares_{ctx.profile}_all_{year}_{timestamp}.xlsx"
     merged.write_excel(filename, autofit=True)
-    click.echo(f"Merged {len(frames)} reports ({len(merged)} rows) into {filename}")
+    click.echo(f"Merged {len(merged)} rows into {filename}")
