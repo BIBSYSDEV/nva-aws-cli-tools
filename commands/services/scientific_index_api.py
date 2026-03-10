@@ -2,6 +2,7 @@ import boto3
 import io
 import json
 import logging
+import warnings
 import requests
 from datetime import datetime, timedelta
 
@@ -83,7 +84,9 @@ class ScientificIndexService:
             cristin_short_id = customer.cristin_id.rsplit("/", 1)[-1]
             try:
                 data = self.get_institution_report(cristin_short_id, year)
-                df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="Could not determine dtype")
+                    df = pl.read_excel(io.BytesIO(data), raise_if_empty=False)
                 if len(df) > 0:
                     frames.append(df)
             except Exception as error:
