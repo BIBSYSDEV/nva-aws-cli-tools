@@ -221,7 +221,7 @@ def resources(
                 if identifier:
                     print(identifier)
             else:
-                print(json.dumps(hit, indent=2))
+                print(json.dumps(hit))
             count += 1
 
             if limit and count >= limit:
@@ -232,4 +232,169 @@ def resources(
 
     except Exception as e:
         logger.error(f"Error fetching resources: {e}")
+        raise click.Abort()
+
+
+@search.command(name="import-candidates")
+@click.pass_obj
+@click.option(
+    "--page-size",
+    type=int,
+    default=100,
+    help="Number of results per page (default: 100)",
+)
+@click.option(
+    "--limit",
+    type=int,
+    help="Maximum number of total results to return (default: unlimited)",
+)
+@click.option(
+    "--import-status",
+    type=str,
+    help="Filter by import status (e.g., NOT_IMPORTED, IMPORTED)",
+)
+@click.option(
+    "--type",
+    "publication_type",
+    type=str,
+    help="Filter by publication type (e.g., AcademicChapter, AcademicArticle)",
+)
+@click.option(
+    "--publication-year",
+    type=str,
+    help="Filter by publication year, or year range as 'from,to' (e.g., 2025 or 2023,2025)",
+)
+@click.option(
+    "--order-by",
+    type=str,
+    help="Order results by field (e.g., createdDate, modifiedDate)",
+)
+@click.option(
+    "--sort-order",
+    type=str,
+    default="desc",
+    help="Sort order: asc or desc (default: desc)",
+)
+@click.option(
+    "--aggregation",
+    type=str,
+    default="none",
+    help="Aggregation parameter (default: none)",
+)
+@click.option(
+    "--category",
+    type=str,
+    help="Filter by category",
+)
+@click.option(
+    "--contributor",
+    type=str,
+    help="Filter by contributor ID",
+)
+@click.option(
+    "--publisher",
+    type=str,
+    help="Filter by publisher ID",
+)
+@click.option(
+    "--title",
+    type=str,
+    help="Filter by title",
+)
+@click.option(
+    "--doi",
+    type=str,
+    help="Filter by DOI",
+)
+@click.option(
+    "--top-level-organization",
+    type=str,
+    help="Filter by top-level organization ID",
+)
+@click.option(
+    "--id-only",
+    is_flag=True,
+    help="Output only identifiers (one per line)",
+)
+@click.option(
+    "--query",
+    type=str,
+    multiple=True,
+    help="Additional query parameters as key=value (can be used multiple times)",
+)
+def import_candidates(
+    ctx: AppContext,
+    page_size: int,
+    limit: int | None,
+    import_status: str | None,
+    publication_type: str | None,
+    publication_year: str | None,
+    order_by: str | None,
+    sort_order: str,
+    aggregation: str,
+    category: str | None,
+    contributor: str | None,
+    publisher: str | None,
+    title: str | None,
+    doi: str | None,
+    top_level_organization: str | None,
+    id_only: bool,
+    query: Tuple[str, ...],
+) -> None:
+    """Search import candidates for the authenticated customer.
+
+    Examples:
+        # Search for not-imported academic chapters from 2025
+        uv run cli.py search import-candidates --import-status NOT_IMPORTED --type AcademicChapter --publication-year 2025
+
+        # Search with all aggregations, sorted by created date
+        uv run cli.py search import-candidates --aggregation all --order-by createdDate --sort-order desc
+
+        # Output only identifiers
+        uv run cli.py search import-candidates --import-status NOT_IMPORTED --id-only
+    """
+    PARAM_MAP = {
+        "importStatus": import_status,
+        "type": publication_type,
+        "publicationYear": publication_year,
+        "orderBy": order_by,
+        "sortOrder": sort_order,
+        "aggregation": aggregation,
+        "category": category,
+        "contributor": contributor,
+        "publisher": publisher,
+        "title": title,
+        "doi": doi,
+        "topLevelOrganization": top_level_organization,
+    }
+    query_params = {key: value for key, value in PARAM_MAP.items() if value}
+
+    for q in query:
+        if "=" in q:
+            key, value = q.split("=", 1)
+            query_params[key] = value
+        else:
+            logger.warning(f"Ignoring invalid query parameter: {q}")
+
+    search_service = SearchApiService(profile=ctx.profile)
+
+    try:
+        count = 0
+        for hit in search_service.import_candidates_search(query_params, page_size):
+            if id_only:
+                identifier = hit.get("identifier")
+                if identifier:
+                    print(identifier)
+            else:
+                print(json.dumps(hit))
+            count += 1
+
+            if limit and count >= limit:
+                break
+
+        if count > 0:
+            logger.info(f"Total results: {count}")
+
+    except Exception as e:
+        logger.error(f"Error fetching import candidates: {e}")
         raise click.Abort()
