@@ -36,6 +36,12 @@ def dynamodb(ctx: AppContext):
     default=None,
     help="Maximum number of items to export (useful for debugging/testing)",
 )
+@click.option(
+    "--segments",
+    type=int,
+    default=1,
+    help="Number of parallel scan segments (default: 1 = sequential). Higher values speed up large table exports.",
+)
 @click.pass_obj
 def export(
     ctx: AppContext,
@@ -43,6 +49,7 @@ def export(
     output_dir: str | None,
     filter_expressions: tuple[str, ...],
     limit: int | None,
+    segments: int,
 ) -> None:
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -54,7 +61,7 @@ def export(
         condition = _parse_multiple_filters(filter_expressions)
 
     exporter = GenericDynamodbExporter(ctx.profile, table)
-    exporter.export(output_dir, condition, limit)
+    exporter.export(output_dir, condition, limit, segments)
 
 
 def _parse_multiple_filters(filter_expressions: tuple[str, ...]) -> ConditionBase | None:
