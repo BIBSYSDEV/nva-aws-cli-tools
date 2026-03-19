@@ -43,6 +43,7 @@ class GenericDynamodbExporter:
         self.dynamodb = self.session.client("dynamodb")
         self.table = self._get_table()
         self.table_name: str = self.table.name
+        self._thread_local = threading.local()
 
     def _get_table(self) -> Any:
         response = self.dynamodb.list_tables()
@@ -86,8 +87,10 @@ class GenericDynamodbExporter:
         return item
 
     def _get_table_for_thread(self) -> Any:
-        session = boto3.Session(profile_name=self.profile) if self.profile else boto3.Session()
-        return session.resource("dynamodb").Table(self.table_name)
+        if not hasattr(self._thread_local, "table"):
+            session = boto3.Session(profile_name=self.profile) if self.profile else boto3.Session()
+            self._thread_local.table = session.resource("dynamodb").Table(self.table_name)
+        return self._thread_local.table
 
     def _save_items_to_file(
         self,
