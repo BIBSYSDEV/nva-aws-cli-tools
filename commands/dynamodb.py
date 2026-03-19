@@ -38,7 +38,7 @@ def dynamodb(ctx: AppContext):
 )
 @click.option(
     "--segments",
-    type=int,
+    type=click.IntRange(min=1, max=256),
     default=1,
     help="Number of parallel scan segments (default: 1 = sequential). Higher values speed up large table exports.",
 )
