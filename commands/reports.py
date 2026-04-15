@@ -24,7 +24,7 @@ def author_shares(ctx: AppContext, year: int, output: str | None):
     service = ScientificIndexService(ctx.profile)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = output or f"author_shares_{ctx.profile}_{year}_{timestamp}.xlsx"
-    click.echo(f"Fetching author shares report for {year}...")
+    click.echo(f"Fetching author shares report for {year} (may take a few minutes)...")
     data = service.get_all_institutions_report(year)
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)

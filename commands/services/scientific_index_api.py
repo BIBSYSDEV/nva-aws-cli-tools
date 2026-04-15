@@ -1,3 +1,4 @@
+import time
 import boto3
 import json
 import logging
@@ -8,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 XLSX_AUTHOR_SHARES_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares"
 ALL_INSTITUTIONS_REPORT_PATH = "scientific-index/reports/{year}/institutions"
+POLL_INTERVAL_SECONDS = 5
 
 
 class ScientificIndexService:
@@ -50,7 +52,7 @@ class ScientificIndexService:
             self.token = self._get_cognito_token()
         return self.token
 
-    def get_all_institutions_report(self, year: int) -> bytes:
+    def get_all_institutions_report(self, year: int, timeout_minutes: int = 5) -> bytes:
         url = f"https://{self.api_domain}/{ALL_INSTITUTIONS_REPORT_PATH.format(year=year)}"
         headers = {
             "Authorization": f"Bearer {self._get_token()}",
@@ -59,6 +61,18 @@ class ScientificIndexService:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         presigned_url = response.json()["uri"]
-        xlsx_response = requests.get(presigned_url)
-        xlsx_response.raise_for_status()
-        return xlsx_response.content
+        return self._poll_for_xlsx(presigned_url, timeout_minutes)
+
+    def _poll_for_xlsx(self, presigned_url: str, timeout_minutes: int) -> bytes:
+        deadline = datetime.now() + timedelta(minutes=timeout_minutes)
+        attempt = 0
+        while datetime.now() < deadline:
+            attempt += 1
+            xlsx_response = requests.get(presigned_url)
+            if xlsx_response.status_code == 200:
+                return xlsx_response.content
+            if xlsx_response.status_code != 404:
+                xlsx_response.raise_for_status()
+            logger.debug("Attempt %d: report not ready, retrying in %ds...", attempt, POLL_INTERVAL_SECONDS)
+            time.sleep(POLL_INTERVAL_SECONDS)
+        raise TimeoutError(f"Report not available after {timeout_minutes} minutes")
