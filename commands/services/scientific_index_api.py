@@ -58,4 +58,7 @@ class ScientificIndexService:
         }
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        return response.content
+        presigned_url = response.json()["uri"]
+        xlsx_response = requests.get(presigned_url)
+        xlsx_response.raise_for_status()
+        return xlsx_response.content
