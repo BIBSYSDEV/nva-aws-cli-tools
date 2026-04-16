@@ -1,5 +1,6 @@
 import base64
 import json
+import math
 import zlib
 from datetime import date, datetime
 from decimal import Decimal
@@ -293,3 +294,68 @@ def test_dynamodb_encoder_date():
     data = {"date_field": d}
     result = json.dumps(data, cls=DynamoDBEncoder)
     assert result == '{"date_field": "2024-01-15"}'
+
+
+def test_save_items_to_file_with_segment(mock_exporter, sample_uncompressed_item, tmp_path):
+    items = [sample_uncompressed_item]
+    mock_exporter._save_items_to_file(items, 1, str(tmp_path), segment=2)
+
+    output_file = tmp_path / "segment_002_batch_00001.jsonl"
+    assert output_file.exists()
+
+    with open(output_file) as file:
+        lines = file.readlines()
+        assert len(lines) == 1
+        saved_item = json.loads(lines[0])
+        assert saved_item == sample_uncompressed_item
+
+
+def test_export_parallel_scan_creates_segment_files(mock_exporter, sample_uncompressed_item, tmp_path):
+    total_segments = 3
+
+    mock_table = Mock()
+    mock_table.scan.return_value = {"Items": [sample_uncompressed_item], "ScannedCount": 1}
+
+    with patch.object(mock_exporter, "_get_table_for_thread", return_value=mock_table):
+        mock_exporter.export(str(tmp_path), total_segments=total_segments)
+
+    segment_files = list(tmp_path.glob("segment_*_batch_*.jsonl"))
+    assert len(segment_files) == total_segments
+    segments_seen = {int(f.name.split("_")[1]) for f in segment_files}
+    assert segments_seen == {0, 1, 2}
+
+
+def test_export_parallel_scan_distributes_limit(mock_exporter, sample_uncompressed_item, tmp_path):
+    total_segments = 4
+    limit = 10
+
+    captured_scan_kwargs = []
+    original_items = [{"PK0": f"Resource:{i}"} for i in range(3)]
+
+    def mock_scan(**kwargs):
+        captured_scan_kwargs.append(kwargs)
+        return {"Items": original_items, "ScannedCount": 3}
+
+    mock_table = Mock()
+    mock_table.scan.side_effect = mock_scan
+
+    with patch.object(mock_exporter, "_get_table_for_thread", return_value=mock_table):
+        mock_exporter.export(str(tmp_path), limit=limit, total_segments=total_segments)
+
+    per_segment_limit = math.ceil(limit / total_segments)
+    assert per_segment_limit == 3
+    for kwargs in captured_scan_kwargs:
+        assert kwargs.get("TotalSegments") == total_segments
+
+
+def test_export_sequential_scan_creates_batch_files(mock_exporter, sample_uncompressed_item, tmp_path):
+    mock_exporter.table.scan.return_value = {
+        "Items": [sample_uncompressed_item],
+        "ScannedCount": 1,
+    }
+
+    mock_exporter.export(str(tmp_path), total_segments=1)
+
+    batch_files = list(tmp_path.glob("batch_*.jsonl"))
+    assert len(batch_files) == 1
+    assert not list(tmp_path.glob("segment_*.jsonl"))
