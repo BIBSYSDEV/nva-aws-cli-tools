@@ -12,9 +12,8 @@ def build_session(profile: str | None = None) -> boto3.Session:
     return boto3.Session(profile_name=profile) if profile else boto3.Session()
 
 
-def get_account_alias(profile: str | None = None) -> str:
-    iam = build_session(profile).client("iam")
-    account_aliases = iam.list_account_aliases()["AccountAliases"]
+def get_account_alias(session: boto3.Session) -> str | None:
+    account_aliases = session.client("iam").list_account_aliases()["AccountAliases"]
     return account_aliases[0] if account_aliases else None
 
 
