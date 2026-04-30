@@ -1,3 +1,12 @@
+"""Pattern: use `MagicMock` (and `patch`) for non-AWS dependencies and for
+assertions about *what was not called*.
+
+moto can't intercept `requests.post` to Cognito or the NVA API, so the OAuth
+token refresh has to be stubbed at the Python level. MagicMock is also the
+right tool when the test is asserting "this code performs no I/O", because
+moto would happily allow the calls. For pure AWS interactions, prefer moto
+(see `test_cognito_api.py`)."""
+
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
