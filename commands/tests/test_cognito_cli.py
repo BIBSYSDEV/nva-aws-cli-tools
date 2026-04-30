@@ -1,13 +1,3 @@
-"""Pattern: end-to-end CLI integration test using `click.testing.CliRunner`.
-
-`runner.invoke(cli, [...])` exercises the real entry point: argument parsing,
-the root group, the subcommand, the service layer, and the AWS calls.
-Combined with `@mock_aws` this is the highest-fidelity test we can write
-short of a real AWS account, and the failure modes it catches (wrong option
-name, missing `@click.pass_obj`, output going to stderr, exit code wrong)
-are not visible from service-level tests. Reach for this for golden-path
-coverage per command. Use service-level tests for edge cases."""
-
 import json
 
 import boto3
@@ -32,9 +22,8 @@ def _seed_user_pool(username: str, email: str) -> None:
 @mock_aws
 def test_cognito_search_prints_matching_user_as_json():
     _seed_user_pool(username="alice", email="alice@example.org")
-    runner = CliRunner()
 
-    result = runner.invoke(cli, ["--quiet", "cognito", "search", "alice"])
+    result = CliRunner().invoke(cli, ["--quiet", "cognito", "search", "alice"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -44,9 +33,8 @@ def test_cognito_search_prints_matching_user_as_json():
 @mock_aws
 def test_cognito_search_prints_null_when_no_match():
     _seed_user_pool(username="alice", email="alice@example.org")
-    runner = CliRunner()
 
-    result = runner.invoke(cli, ["--quiet", "cognito", "search", "missing"])
+    result = CliRunner().invoke(cli, ["--quiet", "cognito", "search", "nobody"])
 
     assert result.exit_code == 0, result.output
     assert json.loads(result.output) is None
