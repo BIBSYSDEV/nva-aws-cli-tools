@@ -37,10 +37,10 @@ def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, any]]
     return all_messages
 
 
-def summarize_messages(messages: list[dict[str, any]]) -> tuple:
-    """Summarize messages by sender and body."""
+def summarize_messages(messages: list[dict]) -> tuple[dict, dict]:
+    """Summarize messages, grouped by sender and by body. Return JSON-serializable dicts."""
     by_sender = defaultdict(lambda: {"count": 0, "candidates": set()})
-    by_type = defaultdict(lambda: {"count": 0, "candidates": set()})
+    by_body = defaultdict(lambda: {"count": 0, "candidates": set()})
 
     for msg in messages:
         sender_id = msg.get("Attributes", {}).get("SenderId", "Unknown")
@@ -50,14 +50,19 @@ def summarize_messages(messages: list[dict[str, any]]) -> tuple:
             .get("candidateIdentifier", {})
             .get("StringValue", "Unknown")
         )
-
         by_sender[sender_id]["count"] += 1
         by_sender[sender_id]["candidates"].add(candidate)
+        by_body[body]["count"] += 1
+        by_body[body]["candidates"].add(candidate)
 
-        by_type[body]["count"] += 1
-        by_type[body]["candidates"].add(candidate)
+    return _finalize(by_sender), _finalize(by_body)
 
-    return by_sender, by_type
+
+def _finalize(grouped: dict) -> dict:
+    return {
+        key: {"count": value["count"], "candidates": sorted(value["candidates"])}
+        for key, value in grouped.items()
+    }
 
 
 def delete_messages_with_prefix(
