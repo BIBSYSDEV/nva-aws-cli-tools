@@ -17,6 +17,7 @@ from commands.sqs import sqs
 from commands.search import search
 from commands.reports import reports
 from commands.sws import sws
+from commands.services.aws_utils import build_session
 from commands.utils import AppContext
 
 from log_config import configure_logger
@@ -36,13 +37,17 @@ from log_config import configure_logger
     "--profile",
     "-p",
     envvar="AWS_PROFILE",
-    default="default",
-    help="Name of the local AWS profile to use (default: AWS_PROFILE environment variable)",
+    default=None,
+    help="Name of the local AWS profile to use (default: AWS_PROFILE environment variable, or the standard credential chain if unset)",
 )
 @click.pass_context
-def cli(ctx: click.Context, log_level: int, profile: str):
+def cli(ctx: click.Context, log_level: int, profile: str | None):
     configure_logger(log_level)
-    ctx.obj = AppContext(log_level=log_level, profile=profile)
+    ctx.obj = AppContext(
+        log_level=log_level,
+        profile=profile,
+        session=build_session(profile),
+    )
 
 
 cli.add_command(cognito)
