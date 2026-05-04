@@ -93,9 +93,6 @@ uv run cli.py --profile sikt-nva-sandbox users search "john"
 # Using environment variable instead
 export AWS_PROFILE=sikt-nva-sandbox
 uv run cli.py users search "john"
-
-# The pipelines command supports comma-separated profiles
-uv run cli.py --profile sikt-nva-dev,sikt-nva-test pipelines branches
 ```
 
 ### **CLI Commands Summary**
