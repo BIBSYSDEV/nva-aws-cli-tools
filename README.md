@@ -41,6 +41,18 @@ uv run ruff check
 uv run ruff format
 ```
 
+#### Output vs logging in commands
+
+Commands have two channels for text:
+
+* `click.echo(...)` for **command output**: the data the user invoked the command to get (JSON results, identifiers, file paths).
+  Goes to stdout, is unaffected by `--quiet`, and is meant to be piped (`| jq`, `> file.json`).
+* `logger.info(...)` (and `logger.warning`, `logger.error`) for **status and progress messages**: which queue is being read, retry notices, deletion confirmations.
+  Goes through the rich handler to stderr and is suppressed by `--quiet` / amplified by `--verbose`.
+
+A useful test: if you pipe the command into `jq`, the result you assume is fed in is what should go through `click.echo`.
+Everything else is a log line.
+
 ## Usage
 
 Preqrequisites to use this project:
