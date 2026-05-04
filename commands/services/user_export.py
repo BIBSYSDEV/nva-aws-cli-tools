@@ -1,6 +1,7 @@
 import polars as pl
 from datetime import datetime
 from typing import Optional
+from commands.services.aws_utils import build_session
 from commands.services.users_api import UsersAndRolesService
 from commands.services.customers_api import build_customer_lookup
 from commands.services.user_models import User, ExportResult
@@ -19,7 +20,7 @@ class UserExportService:
         include_roles: Optional[list[str]] = None,
     ) -> ExportResult:
         all_users = self.users_service.get_all_users()
-        self.customer_lookup = build_customer_lookup(self.profile)
+        self.customer_lookup = build_customer_lookup(build_session(self.profile))
 
         excluded_only_roles_set = (
             set(exclude_only_roles) if exclude_only_roles else set()
