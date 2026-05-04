@@ -74,6 +74,7 @@ def read(ctx: AppContext, queue: str, count: int) -> None:
     is_flag=True,
     help="Show what would be deleted without actually deleting",
 )
+@click.pass_obj
 def purge(ctx: AppContext, queue: str, count: int, prefix: str, dry_run: bool) -> None:
     session = boto3.Session(profile_name=ctx.profile)
     sqs_client = session.client("sqs")
