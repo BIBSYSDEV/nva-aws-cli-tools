@@ -19,12 +19,12 @@ def customers(ctx: AppContext):
 )
 @click.pass_obj
 def list_missing(ctx: AppContext) -> None:
-    result = list_missing_customers(ctx.profile)
+    result = list_missing_customers(ctx.session)
     click.echo(prettify(result))
 
 
 @customers.command(help="Search dubplicate customer references (same cristin id)")
 @click.pass_obj
 def list_duplicate(ctx: AppContext) -> None:
-    result = list_duplicate_customers(ctx.profile)
+    result = list_duplicate_customers(ctx.session)
     click.echo(prettify(result))
