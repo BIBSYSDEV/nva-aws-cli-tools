@@ -25,7 +25,7 @@ def test_cognito_search_prints_matching_user_as_json():
 
     result = CliRunner().invoke(cli, ["--quiet", "cognito", "search", "alice"])
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 0, result.exception
     payload = json.loads(result.output)
     assert payload[0]["Username"] == "alice"
 
@@ -36,5 +36,5 @@ def test_cognito_search_prints_null_when_no_match():
 
     result = CliRunner().invoke(cli, ["--quiet", "cognito", "search", "nobody"])
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 0, result.exception
     assert json.loads(result.output) is None
