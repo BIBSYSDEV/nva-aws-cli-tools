@@ -41,6 +41,16 @@ uv run ruff check
 uv run ruff format
 ```
 
+#### Pre-commit hooks
+
+The repo has a `.pre-commit-config.yaml` that runs `ruff format` and `ruff check --fix` on staged Python files before each commit, using the ruff version pinned in `pyproject.toml`. After cloning, install the hooks once:
+
+```bash
+uvx pre-commit install
+```
+
+If the hook reformats files during a commit, the commit fails with a diff. Re-stage the changes (`git add -u`) and commit again.
+
 #### Output vs logging in commands
 
 Commands have two channels for text:
