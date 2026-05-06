@@ -1,14 +1,20 @@
 import json
 from pathlib import Path
 
+import boto3
 import click
 from rich.console import Console
 from rich.json import JSON
 from rich.prompt import Confirm
 from rich.table import Table
 
+from commands.services.lambda_api import (
+    cleanup_old_versions,
+    concurrency_report,
+    find_function_name,
+    invoke_function,
+)
 from commands.utils import AppContext
-from commands.services.lambda_api import LambdaService
 
 console = Console()
 
@@ -34,9 +40,7 @@ def invoke(ctx: AppContext, function_name: str, body: str, body_file: str, yes: 
     if body and body_file:
         raise click.UsageError("Cannot specify both --body and --body-file")
 
-    lambda_service = LambdaService(ctx.profile)
-
-    resolved_name = resolve_function_name(lambda_service, function_name)
+    resolved_name = resolve_function_name(ctx.session, function_name)
 
     payload = None
     if body_file:
@@ -59,12 +63,12 @@ def invoke(ctx: AppContext, function_name: str, body: str, body_file: str, yes: 
             console.print("[red]Operation cancelled[/red]")
             return
 
-    lambda_service.invoke_function(resolved_name, payload)
+    invoke_function(ctx.session, resolved_name, payload)
     console.print("[green]Function invoked[/green]")
 
 
-def resolve_function_name(lambda_service: LambdaService, name_partial: str) -> str:
-    matches = lambda_service.find_function_name(name_partial)
+def resolve_function_name(session: boto3.Session, name_partial: str) -> str:
+    matches = find_function_name(session, name_partial)
 
     if not matches:
         console.print(f"[red]No functions found matching '{name_partial}'[/red]")
@@ -93,10 +97,10 @@ def resolve_function_name(lambda_service: LambdaService, name_partial: str) -> s
 @click.option("--delete", is_flag=True, default=True, help="Delete old versions.")
 @click.pass_obj
 def delete_old_versions(ctx: AppContext, delete: bool) -> None:
-    LambdaService(ctx.profile).delete_old_versions(delete)
+    cleanup_old_versions(ctx.session, delete)
 
 
 @awslambda.command(help="Generate concurrency report for AWS Lambda functions.")
 @click.pass_obj
 def concurrency(ctx: AppContext) -> None:
-    LambdaService(ctx.profile).concurrency()
+    concurrency_report(ctx.session)
