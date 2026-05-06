@@ -81,10 +81,16 @@ def purge(ctx: AppContext, queue: str, count: int, prefix: str, dry_run: bool) -
         messages = get_messages(sqs_client, queue, count)
         to_delete = [msg for msg in messages if msg.get("Body", "").startswith(prefix)]
         by_sender, by_body = summarize_messages(to_delete)
-        click.echo(json.dumps(
-            {"matched_count": len(to_delete), "by_sender": by_sender, "by_body": by_body},
-            indent=2,
-        ))
+        click.echo(
+            json.dumps(
+                {
+                    "matched_count": len(to_delete),
+                    "by_sender": by_sender,
+                    "by_body": by_body,
+                },
+                indent=2,
+            )
+        )
         return
     if not click.confirm("Purge messages from this queue?", default=False):
         logger.info("Aborting...")

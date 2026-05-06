@@ -18,8 +18,14 @@ def reports(ctx: AppContext):
 
 
 @reports.command(name="author-shares")
-@click.option("--year", default=lambda: datetime.now().year, show_default="current year", type=int)
-@click.option("--output", default=None, help="Output filename (defaults to author_shares_<profile>_<year>_<timestamp>.xlsx)")
+@click.option(
+    "--year", default=lambda: datetime.now().year, show_default="current year", type=int
+)
+@click.option(
+    "--output",
+    default=None,
+    help="Output filename (defaults to author_shares_<profile>_<year>_<timestamp>.xlsx)",
+)
 @click.pass_obj
 def author_shares(ctx: AppContext, year: int, output: str | None):
     client = ApiClient(session=ctx.session)
@@ -29,5 +35,7 @@ def author_shares(ctx: AppContext, year: int, output: str | None):
     data = get_all_institutions_report(client, year)
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
-    pl.read_excel(io.BytesIO(data)).write_excel(filename, autofit=True, table_style="Table Style Medium 9")
+    pl.read_excel(io.BytesIO(data)).write_excel(
+        filename, autofit=True, table_style="Table Style Medium 9"
+    )
     click.echo(f"Saved to {filename}")

@@ -38,7 +38,17 @@ def test_dlq_purge_dry_run_reports_matches_and_does_not_delete():
     )
 
     result = CliRunner().invoke(
-        cli, ["--quiet", "dlq", "purge", "--queue", queue_url, "--prefix", "DocumentNotFound", "--dry-run"]
+        cli,
+        [
+            "--quiet",
+            "dlq",
+            "purge",
+            "--queue",
+            queue_url,
+            "--prefix",
+            "DocumentNotFound",
+            "--dry-run",
+        ],
     )
 
     assert result.exit_code == 0, result.exception
@@ -47,7 +57,10 @@ def test_dlq_purge_dry_run_reports_matches_and_does_not_delete():
 
     attributes = boto3.client("sqs").get_queue_attributes(
         QueueUrl=queue_url,
-        AttributeNames=["ApproximateNumberOfMessages", "ApproximateNumberOfMessagesNotVisible"],
+        AttributeNames=[
+            "ApproximateNumberOfMessages",
+            "ApproximateNumberOfMessagesNotVisible",
+        ],
     )["Attributes"]
     visible = int(attributes["ApproximateNumberOfMessages"])
     in_flight = int(attributes["ApproximateNumberOfMessagesNotVisible"])

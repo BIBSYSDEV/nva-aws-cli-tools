@@ -16,7 +16,9 @@ def _seed_user_pool(username: str, email: str) -> None:
         Username=username,
         UserAttributes=[{"Name": "email", "Value": email}],
     )
-    boto3.client("ssm").put_parameter(Name=USER_POOL_ID_PARAMETER, Value=pool_id, Type="String")
+    boto3.client("ssm").put_parameter(
+        Name=USER_POOL_ID_PARAMETER, Value=pool_id, Type="String"
+    )
 
 
 @mock_aws

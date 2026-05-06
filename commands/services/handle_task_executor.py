@@ -24,11 +24,11 @@ class HandleTaskExecutorService:
         self.default_action = lambda task: None
         self.switcher = {
             "nop": lambda task: None,
-            "move_top_to_additional_and_promote_additional": lambda task: self.move_top_to_additional_and_promote_additional(
-                task
+            "move_top_to_additional_and_promote_additional": lambda task: (
+                self.move_top_to_additional_and_promote_additional(task)
             ),
-            "move_top_to_additional_and_create_new_top": lambda task: self.move_top_to_additional_and_create_new_top(
-                task
+            "move_top_to_additional_and_create_new_top": lambda task: (
+                self.move_top_to_additional_and_create_new_top(task)
             ),
             "promote_additional": lambda task: self.promote_additional(task),
             "create_new_top": lambda task: self.create_new_top(task),

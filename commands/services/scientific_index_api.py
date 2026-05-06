@@ -16,7 +16,9 @@ POLL_INTERVAL_SECONDS = 5
 def get_all_institutions_report(
     client: ApiClient, year: int, timeout_minutes: int = 5
 ) -> bytes:
-    url = f"https://{client.api_domain}/{ALL_INSTITUTIONS_REPORT_PATH.format(year=year)}"
+    url = (
+        f"https://{client.api_domain}/{ALL_INSTITUTIONS_REPORT_PATH.format(year=year)}"
+    )
     headers = {**client.auth_header(), "Accept": XLSX_AUTHOR_SHARES_ACCEPT}
     response = requests.get(url, headers=headers)
     response.raise_for_status()

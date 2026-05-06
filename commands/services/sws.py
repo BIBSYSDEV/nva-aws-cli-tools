@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 class SwsService:
     TOKEN_ENDPOINT_PROD = "https://sws-auth.auth.eu-west-1.amazoncognito.com/token"
-    TOKEN_ENDPOINT_NON_PROD = "https://sws-auth-dev.auth.eu-west-1.amazoncognito.com/token"
+    TOKEN_ENDPOINT_NON_PROD = (
+        "https://sws-auth-dev.auth.eu-west-1.amazoncognito.com/token"
+    )
     API_ENDPOINT_PROD = "https://api.sws.aws.sikt.no"
     API_ENDPOINT_NON_PROD = "https://api.dev.sws.aws.sikt.no"
     SECRET_NAME = "SearchInfrastructureCredentials"
@@ -46,9 +48,7 @@ class SwsService:
         client_secret = credentials.get("password")
 
         if not client_id or not client_secret:
-            raise ValueError(
-                f"Missing username or password in {self.SECRET_NAME}"
-            )
+            raise ValueError(f"Missing username or password in {self.SECRET_NAME}")
 
         response = requests.post(
             self.token_endpoint,
