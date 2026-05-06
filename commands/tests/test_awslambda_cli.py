@@ -41,12 +41,16 @@ def _publish_versions(name: str, count: int) -> None:
     """Publish `count` distinct versions. Each call updates code so AWS records a new version."""
     client = boto3.client("lambda")
     for marker in range(count):
-        client.update_function_code(FunctionName=name, ZipFile=_zip_handler(f"v{marker + 1}"))
+        client.update_function_code(
+            FunctionName=name, ZipFile=_zip_handler(f"v{marker + 1}")
+        )
         client.publish_version(FunctionName=name)
 
 
 def _create_alias(name: str, version: str, alias: str = "prod") -> None:
-    boto3.client("lambda").create_alias(FunctionName=name, Name=alias, FunctionVersion=version)
+    boto3.client("lambda").create_alias(
+        FunctionName=name, Name=alias, FunctionVersion=version
+    )
 
 
 def _set_reserved_concurrency(name: str, value: int) -> None:
@@ -63,7 +67,9 @@ def _list_versions(name: str) -> set[str]:
 def _zip_handler(marker: str) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr("handler.py", f"def handler(event, context): return {marker!r}")
+        archive.writestr(
+            "handler.py", f"def handler(event, context): return {marker!r}"
+        )
     buffer.seek(0)
     return buffer.read()
 
@@ -81,7 +87,9 @@ def test_delete_old_versions_skips_current_and_aliased():
 
 
 @mock_aws
-def test_concurrency_writes_functions_sorted_desc_by_reserved_concurrency(monkeypatch, tmp_path):
+def test_concurrency_writes_functions_sorted_desc_by_reserved_concurrency(
+    monkeypatch, tmp_path
+):
     boto3.client("iam").create_account_alias(AccountAlias="nva-test")
     monkeypatch.chdir(tmp_path)
     _create_function("func-low")
@@ -94,7 +102,11 @@ def test_concurrency_writes_functions_sorted_desc_by_reserved_concurrency(monkey
 
     assert result.exit_code == 0, result.exception
     report = json.loads((tmp_path / "nva-test_lambda_concurrency.json").read_text())
-    assert [item["FunctionName"] for item in report] == ["func-high", "func-low", "func-no-reserved"]
+    assert [item["FunctionName"] for item in report] == [
+        "func-high",
+        "func-low",
+        "func-no-reserved",
+    ]
     assert report[2]["ReservedConcurrency"] is None
 
 
@@ -111,13 +123,24 @@ def _build_session_with_stubbed_lambda(fake_lambda) -> boto3.Session:
 @mock_aws
 def test_invoke_calls_lambda_with_resolved_function_name(payload_arg):
     fake_lambda = MagicMock()
-    fake_lambda.get_paginator.return_value.paginate = lambda *args, **kwargs: iter([
-        {"Functions": [{"FunctionName": "nva-publication-handler"}]}
-    ])
+    fake_lambda.get_paginator.return_value.paginate = lambda *args, **kwargs: iter(
+        [{"Functions": [{"FunctionName": "nva-publication-handler"}]}]
+    )
 
-    with patch("cli.build_session", return_value=_build_session_with_stubbed_lambda(fake_lambda)):
+    with patch(
+        "cli.build_session",
+        return_value=_build_session_with_stubbed_lambda(fake_lambda),
+    ):
         result = CliRunner().invoke(
-            cli, ["--quiet", "awslambda", "invoke", "publication-handler", "--yes", *payload_arg]
+            cli,
+            [
+                "--quiet",
+                "awslambda",
+                "invoke",
+                "publication-handler",
+                "--yes",
+                *payload_arg,
+            ],
         )
 
     assert result.exit_code == 0, result.exception
