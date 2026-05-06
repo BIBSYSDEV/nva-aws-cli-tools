@@ -22,10 +22,12 @@ dependencies = [
 
 [tool.pytest.ini_options]
 pythonpath = "."
+addopts = "--cov=commands --cov=cli --cov-report=term-missing --cov-fail-under=44"
 
 [dependency-groups]
 dev = [
     "moto[cognitoidp,ssm]>=5.1.22",
     "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
     "ruff>=0.15.12",
 ]
