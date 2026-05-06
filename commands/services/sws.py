@@ -18,16 +18,9 @@ CREDENTIALS_SECRET_NAME = "SearchInfrastructureCredentials"
 @dataclass
 class SwsClient:
     session: boto3.Session
-    profile: str | None
+    api_endpoint: str
+    token_endpoint: str
     _token: str | None = field(default=None, init=False, repr=False)
-
-    @property
-    def token_endpoint(self) -> str:
-        return TOKEN_ENDPOINT_PROD if self._is_prod() else TOKEN_ENDPOINT_NON_PROD
-
-    @property
-    def api_endpoint(self) -> str:
-        return API_ENDPOINT_PROD if self._is_prod() else API_ENDPOINT_NON_PROD
 
     def auth_header(self) -> dict[str, str]:
         if self._token is None:
@@ -62,8 +55,20 @@ class SwsClient:
         response.raise_for_status()
         self._token = response.json()["access_token"]
 
-    def _is_prod(self) -> bool:
-        return bool(self.profile) and "prod" in self.profile.lower()
+
+def client_for_environment(session: boto3.Session, env: str) -> SwsClient:
+    """Build an SwsClient pointed at the dev or prod SWS account."""
+    if env == "prod":
+        return SwsClient(
+            session=session,
+            api_endpoint=API_ENDPOINT_PROD,
+            token_endpoint=TOKEN_ENDPOINT_PROD,
+        )
+    return SwsClient(
+        session=session,
+        api_endpoint=API_ENDPOINT_NON_PROD,
+        token_endpoint=TOKEN_ENDPOINT_NON_PROD,
+    )
 
 
 def get_mappings(client: SwsClient, index: str) -> dict | None:
