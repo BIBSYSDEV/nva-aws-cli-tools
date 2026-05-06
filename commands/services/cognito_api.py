@@ -30,7 +30,9 @@ def _list_all_users(session: boto3.Session, user_pool_id: str) -> list[dict]:
             return users
 
 
-def _filter_by_attribute_value(users: list[dict], search_term: str) -> list[dict] | None:
+def _filter_by_attribute_value(
+    users: list[dict], search_term: str
+) -> list[dict] | None:
     search_words = search_term.split()
     matches = [
         user

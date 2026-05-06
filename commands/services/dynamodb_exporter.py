@@ -39,7 +39,9 @@ class GenericDynamodbExporter:
     def __init__(self, profile: str | None, table_name_substring: str) -> None:
         self.profile = profile
         self.table_name_substring = table_name_substring
-        self.session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+        self.session = (
+            boto3.Session(profile_name=profile) if profile else boto3.Session()
+        )
         self.dynamodb = self.session.client("dynamodb")
         self.table = self._get_table()
         self.table_name: str = self.table.name
@@ -88,8 +90,14 @@ class GenericDynamodbExporter:
 
     def _get_table_for_thread(self) -> Any:
         if not hasattr(self._thread_local, "table"):
-            session = boto3.Session(profile_name=self.profile) if self.profile else boto3.Session()
-            self._thread_local.table = session.resource("dynamodb").Table(self.table_name)
+            session = (
+                boto3.Session(profile_name=self.profile)
+                if self.profile
+                else boto3.Session()
+            )
+            self._thread_local.table = session.resource("dynamodb").Table(
+                self.table_name
+            )
         return self._thread_local.table
 
     def _save_items_to_file(
@@ -102,7 +110,10 @@ class GenericDynamodbExporter:
         processed_items = [self._process_item(item) for item in items]
 
         if segment is not None:
-            output_file = Path(output_folder) / f"segment_{segment:03d}_batch_{batch_count:05d}.jsonl"
+            output_file = (
+                Path(output_folder)
+                / f"segment_{segment:03d}_batch_{batch_count:05d}.jsonl"
+            )
         else:
             output_file = Path(output_folder) / f"batch_{batch_count:05d}.jsonl"
 
@@ -112,7 +123,6 @@ class GenericDynamodbExporter:
                 file.write("\n")
 
         logger.info(f"Saved {len(processed_items)} items to {output_file}")
-
 
     def _run_scan_loop(
         self,
@@ -173,7 +183,9 @@ class GenericDynamodbExporter:
         logger.info("Initiating table scan (this may take a while for large tables)...")
 
         with tqdm(desc="Scanning table", unit="items") as progress_bar:
-            items_processed, _ = self._run_scan_loop(self.table, scan_kwargs, limit, callback, progress_bar)
+            items_processed, _ = self._run_scan_loop(
+                self.table, scan_kwargs, limit, callback, progress_bar
+            )
 
         logger.info(f"Completed scan. Processed {items_processed} items")
 
@@ -188,14 +200,19 @@ class GenericDynamodbExporter:
         progress_lock: threading.Lock,
     ) -> tuple[int, int]:
         table = self._get_table_for_thread()
-        scan_kwargs: dict[str, Any] = {"Segment": segment, "TotalSegments": total_segments}
+        scan_kwargs: dict[str, Any] = {
+            "Segment": segment,
+            "TotalSegments": total_segments,
+        }
         if condition:
             scan_kwargs["FilterExpression"] = condition
 
         def segment_callback(items: list, batch_count: int) -> None:
             callback(items, segment, batch_count)
 
-        return self._run_scan_loop(table, scan_kwargs, limit, segment_callback, progress_bar, progress_lock)
+        return self._run_scan_loop(
+            table, scan_kwargs, limit, segment_callback, progress_bar, progress_lock
+        )
 
     def _iterate_batches_parallel_scan(
         self,
@@ -212,7 +229,9 @@ class GenericDynamodbExporter:
         progress_lock = threading.Lock()
         total_items_processed = 0
         total_items_scanned = 0
-        per_segment_limit = math.ceil(limit / total_segments) if limit is not None else None
+        per_segment_limit = (
+            math.ceil(limit / total_segments) if limit is not None else None
+        )
 
         with tqdm(desc="Scanning table (parallel)", unit="items") as progress_bar:
             with ThreadPoolExecutor(max_workers=total_segments) as executor:
@@ -252,11 +271,19 @@ class GenericDynamodbExporter:
         logger.info(f"Starting export of table {self.table_name} to {output_folder}")
 
         if total_segments > 1:
-            def parallel_save_callback(items: list, segment: int, batch_count: int) -> None:
-                self._save_items_to_file(items, batch_count, output_folder, segment=segment)
 
-            self._iterate_batches_parallel_scan(condition, parallel_save_callback, limit, total_segments)
+            def parallel_save_callback(
+                items: list, segment: int, batch_count: int
+            ) -> None:
+                self._save_items_to_file(
+                    items, batch_count, output_folder, segment=segment
+                )
+
+            self._iterate_batches_parallel_scan(
+                condition, parallel_save_callback, limit, total_segments
+            )
         else:
+
             def save_callback(items: list, batch_count: int) -> None:
                 self._save_items_to_file(items, batch_count, output_folder)
 

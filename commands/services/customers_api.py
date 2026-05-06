@@ -75,10 +75,12 @@ def _find_missing_customers(users_table, customer_identifiers: set[str]) -> list
             continue
         customer_id = match.group()
         if customer_id not in customer_identifiers:
-            missing_customers.append({
-                "PrimaryKeyHashKey": user["PrimaryKeyHashKey"],
-                "MissingCustomerId": customer_id,
-            })
+            missing_customers.append(
+                {
+                    "PrimaryKeyHashKey": user["PrimaryKeyHashKey"],
+                    "MissingCustomerId": customer_id,
+                }
+            )
     return missing_customers
 
 

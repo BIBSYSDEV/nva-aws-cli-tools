@@ -86,7 +86,9 @@ def test_get_table_success(mock_session):
 
 def test_get_table_not_found(mock_session):
     mock_client = Mock()
-    mock_client.list_tables.return_value = {"TableNames": ["other-table", "another-table"]}
+    mock_client.list_tables.return_value = {
+        "TableNames": ["other-table", "another-table"]
+    }
 
     mock_session_instance = Mock()
     mock_session_instance.client.return_value = mock_client
@@ -296,7 +298,9 @@ def test_dynamodb_encoder_date():
     assert result == '{"date_field": "2024-01-15"}'
 
 
-def test_save_items_to_file_with_segment(mock_exporter, sample_uncompressed_item, tmp_path):
+def test_save_items_to_file_with_segment(
+    mock_exporter, sample_uncompressed_item, tmp_path
+):
     items = [sample_uncompressed_item]
     mock_exporter._save_items_to_file(items, 1, str(tmp_path), segment=2)
 
@@ -310,11 +314,16 @@ def test_save_items_to_file_with_segment(mock_exporter, sample_uncompressed_item
         assert saved_item == sample_uncompressed_item
 
 
-def test_export_parallel_scan_creates_segment_files(mock_exporter, sample_uncompressed_item, tmp_path):
+def test_export_parallel_scan_creates_segment_files(
+    mock_exporter, sample_uncompressed_item, tmp_path
+):
     total_segments = 3
 
     mock_table = Mock()
-    mock_table.scan.return_value = {"Items": [sample_uncompressed_item], "ScannedCount": 1}
+    mock_table.scan.return_value = {
+        "Items": [sample_uncompressed_item],
+        "ScannedCount": 1,
+    }
 
     with patch.object(mock_exporter, "_get_table_for_thread", return_value=mock_table):
         mock_exporter.export(str(tmp_path), total_segments=total_segments)
@@ -325,7 +334,9 @@ def test_export_parallel_scan_creates_segment_files(mock_exporter, sample_uncomp
     assert segments_seen == {0, 1, 2}
 
 
-def test_export_parallel_scan_distributes_limit(mock_exporter, sample_uncompressed_item, tmp_path):
+def test_export_parallel_scan_distributes_limit(
+    mock_exporter, sample_uncompressed_item, tmp_path
+):
     total_segments = 4
     limit = 10
 
@@ -348,7 +359,9 @@ def test_export_parallel_scan_distributes_limit(mock_exporter, sample_uncompress
         assert kwargs.get("TotalSegments") == total_segments
 
 
-def test_export_sequential_scan_creates_batch_files(mock_exporter, sample_uncompressed_item, tmp_path):
+def test_export_sequential_scan_creates_batch_files(
+    mock_exporter, sample_uncompressed_item, tmp_path
+):
     mock_exporter.table.scan.return_value = {
         "Items": [sample_uncompressed_item],
         "ScannedCount": 1,

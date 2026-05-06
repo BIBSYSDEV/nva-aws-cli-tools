@@ -52,11 +52,15 @@ class SearchParams:
 
         if "unit" in query_params and not query_params["unit"].startswith("http"):
             unit_id = query_params["unit"]
-            query_params["unit"] = f"https://{api_domain}/cristin/organization/{unit_id}"
+            query_params["unit"] = (
+                f"https://{api_domain}/cristin/organization/{unit_id}"
+            )
 
         if "project" in query_params and not query_params["project"].startswith("http"):
             project_id = query_params["project"]
-            query_params["project"] = f"https://{api_domain}/cristin/project/{project_id}"
+            query_params["project"] = (
+                f"https://{api_domain}/cristin/project/{project_id}"
+            )
 
         return query_params
 

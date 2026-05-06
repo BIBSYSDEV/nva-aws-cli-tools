@@ -125,7 +125,9 @@ class SqsService:
 
     def start_redrive(self, source_queue_url: str, destination_queue_url: str) -> str:
         source_arn = self.get_queue_attributes(source_queue_url).get("QueueArn")
-        destination_arn = self.get_queue_attributes(destination_queue_url).get("QueueArn")
+        destination_arn = self.get_queue_attributes(destination_queue_url).get(
+            "QueueArn"
+        )
 
         response = self.sqs_client.start_message_move_task(
             SourceArn=source_arn,

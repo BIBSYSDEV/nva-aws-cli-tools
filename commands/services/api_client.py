@@ -21,7 +21,10 @@ class ApiClient:
         response = self.session.client("ssm").get_parameters(
             Names=["/NVA/ApiDomain", "/NVA/CognitoUri"]
         )
-        return {parameter["Name"]: parameter["Value"] for parameter in response["Parameters"]}
+        return {
+            parameter["Name"]: parameter["Value"]
+            for parameter in response["Parameters"]
+        }
 
     @cached_property
     def _credentials(self) -> dict:
@@ -62,4 +65,6 @@ class ApiClient:
     def _is_token_expired(self) -> bool:
         if self._token_expires_at is None:
             return True
-        return datetime.now() > self._token_expires_at - timedelta(seconds=TOKEN_REFRESH_BUFFER_SECONDS)
+        return datetime.now() > self._token_expires_at - timedelta(
+            seconds=TOKEN_REFRESH_BUFFER_SECONDS
+        )

@@ -64,7 +64,9 @@ def export(
     exporter.export(output_dir, condition, limit, segments)
 
 
-def _parse_multiple_filters(filter_expressions: tuple[str, ...]) -> ConditionBase | None:
+def _parse_multiple_filters(
+    filter_expressions: tuple[str, ...],
+) -> ConditionBase | None:
     """Parse multiple filter expressions and combine them with AND logic."""
     if not filter_expressions:
         return None

@@ -86,9 +86,9 @@ class LambdaService:
 
         # Sort functions by reserved concurrency in descending order
         functions.sort(
-            key=lambda x: x["ReservedConcurrency"]
-            if x["ReservedConcurrency"] is not None
-            else -1,
+            key=lambda x: (
+                x["ReservedConcurrency"] if x["ReservedConcurrency"] is not None else -1
+            ),
             reverse=True,
         )
 
