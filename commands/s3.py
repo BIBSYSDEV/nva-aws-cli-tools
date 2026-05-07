@@ -1,5 +1,4 @@
 import click
-import boto3
 import logging
 
 from commands.utils import AppContext
@@ -43,8 +42,7 @@ def get_versions(
     if not object_path:
         raise click.BadParameter("S3_PATH must be bucket/key", param_hint="S3_PATH")
 
-    session = boto3.Session(profile_name=ctx.profile)
-    s3_client = session.client("s3")
+    s3_client = ctx.session.client("s3")
 
     version_dir = download_versions(s3_client, bucket, object_path, output_dir)
     click.echo(f"Versions saved to: {version_dir}")

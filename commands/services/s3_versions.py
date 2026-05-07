@@ -4,6 +4,7 @@ import re
 import subprocess
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def sanitize_to_folder_name(path: str) -> str:
     return ILLEGAL_CHARS.sub("_", path).strip("_")
 
 
-def fetch_versions(s3_client, bucket: str, key: str) -> list[dict]:
+def fetch_versions(s3_client: Any, bucket: str, key: str) -> list[dict]:
     versions = []
     paginator = s3_client.get_paginator("list_object_versions")
     for page in paginator.paginate(Bucket=bucket, Prefix=key):
@@ -43,7 +44,7 @@ def try_pretty_json(data: bytes) -> bytes:
 
 
 def download_versions(
-    s3_client,
+    s3_client: Any,
     bucket: str,
     object_path: str,
     output_base: str,
@@ -87,6 +88,8 @@ def build_git_history(output_dir: Path) -> None:
         return
 
     subprocess.run(["git", "init"], cwd=output_dir, check=True)
+    # Only track object.json — each commit overwrites it with one version so `git diff` shows changes between versions.
+    # The raw version files stay on disk for reference but are intentionally excluded from git.
     (output_dir / ".gitignore").write_text("*\n!object.json\n!.gitignore\n")
     subprocess.run(["git", "add", ".gitignore"], cwd=output_dir, check=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=output_dir, check=True)
