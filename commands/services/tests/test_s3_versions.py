@@ -171,7 +171,11 @@ def test_download_versions_skips_existing_files(tmp_path: Path):
     assert existing_file.read_bytes() == b"existing"
 
 
-def test_build_git_history_creates_commits(tmp_path: Path):
+def test_build_git_history_creates_commits(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "Test")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@test.com")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Test")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "test@test.com")
     version_dir = tmp_path / "versions"
     version_dir.mkdir()
 
