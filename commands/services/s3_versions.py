@@ -111,10 +111,14 @@ def download_versions(
     return output_dir
 
 
-def build_git_history(output_dir: Path, tracked_filename: str = "object.json") -> None:
+def build_git_history(output_dir: Path, key: str = "") -> None:
+    tracked_filename = _tracked_filename_for_key(key) if key else "object.json"
     git_dir = output_dir / ".git"
     if git_dir.exists():
-        logger.info("Git repo already exists, skipping git history creation")
+        logger.warning(
+            "Git repo already exists in %s — skipping. Delete the .git folder to rebuild.",
+            output_dir,
+        )
         return
 
     _git(output_dir, "init")

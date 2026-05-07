@@ -5,7 +5,6 @@ from commands.utils import AppContext
 from commands.services.s3_versions import (
     download_versions,
     build_git_history,
-    _tracked_filename_for_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,9 +54,8 @@ def get_versions(
     click.echo(f"Versions saved to: {version_dir}")
 
     if not no_git:
-        tracked_filename = _tracked_filename_for_key(object_path)
         try:
-            build_git_history(version_dir, tracked_filename)
+            build_git_history(version_dir, object_path)
         except RuntimeError as exc:
             raise click.ClickException(f"Git error: {exc}")
         click.echo(f"Git history created in: {version_dir}")
