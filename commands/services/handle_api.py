@@ -82,6 +82,12 @@ class HandleApiService:
         response = requests.put(url, headers=headers, json=request_body)
         return response.json()
 
+    def set_handle(self, handle_value: str, target_url: str) -> dict:
+        segments = handle_value.split("/")
+        suffix = segments.pop()
+        prefix = segments.pop()
+        return self.update_handle(prefix, suffix, {"uri": target_url})
+
     def create_handle(self, request_body):
         url = f"https://{self.api_domain}/handle/"
         headers = {

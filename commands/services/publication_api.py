@@ -6,11 +6,9 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-"""
-# example of usage
 
-
-"""
+def extract_publication_identifier(publication_id: str) -> str:
+    return publication_id.rstrip("/").split("/publication/")[-1]
 
 
 class PublicationApiService:
