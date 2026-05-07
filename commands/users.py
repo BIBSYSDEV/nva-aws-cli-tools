@@ -1,7 +1,12 @@
+import csv
 import json
 import click
 import sys
 import logging
+from collections import Counter
+
+from rich.console import Console
+from rich.table import Table
 
 from commands.utils import AppContext
 from commands.services.users_api import UsersAndRolesService
@@ -67,12 +72,18 @@ def approve_terms(ctx: AppContext, user_id: str) -> None:
     required=True,
     help="Comma-separated list of scopes without whitespace, e.g., https://api.nva.unit.no/scopes/third-party/publication-read,https://api.nva.unit.no/scopes/third-party/publication-upsert",
 )
+@click.option(
+    "--shortname",
+    required=False,
+    default=None,
+    help="Override the org shortname used in client name and acting user (e.g. ntnu). Needed when customer lacks shortName.",
+)
 @click.pass_obj
 def create_external(
-    ctx: AppContext, customer: str, intended_purpose: str, scopes: str
+    ctx: AppContext, customer: str, intended_purpose: str, scopes: str, shortname: str | None
 ) -> None:
     external_user = ExternalUserService(ctx.profile).create(
-        customer, intended_purpose, scopes.split(",")
+        customer, intended_purpose, scopes.split(","), shortname
     )
     external_user.save_to_file()
     click.echo(prettify(external_user.client_data))
@@ -134,3 +145,45 @@ def export_roles(
         f"Found {result.total_users} users, exported {result.exported_users} users."
     )
     logger.info(f"Excel file saved to: {result.filename}")
+
+
+@users.command(help="Show number of users per role")
+@click.option(
+    "--roles",
+    help="Comma-separated list of role names to include (default: all roles)",
+)
+@click.option("--csv-output", is_flag=True, help="Output as CSV instead of table")
+@click.pass_obj
+def role_summary(ctx: AppContext, roles: str, csv_output: bool) -> None:
+    role_filter = {role.strip() for role in roles.split(",")} if roles else None
+
+    all_users = UsersAndRolesService(ctx.profile).get_all_users()
+
+    role_counts: Counter = Counter()
+    for user in all_users:
+        for role in user.roles:
+            if role.name and (role_filter is None or role.name in role_filter):
+                role_counts[role.name] += 1
+
+    sorted_counts = sorted(role_counts.items(), key=lambda item: -item[1])
+
+    if csv_output:
+        writer = csv.writer(sys.stdout)
+        writer.writerow(["Role", "Number of users"])
+        writer.writerows(sorted_counts)
+        return
+
+    console = Console()
+    table = Table(
+        show_header=True,
+        header_style="bold cyan",
+        show_lines=True,
+        title=f"[bold magenta]Role summary ({len(all_users)} users total)[/bold magenta]",
+    )
+    table.add_column("Role", style="bold")
+    table.add_column("Number of users", justify="right")
+
+    for role_name, count in sorted_counts:
+        table.add_row(role_name, str(count))
+
+    console.print(table)
