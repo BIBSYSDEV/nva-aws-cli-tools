@@ -66,7 +66,9 @@ def test_try_pretty_json_returns_original_on_invalid_json():
     assert result == raw
 
 
-def make_version(version_id: str, last_modified: datetime, key: str = "resources/obj.gz") -> dict:
+def make_version(
+    version_id: str, last_modified: datetime, key: str = "resources/obj.gz"
+) -> dict:
     return {
         "Key": key,
         "VersionId": version_id,
@@ -95,8 +97,12 @@ def test_fetch_versions_filters_by_exact_key():
     paginator = MagicMock()
     s3_client.get_paginator.return_value = paginator
 
-    target = make_version("v1", datetime(2024, 1, 1, tzinfo=timezone.utc), key="resources/obj.gz")
-    other = make_version("v2", datetime(2024, 1, 2, tzinfo=timezone.utc), key="resources/obj-other.gz")
+    target = make_version(
+        "v1", datetime(2024, 1, 1, tzinfo=timezone.utc), key="resources/obj.gz"
+    )
+    other = make_version(
+        "v2", datetime(2024, 1, 2, tzinfo=timezone.utc), key="resources/obj-other.gz"
+    )
 
     paginator.paginate.return_value = [{"Versions": [target, other]}]
 
@@ -112,11 +118,19 @@ def test_download_versions_creates_files(tmp_path: Path):
     s3_client.get_paginator.return_value = paginator
 
     content = json.dumps({"id": "abc"}).encode()
-    version = make_version("abc123", datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc), key="resources/obj.json")
+    version = make_version(
+        "abc123",
+        datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc),
+        key="resources/obj.json",
+    )
     paginator.paginate.return_value = [{"Versions": [version]}]
-    s3_client.get_object.return_value = {"Body": MagicMock(read=MagicMock(return_value=content))}
+    s3_client.get_object.return_value = {
+        "Body": MagicMock(read=MagicMock(return_value=content))
+    }
 
-    output_dir = download_versions(s3_client, "my-bucket", "resources/obj.json", str(tmp_path))
+    output_dir = download_versions(
+        s3_client, "my-bucket", "resources/obj.json", str(tmp_path)
+    )
 
     files = list(output_dir.iterdir())
     assert len(files) == 1
@@ -132,9 +146,13 @@ def test_download_versions_decompresses_gz(tmp_path: Path):
     compressed = gzip.compress(json.dumps(original).encode())
     version = make_version("v1", datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc))
     paginator.paginate.return_value = [{"Versions": [version]}]
-    s3_client.get_object.return_value = {"Body": MagicMock(read=MagicMock(return_value=compressed))}
+    s3_client.get_object.return_value = {
+        "Body": MagicMock(read=MagicMock(return_value=compressed))
+    }
 
-    output_dir = download_versions(s3_client, "my-bucket", "resources/obj.gz", str(tmp_path))
+    output_dir = download_versions(
+        s3_client, "my-bucket", "resources/obj.gz", str(tmp_path)
+    )
 
     files = list(output_dir.iterdir())
     assert len(files) == 1

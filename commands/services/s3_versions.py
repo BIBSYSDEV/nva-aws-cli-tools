@@ -108,4 +108,6 @@ def build_git_history(output_dir: Path) -> None:
             check=True,
         )
 
-    logger.info(f"Git history created with {len(version_files)} commits in {output_dir}")
+    logger.info(
+        f"Git history created with {len(version_files)} commits in {output_dir}"
+    )
