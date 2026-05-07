@@ -18,6 +18,7 @@ from commands.search import search
 from commands.reports import reports
 from commands.sws import sws
 from commands.services.aws_utils import build_session
+from commands.s3 import s3
 from commands.utils import AppContext
 
 from log_config import configure_logger
@@ -65,6 +66,7 @@ cli.add_command(sqs)
 cli.add_command(search)
 cli.add_command(reports)
 cli.add_command(sws)
+cli.add_command(s3)
 
 if __name__ == "__main__":
     cli()
