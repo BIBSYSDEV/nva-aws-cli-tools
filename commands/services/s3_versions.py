@@ -108,4 +108,6 @@ def build_git_history(output_dir: Path) -> None:
         _git(output_dir, "add", "object.json")
         _git(output_dir, "commit", "--allow-empty", "-m", filepath.name)
 
-    logger.info("Git history created with %d commits in %s", len(version_files), output_dir)
+    logger.info(
+        "Git history created with %d commits in %s", len(version_files), output_dir
+    )
