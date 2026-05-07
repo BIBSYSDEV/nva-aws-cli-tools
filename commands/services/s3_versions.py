@@ -1,4 +1,3 @@
-import boto3
 import gzip
 import json
 import re
