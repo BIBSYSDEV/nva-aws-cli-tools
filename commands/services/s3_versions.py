@@ -1,5 +1,6 @@
 import gzip
 import json
+import os
 import re
 import subprocess
 import logging
@@ -10,13 +11,38 @@ logger = logging.getLogger(__name__)
 
 ILLEGAL_CHARS = re.compile(r"[^a-zA-Z0-9_-]")
 
+_GIT_IDENTITY_DEFAULTS = {
+    "GIT_AUTHOR_NAME": "nva-aws-cli-tools",
+    "GIT_AUTHOR_EMAIL": "nva-aws-cli-tools@local",
+    "GIT_COMMITTER_NAME": "nva-aws-cli-tools",
+    "GIT_COMMITTER_EMAIL": "nva-aws-cli-tools@local",
+}
+
 
 def _git(cwd: Path, *args: str) -> None:
-    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+    env = {
+        **os.environ,
+        **{k: v for k, v in _GIT_IDENTITY_DEFAULTS.items() if k not in os.environ},
+    }
+    try:
+        subprocess.run(
+            ["git", *args], cwd=cwd, check=True, capture_output=True, env=env
+        )
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(exc.stderr.decode(errors="replace").strip()) from exc
 
 
 def sanitize_to_folder_name(path: str) -> str:
     return ILLEGAL_CHARS.sub("_", path).strip("_")
+
+
+def _tracked_filename_for_key(key: str) -> str:
+    name = Path(key).name
+    if name.endswith(".gz"):
+        name = name[:-3]
+    if "." not in name:
+        name = f"{name}.json"
+    return name
 
 
 def fetch_versions(s3_client: Any, bucket: str, key: str) -> list[dict]:
@@ -85,16 +111,16 @@ def download_versions(
     return output_dir
 
 
-def build_git_history(output_dir: Path) -> None:
+def build_git_history(output_dir: Path, tracked_filename: str = "object.json") -> None:
     git_dir = output_dir / ".git"
     if git_dir.exists():
         logger.info("Git repo already exists, skipping git history creation")
         return
 
     _git(output_dir, "init")
-    # Only track object.json — each commit overwrites it with one version so `git diff` shows changes between versions.
+    # Only track the single object file — each commit overwrites it with one version so `git diff` shows changes between versions.
     # The raw version files stay on disk for reference but are intentionally excluded from git.
-    (output_dir / ".gitignore").write_text("*\n!object.json\n!.gitignore\n")
+    (output_dir / ".gitignore").write_text(f"*\n!{tracked_filename}\n!.gitignore\n")
     _git(output_dir, "add", ".gitignore")
     _git(output_dir, "commit", "-m", "init")
 
@@ -102,11 +128,11 @@ def build_git_history(output_dir: Path) -> None:
         f for f in output_dir.iterdir() if f.is_file() and not f.name.startswith(".")
     )
 
-    object_file = output_dir / "object.json"
+    object_file = output_dir / tracked_filename
     for filepath in version_files:
         object_file.write_bytes(filepath.read_bytes())
-        _git(output_dir, "add", "object.json")
-        _git(output_dir, "commit", "--allow-empty", "-m", filepath.name)
+        _git(output_dir, "add", tracked_filename)
+        _git(output_dir, "commit", "-m", filepath.name)
 
     logger.info(
         "Git history created with %d commits in %s", len(version_files), output_dir

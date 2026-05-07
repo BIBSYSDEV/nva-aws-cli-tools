@@ -2,7 +2,11 @@ import click
 import logging
 
 from commands.utils import AppContext
-from commands.services.s3_versions import download_versions, build_git_history
+from commands.services.s3_versions import (
+    download_versions,
+    build_git_history,
+    _tracked_filename_for_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +15,6 @@ logger = logging.getLogger(__name__)
 @click.pass_obj
 def s3(ctx: AppContext):
     """S3 utilities."""
-    pass
 
 
 @s3.command(
@@ -44,9 +47,17 @@ def get_versions(
 
     s3_client = ctx.session.client("s3")
 
-    version_dir = download_versions(s3_client, bucket, object_path, output_dir)
+    try:
+        version_dir = download_versions(s3_client, bucket, object_path, output_dir)
+    except ValueError as exc:
+        raise click.ClickException(str(exc))
+
     click.echo(f"Versions saved to: {version_dir}")
 
     if not no_git:
-        build_git_history(version_dir)
+        tracked_filename = _tracked_filename_for_key(object_path)
+        try:
+            build_git_history(version_dir, tracked_filename)
+        except RuntimeError as exc:
+            raise click.ClickException(f"Git error: {exc}")
         click.echo(f"Git history created in: {version_dir}")
