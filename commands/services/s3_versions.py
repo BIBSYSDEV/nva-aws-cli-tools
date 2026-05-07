@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 ILLEGAL_CHARS = re.compile(r"[^a-zA-Z0-9_-]")
 
 
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+
 def sanitize_to_folder_name(path: str) -> str:
     return ILLEGAL_CHARS.sub("_", path).strip("_")
 
@@ -31,7 +35,7 @@ def decompress_if_needed(data: bytes, key: str) -> bytes:
         try:
             return gzip.decompress(data)
         except Exception as exc:
-            logger.warning(f"Failed to decompress gz data: {exc}")
+            logger.warning("Failed to decompress gz data: %s", exc)
     return data
 
 
@@ -50,7 +54,7 @@ def download_versions(
     output_base: str,
 ) -> Path:
     key = object_path.lstrip("/")  # tolerate a leading slash from the user
-    folder_name = sanitize_to_folder_name(object_path)
+    folder_name = sanitize_to_folder_name(key)
     output_dir = Path(output_base) / folder_name
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -58,7 +62,7 @@ def download_versions(
     if not versions:
         raise ValueError(f"No versions found for '{key}' in bucket '{bucket}'")
 
-    logger.info(f"Found {len(versions)} versions in s3://{bucket}/{key}")
+    logger.info("Found %d versions in s3://%s/%s", len(versions), bucket, key)
 
     for version in versions:
         version_id = version["VersionId"]
@@ -68,7 +72,7 @@ def download_versions(
         filepath = output_dir / filename
 
         if filepath.exists():
-            logger.info(f"Skipping (already exists): {filename}")
+            logger.info("Skipping (already exists): %s", filename)
             continue
 
         response = s3_client.get_object(Bucket=bucket, Key=key, VersionId=version_id)
@@ -76,7 +80,7 @@ def download_versions(
         data = decompress_if_needed(raw, key)
         data = try_pretty_json(data)
         filepath.write_bytes(data)
-        logger.info(f"Downloaded: {filename}")
+        logger.info("Downloaded: %s", filename)
 
     return output_dir
 
@@ -87,12 +91,12 @@ def build_git_history(output_dir: Path) -> None:
         logger.info("Git repo already exists, skipping git history creation")
         return
 
-    subprocess.run(["git", "init"], cwd=output_dir, check=True)
+    _git(output_dir, "init")
     # Only track object.json — each commit overwrites it with one version so `git diff` shows changes between versions.
     # The raw version files stay on disk for reference but are intentionally excluded from git.
     (output_dir / ".gitignore").write_text("*\n!object.json\n!.gitignore\n")
-    subprocess.run(["git", "add", ".gitignore"], cwd=output_dir, check=True)
-    subprocess.run(["git", "commit", "-m", "init"], cwd=output_dir, check=True)
+    _git(output_dir, "add", ".gitignore")
+    _git(output_dir, "commit", "-m", "init")
 
     version_files = sorted(
         f for f in output_dir.iterdir() if f.is_file() and not f.name.startswith(".")
@@ -101,13 +105,7 @@ def build_git_history(output_dir: Path) -> None:
     object_file = output_dir / "object.json"
     for filepath in version_files:
         object_file.write_bytes(filepath.read_bytes())
-        subprocess.run(["git", "add", "object.json"], cwd=output_dir, check=True)
-        subprocess.run(
-            ["git", "commit", "--allow-empty", "-m", filepath.name],
-            cwd=output_dir,
-            check=True,
-        )
+        _git(output_dir, "add", "object.json")
+        _git(output_dir, "commit", "--allow-empty", "-m", filepath.name)
 
-    logger.info(
-        f"Git history created with {len(version_files)} commits in {output_dir}"
-    )
+    logger.info("Git history created with %d commits in %s", len(version_files), output_dir)

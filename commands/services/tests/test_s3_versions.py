@@ -50,6 +50,7 @@ def test_decompress_if_needed_returns_raw_on_corrupt_gz(caplog):
     corrupt = b"not gzip data"
     result = decompress_if_needed(corrupt, "file.gz")
     assert result == corrupt
+    assert "Failed to decompress gz data" in caplog.text
 
 
 def test_try_pretty_json_formats_valid_json():
