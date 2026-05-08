@@ -596,6 +596,7 @@ dev = [
     { name = "moto", extra = ["cognitoidp", "ssm"] },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "responses" },
     { name = "ruff" },
 ]
 
@@ -621,6 +622,7 @@ dev = [
     { name = "moto", extras = ["cognitoidp", "ssm"], specifier = ">=5.1.22" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "responses", specifier = ">=0.26.0" },
     { name = "ruff", specifier = ">=0.15.12" },
 ]
 

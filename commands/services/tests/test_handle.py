@@ -1,3 +1,4 @@
+import csv
 import json
 
 import boto3
@@ -5,7 +6,7 @@ import responses
 from click.testing import CliRunner
 from moto import mock_aws
 
-from commands.handle import handle
+from commands.handle import handle, DONE_CSV
 from commands.services.publication_api import extract_publication_identifier
 from commands.services.search_api import SearchApiService
 
@@ -130,12 +131,16 @@ def test_redirect_to_nva_updates_handle(tmp_path):
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(handle, ["redirect-to-nva", A_HANDLE], obj=_ctx())
+        csv_rows = _read_done_csv()
 
     assert result.exit_code == 0
     assert "UPDATED" in result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
     assert A_IDENTIFIER in put_calls[0].request.body.decode()
+    assert len(csv_rows) == 1
+    assert csv_rows[0]["handle"] == A_HANDLE
+    assert csv_rows[0]["status"] == "ok"
 
 
 @mock_aws
@@ -150,9 +155,11 @@ def test_redirect_to_nva_skips_when_no_hit(tmp_path):
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(handle, ["redirect-to-nva", A_HANDLE], obj=_ctx())
+        csv_rows = _read_done_csv()
 
     assert result.exit_code == 0
     assert "SKIP" in result.output
+    assert csv_rows[0]["status"] == "skipped"
 
 
 @mock_aws
@@ -173,6 +180,14 @@ def test_redirect_to_nva_skips_already_processed(tmp_path):
     assert "already processed" in result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
+
+
+def _read_done_csv() -> list:
+    try:
+        with open(DONE_CSV, newline="") as f:
+            return list(csv.DictReader(f))
+    except FileNotFoundError:
+        return []
 
 
 def _ctx():
