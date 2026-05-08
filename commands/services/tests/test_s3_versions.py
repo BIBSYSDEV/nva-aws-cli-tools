@@ -5,13 +5,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import boto3
 import pytest
+from click.testing import CliRunner
+from moto import mock_aws
 
+from commands.s3 import s3
 from commands.services.s3_versions import (
     build_git_history,
     decompress_if_needed,
     download_versions,
     fetch_versions,
+    find_bucket,
     sanitize_to_folder_name,
     try_pretty_json,
 )
@@ -222,3 +227,101 @@ def test_build_git_history_skips_if_git_exists(tmp_path: Path):
     with patch("commands.services.s3_versions.subprocess.run") as mock_run:
         build_git_history(version_dir)
         mock_run.assert_not_called()
+
+
+def test_find_bucket_returns_matching_bucket():
+    s3_client = MagicMock()
+    s3_client.list_buckets.return_value = {
+        "Buckets": [
+            {"Name": "persisted-resources-123456789"},
+            {"Name": "other-bucket"},
+        ]
+    }
+    assert find_bucket(s3_client, "persisted-resources") == "persisted-resources-123456789"
+
+
+def test_find_bucket_raises_when_no_match():
+    s3_client = MagicMock()
+    s3_client.list_buckets.return_value = {"Buckets": [{"Name": "other-bucket"}]}
+    with pytest.raises(ValueError, match="No bucket found"):
+        find_bucket(s3_client, "persisted-resources")
+
+
+def test_find_bucket_raises_on_multiple_matches():
+    s3_client = MagicMock()
+    s3_client.list_buckets.return_value = {
+        "Buckets": [
+            {"Name": "persisted-resources-111"},
+            {"Name": "persisted-resources-222"},
+        ]
+    }
+    with pytest.raises(ValueError, match="Multiple buckets"):
+        find_bucket(s3_client, "persisted-resources")
+
+
+def _s3_ctx():
+    from commands.utils import AppContext
+
+    return AppContext(
+        log_level=0, profile=None, session=boto3.Session(region_name="eu-west-1")
+    )
+
+
+@mock_aws
+def test_get_versions_command_resolves_bucket_and_key(tmp_path: Path):
+    boto3_session = boto3.Session(region_name="eu-west-1")
+    s3_client = boto3_session.client("s3", region_name="eu-west-1")
+    bucket_name = "persisted-resources-123456789"
+    s3_client.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
+    )
+    s3_client.put_bucket_versioning(
+        Bucket=bucket_name,
+        VersioningConfiguration={"Status": "Enabled"},
+    )
+    content = json.dumps({"id": "abc"}).encode()
+    s3_client.put_object(Bucket=bucket_name, Key="resources/obj.json", Body=content)
+
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(
+            s3,
+            ["get-versions", "obj.json", "--bucket", "persisted-resources", "--no-git"],
+            obj=_s3_ctx(),
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "Versions saved to" in result.output
+
+
+@mock_aws
+def test_get_versions_uri_command_accepts_s3_prefix(tmp_path: Path):
+    boto3_session = boto3.Session(region_name="eu-west-1")
+    s3_client = boto3_session.client("s3", region_name="eu-west-1")
+    bucket_name = "persisted-resources-123456789"
+    s3_client.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
+    )
+    s3_client.put_bucket_versioning(
+        Bucket=bucket_name,
+        VersioningConfiguration={"Status": "Enabled"},
+    )
+    content = json.dumps({"id": "abc"}).encode()
+    s3_client.put_object(Bucket=bucket_name, Key="resources/obj.json", Body=content)
+
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(
+            s3,
+            [
+                "get-versions-uri",
+                f"s3://{bucket_name}/resources/obj.json",
+                "--no-git",
+            ],
+            obj=_s3_ctx(),
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "Versions saved to" in result.output
