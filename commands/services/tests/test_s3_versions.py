@@ -237,7 +237,9 @@ def test_find_bucket_returns_matching_bucket():
             {"Name": "other-bucket"},
         ]
     }
-    assert find_bucket(s3_client, "persisted-resources") == "persisted-resources-123456789"
+    assert (
+        find_bucket(s3_client, "persisted-resources") == "persisted-resources-123456789"
+    )
 
 
 def test_find_bucket_raises_when_no_match():
