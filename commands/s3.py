@@ -70,7 +70,8 @@ def get_versions(
     except ValueError as exc:
         raise click.ClickException(str(exc))
 
-    key = prefix.rstrip("/") + "/" + object_key.lstrip("/")
+    normalized_key = object_key if object_key.endswith(".gz") else f"{object_key}.gz"
+    key = prefix.rstrip("/") + "/" + normalized_key.lstrip("/")
     _fetch_and_build(s3_client, resolved_bucket, key, output_dir, no_git)
 
 

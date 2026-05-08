@@ -283,13 +283,13 @@ def test_get_versions_command_resolves_bucket_and_key(tmp_path: Path):
         VersioningConfiguration={"Status": "Enabled"},
     )
     content = json.dumps({"id": "abc"}).encode()
-    s3_client.put_object(Bucket=bucket_name, Key="resources/obj.json", Body=content)
+    s3_client.put_object(Bucket=bucket_name, Key="resources/obj.gz", Body=content)
 
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(
             s3,
-            ["get-versions", "obj.json", "--bucket", "persisted-resources", "--no-git"],
+            ["get-versions", "obj", "--bucket", "persisted-resources", "--no-git"],
             obj=_s3_ctx(),
         )
 
