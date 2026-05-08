@@ -3,9 +3,8 @@ import os
 import sqlite3
 from datetime import datetime
 
-import boto3
-
 from commands.services.api_client import ApiClient
+from commands.services.aws_utils import build_session
 from commands.services.handle_api import create_handle
 from commands.services.publication_api import PublicationApiService
 
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class HandleTaskExecutorService:
-    def __init__(self, session: boto3.Session, profile: str | None, folder: str):
+    def __init__(self, profile: str | None, folder: str):
         self.sqlite_conn = sqlite3.connect(os.path.join(folder, "done_tasks.db"))
         self.sqlite_cursor = self.sqlite_conn.cursor()
         self.sqlite_cursor.execute("""
@@ -23,8 +22,7 @@ class HandleTaskExecutorService:
             )
         """)
         self.sqlite_conn.commit()
-        self.api_client = ApiClient(session=session)
-        # PublicationApiService is converted in a later PR; bridges via profile for now.
+        self.api_client = ApiClient(session=build_session(profile))
         self.publication_service = PublicationApiService(profile)
         self.default_action = lambda task: None
         self.switcher = {

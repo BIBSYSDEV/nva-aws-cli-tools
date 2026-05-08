@@ -97,9 +97,7 @@ def execute(ctx: AppContext, input_folder: str) -> None:
         if os.path.isfile(file_path) and batch_file.endswith(".jsonl"):
             with open(file_path, "r") as infile:
                 batch = [json.loads(line) for line in infile]
-                HandleTaskExecutorService(
-                    ctx.session, ctx.profile, input_folder
-                ).execute(batch)
+                HandleTaskExecutorService(ctx.profile, input_folder).execute(batch)
 
             # Move the file to the 'complete' folder after processing
             new_file_path = os.path.join(complete_folder, batch_file)
