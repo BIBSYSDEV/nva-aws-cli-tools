@@ -18,7 +18,9 @@ def test_role_summary_counts_roles_correctly(mock_service_class: MagicMock) -> N
         make_user("carol", ["Editor"]),
     ]
 
-    result = CliRunner().invoke(cli, ["--quiet", "users", "role-summary", "--csv-output"])
+    result = CliRunner().invoke(
+        cli, ["--quiet", "users", "role-summary", "--csv-output"]
+    )
 
     assert result.exit_code == 0, result.exception
     assert "Creator,2" in result.output
@@ -50,16 +52,24 @@ def test_role_summary_sorts_by_count_descending(mock_service_class: MagicMock) -
         make_user("dave", ["Creator"]),
     ]
 
-    result = CliRunner().invoke(cli, ["--quiet", "users", "role-summary", "--csv-output"])
+    result = CliRunner().invoke(
+        cli, ["--quiet", "users", "role-summary", "--csv-output"]
+    )
 
     assert result.exit_code == 0, result.exception
-    lines = [line for line in result.output.splitlines() if "," in line and line != "Role,Number of users"]
+    lines = [
+        line
+        for line in result.output.splitlines()
+        if "," in line and line != "Role,Number of users"
+    ]
     assert lines[0].startswith("Creator")
     assert lines[1].startswith("Editor")
 
 
 @patch("commands.users.ExternalUserService")
-def test_create_external_passes_shortname_to_service(mock_service_class: MagicMock) -> None:
+def test_create_external_passes_shortname_to_service(
+    mock_service_class: MagicMock,
+) -> None:
     mock_external_user = MagicMock()
     mock_external_user.client_data = {"clientId": "id", "clientSecret": "secret"}
     mock_service_class.return_value.create.return_value = mock_external_user
@@ -70,10 +80,14 @@ def test_create_external_passes_shortname_to_service(mock_service_class: MagicMo
             "--quiet",
             "users",
             "create-external",
-            "--customer", "bb3d0c0c-5065-4623-9b98-5810983c2478",
-            "--intended_purpose", "test-integration",
-            "--scopes", "https://api.nva.unit.no/scopes/third-party/publication-read",
-            "--shortname", "MyOrg",
+            "--customer",
+            "bb3d0c0c-5065-4623-9b98-5810983c2478",
+            "--intended_purpose",
+            "test-integration",
+            "--scopes",
+            "https://api.nva.unit.no/scopes/third-party/publication-read",
+            "--shortname",
+            "MyOrg",
         ],
     )
 
@@ -87,7 +101,9 @@ def test_create_external_passes_shortname_to_service(mock_service_class: MagicMo
 
 
 @patch("commands.users.ExternalUserService")
-def test_create_external_passes_none_shortname_when_not_provided(mock_service_class: MagicMock) -> None:
+def test_create_external_passes_none_shortname_when_not_provided(
+    mock_service_class: MagicMock,
+) -> None:
     mock_external_user = MagicMock()
     mock_external_user.client_data = {"clientId": "id", "clientSecret": "secret"}
     mock_service_class.return_value.create.return_value = mock_external_user
@@ -98,9 +114,12 @@ def test_create_external_passes_none_shortname_when_not_provided(mock_service_cl
             "--quiet",
             "users",
             "create-external",
-            "--customer", "bb3d0c0c-5065-4623-9b98-5810983c2478",
-            "--intended_purpose", "test-integration",
-            "--scopes", "https://api.nva.unit.no/scopes/third-party/publication-read",
+            "--customer",
+            "bb3d0c0c-5065-4623-9b98-5810983c2478",
+            "--intended_purpose",
+            "test-integration",
+            "--scopes",
+            "https://api.nva.unit.no/scopes/third-party/publication-read",
         ],
     )
 
