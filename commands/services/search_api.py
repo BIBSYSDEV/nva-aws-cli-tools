@@ -92,7 +92,7 @@ class SearchApiService:
                     try:
                         error_detail = e.response.json()
                         logger.error(f"Error detail: {error_detail}")
-                    except (ValueError, JSONDecodeError):
+                    except ValueError, JSONDecodeError:
                         logger.error(f"Error detail: {e.response.text}")
                 break
             except requests.exceptions.RequestException as e:
