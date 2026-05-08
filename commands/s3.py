@@ -64,15 +64,15 @@ def get_versions(
       s3 get-versions 0198cc877130-63254c68-0000-0000-0000-000000000000.gz
     """
     s3_client = ctx.session.client("s3")
-
     try:
         resolved_bucket = find_bucket(s3_client, bucket)
+        normalized_key = (
+            object_key if object_key.endswith(".gz") else f"{object_key}.gz"
+        )
+        key = prefix.rstrip("/") + "/" + normalized_key.lstrip("/")
+        _fetch_and_build(s3_client, resolved_bucket, key, output_dir, no_git)
     except ValueError as exc:
         raise click.ClickException(str(exc))
-
-    normalized_key = object_key if object_key.endswith(".gz") else f"{object_key}.gz"
-    key = prefix.rstrip("/") + "/" + normalized_key.lstrip("/")
-    _fetch_and_build(s3_client, resolved_bucket, key, output_dir, no_git)
 
 
 @s3.command()
@@ -112,16 +112,16 @@ def get_versions_uri(
         )
 
     s3_client = ctx.session.client("s3")
-    _fetch_and_build(s3_client, bucket, object_path, output_dir, no_git)
+    try:
+        _fetch_and_build(s3_client, bucket, object_path, output_dir, no_git)
+    except ValueError as exc:
+        raise click.ClickException(str(exc))
 
 
 def _fetch_and_build(
     s3_client, bucket: str, key: str, output_dir: str, no_git: bool
 ) -> None:
-    try:
-        version_dir = download_versions(s3_client, bucket, key, output_dir)
-    except ValueError as exc:
-        raise click.ClickException(str(exc))
+    version_dir = download_versions(s3_client, bucket, key, output_dir)
 
     click.echo(f"Versions saved to: {version_dir}")
 

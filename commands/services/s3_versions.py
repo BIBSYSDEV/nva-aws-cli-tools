@@ -70,7 +70,7 @@ def decompress_if_needed(data: bytes, key: str) -> bytes:
     if key.endswith(".gz"):
         try:
             return gzip.decompress(data)
-        except Exception as exc:
+        except (gzip.BadGzipFile, OSError) as exc:
             logger.warning("Failed to decompress gz data: %s", exc)
     return data
 
@@ -79,7 +79,7 @@ def try_pretty_json(data: bytes) -> bytes:
     try:
         parsed = json.loads(data)
         return json.dumps(parsed, indent=2, ensure_ascii=False).encode("utf-8")
-    except Exception:
+    except json.JSONDecodeError:
         return data
 
 
