@@ -85,12 +85,14 @@ def _append_result(handle_value: str, target_url: str, status: str) -> None:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         if not file_exists:
             writer.writeheader()
-        writer.writerow({
-            "handle": handle_value,
-            "target_url": target_url,
-            "timestamp": datetime.now().isoformat(),
-            "status": status,
-        })
+        writer.writerow(
+            {
+                "handle": handle_value,
+                "target_url": target_url,
+                "timestamp": datetime.now().isoformat(),
+                "status": status,
+            }
+        )
 
 
 def _process_handle(
