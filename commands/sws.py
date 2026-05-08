@@ -2,7 +2,7 @@ import json
 
 import click
 
-from commands.services.sws import SwsClient, get_mappings
+from commands.services.sws import client_for_environment, get_mappings
 from commands.utils import AppContext
 
 
@@ -14,13 +14,20 @@ def sws():
 
 @sws.command(name="get-mappings")
 @click.argument("index")
+@click.option(
+    "--env",
+    type=click.Choice(["dev", "prod"]),
+    default="dev",
+    show_default=True,
+    help="SWS environment to target.",
+)
 @click.pass_obj
-def get_mappings_command(ctx: AppContext, index: str):
+def get_mappings_command(ctx: AppContext, index: str, env: str):
     """Get index mapping configuration
 
     INDEX is the name of the search index (e.g., 'resources', 'nvi-candidates')
     """
-    client = SwsClient(session=ctx.session, profile=ctx.profile)
+    client = client_for_environment(ctx.session, env)
     mappings = get_mappings(client, index)
 
     if mappings:
