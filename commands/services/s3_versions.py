@@ -45,6 +45,16 @@ def _tracked_filename_for_key(key: str) -> str:
     return name
 
 
+def find_bucket(s3_client: Any, name_substring: str) -> str:
+    response = s3_client.list_buckets()
+    matches = [b["Name"] for b in response["Buckets"] if name_substring in b["Name"]]
+    if not matches:
+        raise ValueError(f"No bucket found matching '{name_substring}'")
+    if len(matches) > 1:
+        raise ValueError(f"Multiple buckets match '{name_substring}': {matches}")
+    return matches[0]
+
+
 def fetch_versions(s3_client: Any, bucket: str, key: str) -> list[dict]:
     versions = []
     paginator = s3_client.get_paginator("list_object_versions")
