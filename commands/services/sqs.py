@@ -125,7 +125,9 @@ class SqsService:
 
     def start_redrive(self, source_queue_url: str, destination_queue_url: str) -> str:
         source_arn = self.get_queue_attributes(source_queue_url).get("QueueArn")
-        destination_arn = self.get_queue_attributes(destination_queue_url).get("QueueArn")
+        destination_arn = self.get_queue_attributes(destination_queue_url).get(
+            "QueueArn"
+        )
 
         response = self.sqs_client.start_message_move_task(
             SourceArn=source_arn,
@@ -161,7 +163,7 @@ class SqsService:
 
                 try:
                     processed_msg["ParsedBody"] = json.loads(msg.get("Body", "{}"))
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     processed_msg["ParsedBody"] = None
 
                 processed_messages.append(processed_msg)
@@ -280,7 +282,7 @@ class SqsService:
 
                     try:
                         processed_msg["ParsedBody"] = json.loads(msg.get("Body", "{}"))
-                    except (json.JSONDecodeError, TypeError):
+                    except json.JSONDecodeError, TypeError:
                         processed_msg["ParsedBody"] = None
 
                     messages_buffer.append(processed_msg)

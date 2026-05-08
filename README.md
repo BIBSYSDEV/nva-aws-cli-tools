@@ -41,6 +41,28 @@ uv run ruff check
 uv run ruff format
 ```
 
+#### Pre-commit hooks
+
+The repo has a `.pre-commit-config.yaml` that runs `ruff format` and `ruff check --fix` on staged Python files before each commit, using the ruff version pinned in `pyproject.toml`. After cloning, install the hooks once:
+
+```bash
+uvx pre-commit install
+```
+
+If the hook reformats files during a commit, the commit fails with a diff. Re-stage the changes (`git add -u`) and commit again.
+
+#### Output vs logging in commands
+
+Commands have two channels for text:
+
+* `click.echo(...)` for **command output**: the data the user invoked the command to get (JSON results, identifiers, file paths).
+  Goes to stdout, is unaffected by `--quiet`, and is meant to be piped (`| jq`, `> file.json`).
+* `logger.info(...)` (and `logger.warning`, `logger.error`) for **status and progress messages**: which queue is being read, retry notices, deletion confirmations.
+  Goes through the rich handler to stderr and is suppressed by `--quiet` / amplified by `--verbose`.
+
+A useful test: if you pipe the command into `jq`, the result you assume is fed in is what should go through `click.echo`.
+Everything else is a log line.
+
 ## Usage
 
 Preqrequisites to use this project:
@@ -93,9 +115,6 @@ uv run cli.py --profile sikt-nva-sandbox users search "john"
 # Using environment variable instead
 export AWS_PROFILE=sikt-nva-sandbox
 uv run cli.py users search "john"
-
-# The pipelines command supports comma-separated profiles
-uv run cli.py --profile sikt-nva-dev,sikt-nva-test pipelines branches
 ```
 
 ### **CLI Commands Summary**

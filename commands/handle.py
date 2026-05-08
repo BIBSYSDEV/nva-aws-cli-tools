@@ -53,7 +53,7 @@ def prepare(
 
     if not output_folder:
         output_folder = (
-            f"{get_account_alias(ctx.profile)}-resources-{resource_owner}-handle-tasks"
+            f"{get_account_alias(ctx.session)}-resources-{resource_owner}-handle-tasks"
         )
 
     # Create output folder if not exists

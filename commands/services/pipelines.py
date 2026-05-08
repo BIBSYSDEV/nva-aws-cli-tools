@@ -192,8 +192,7 @@ def get_single_pipeline_details(
     )
 
 
-def get_pipeline_details_for_account(profile: str) -> list[PipelineDetails]:
-    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+def get_pipeline_details_for_account(session: boto3.Session) -> list[PipelineDetails]:
     codepipeline = session.client("codepipeline")
 
     pipelines = codepipeline.list_pipelines()["pipelines"]

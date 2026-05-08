@@ -1,4 +1,8 @@
 name: Build
+permissions:
+  contents: write # To submit dependency graph
+  checks: write # To publish test results
+  pull-requests: write # To comment on PRs
 
 on:
   push:
@@ -12,24 +16,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v.8.1.0
         with:
-          version: "0.9.12"
+          version: "0.11.8"
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: ".python-version"
     
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Run tests
+      - name: Tests
         run: uv run pytest
 
-      - name: Run Ruff
+      - name: Linting
         run: uv run ruff check --output-format=github .
+
+      - name: Formatting
+        run: uv run ruff format --check .
