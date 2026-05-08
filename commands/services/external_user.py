@@ -107,11 +107,15 @@ class ExternalUserService:
         response.raise_for_status()  # raises HTTPError for 4xx and 5xx status codes
         return response.json()
 
-    def create(self, customer_id, intended_purpose, scopes, shortname: str | None = None):
+    def create(
+        self, customer_id, intended_purpose, scopes, shortname: str | None = None
+    ):
         customer_data = self._get_customer_data(customer_id)
         self.org_id = customer_data["cristinId"]
         self.customer_id = customer_data["id"]
-        self.org_abbreviation = shortname.lower() if shortname else customer_data["shortName"].lower()
+        self.org_abbreviation = (
+            shortname.lower() if shortname else customer_data["shortName"].lower()
+        )
         self.intended_purpose = intended_purpose
         client_data = self._create_external_client_token(scopes)
         return ExternalUser(self.org_abbreviation, self.intended_purpose, client_data)

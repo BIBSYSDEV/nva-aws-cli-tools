@@ -80,7 +80,11 @@ def approve_terms(ctx: AppContext, user_id: str) -> None:
 )
 @click.pass_obj
 def create_external(
-    ctx: AppContext, customer: str, intended_purpose: str, scopes: str, shortname: str | None
+    ctx: AppContext,
+    customer: str,
+    intended_purpose: str,
+    scopes: str,
+    shortname: str | None,
 ) -> None:
     external_user = ExternalUserService(ctx.profile).create(
         customer, intended_purpose, scopes.split(","), shortname
