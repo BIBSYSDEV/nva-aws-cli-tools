@@ -6,7 +6,7 @@ import shutil
 from boto3.dynamodb.conditions import Key
 from commands.utils import AppContext
 from commands.services.aws_utils import get_account_alias
-from commands.services.handle_task_writer import HandleTaskWriterService
+from commands.services.handle_task_writer import build_task
 from commands.services.handle_task_executor import HandleTaskExecutorService
 from commands.services.dynamodb_publications import DynamodbPublications
 
@@ -65,7 +65,7 @@ def prepare(
     def process_batch(batch, batch_counter):
         with open(f"{output_folder}/batch_{batch_counter}.jsonl", "w") as outfile:
             for data in batch:
-                task = HandleTaskWriterService().process_item(data, prefix)
+                task = build_task(data, prefix)
                 action = task.get("action")
                 action_counts[action] = action_counts.get(action, 0) + 1
                 json.dump(task, outfile)

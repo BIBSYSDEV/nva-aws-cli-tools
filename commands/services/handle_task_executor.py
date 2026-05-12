@@ -1,15 +1,18 @@
-from .handle_api import HandleApiService
-from .publication_api import PublicationApiService
 import logging
+import os
 import sqlite3
 from datetime import datetime
-import os
+
+from commands.services.api_client import ApiClient
+from commands.services.aws_utils import build_session
+from commands.services.handle_api import create_handle
+from commands.services.publication_api import PublicationApiService
 
 logger = logging.getLogger(__name__)
 
 
 class HandleTaskExecutorService:
-    def __init__(self, profile, folder):
+    def __init__(self, profile: str | None, folder: str):
         self.sqlite_conn = sqlite3.connect(os.path.join(folder, "done_tasks.db"))
         self.sqlite_cursor = self.sqlite_conn.cursor()
         self.sqlite_cursor.execute("""
@@ -19,7 +22,7 @@ class HandleTaskExecutorService:
             )
         """)
         self.sqlite_conn.commit()
-        self.handle_service = HandleApiService(profile)
+        self.api_client = ApiClient(session=build_session(profile))
         self.publication_service = PublicationApiService(profile)
         self.default_action = lambda task: None
         self.switcher = {
@@ -33,7 +36,6 @@ class HandleTaskExecutorService:
             "promote_additional": lambda task: self.promote_additional(task),
             "create_new_top": lambda task: self.create_new_top(task),
         }
-        pass
 
     def __del__(self):
         if self.sqlite_conn:
@@ -73,21 +75,15 @@ class HandleTaskExecutorService:
         return task is not None
 
     def import_handles(self, item):
-        handles_to_import = item.get("handles_to_import", [])
-        for handle in handles_to_import:
+        for handle in item.get("handles_to_import", []):
             path_segments = handle.split("/")
-            suffix = path_segments.pop()  # Last segment
-            prefix = path_segments.pop()  # Second last segment
+            suffix = path_segments.pop()
+            prefix = path_segments.pop()
             value = self.publication_service.get_uri(item.get("identifier"))
             logger.info(f"Create handle {prefix}/{suffix} with value " + value)
-            request_body = {
-                "uri": value,
-                "prefix": prefix,
-                "suffix": suffix,
-            }
-            result = self.handle_service.create_handle(request_body)
+            request_body = {"uri": value, "prefix": prefix, "suffix": suffix}
+            result = create_handle(self.api_client, request_body)
             logger.info(f"Handle {prefix}/{suffix} was created with result: {result}")
-        pass
 
     def execute(self, batch):
         for item in batch:
@@ -105,4 +101,3 @@ class HandleTaskExecutorService:
             else:
                 logger.error(f"Unknown action: {action}")
                 exit(1)
-        pass
