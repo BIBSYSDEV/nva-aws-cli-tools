@@ -163,7 +163,7 @@ class SqsService:
 
                 try:
                     processed_msg["ParsedBody"] = json.loads(msg.get("Body", "{}"))
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     processed_msg["ParsedBody"] = None
 
                 processed_messages.append(processed_msg)
@@ -282,7 +282,7 @@ class SqsService:
 
                     try:
                         processed_msg["ParsedBody"] = json.loads(msg.get("Body", "{}"))
-                    except (json.JSONDecodeError, TypeError):
+                    except json.JSONDecodeError, TypeError:
                         processed_msg["ParsedBody"] = None
 
                     messages_buffer.append(processed_msg)
