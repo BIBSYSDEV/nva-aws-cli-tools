@@ -26,6 +26,18 @@ class SearchApiService:
     def get_uri(self, type: str) -> str:
         return f"https://{self.api_domain}/search/{type}"
 
+    def find_by_handle(self, handle_value: str) -> list:
+        hits = list(
+            self.resource_search(
+                {"aggregation": "none", "handle": handle_value}, page_size=10
+            )
+        )
+        return [hit for hit in hits if self._hit_contains_handle(hit, handle_value)]
+
+    def _hit_contains_handle(self, hit: dict, handle_value: str) -> bool:
+        handles = hit.get("otherIdentifiers", {}).get("handle", [])
+        return any(handle_url.endswith(f"/{handle_value}") for handle_url in handles)
+
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=2, max=30),
