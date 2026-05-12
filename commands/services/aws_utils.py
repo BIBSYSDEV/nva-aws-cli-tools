@@ -12,6 +12,10 @@ def build_session(profile: str | None = None) -> boto3.Session:
     return boto3.Session(profile_name=profile) if profile else boto3.Session()
 
 
+def get_ssm_parameter(session: boto3.Session, name: str) -> str:
+    return session.client("ssm").get_parameter(Name=name)["Parameter"]["Value"]
+
+
 def get_account_alias(session: boto3.Session) -> str | None:
     account_aliases = session.client("iam").list_account_aliases()["AccountAliases"]
     return account_aliases[0] if account_aliases else None

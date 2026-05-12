@@ -80,10 +80,15 @@ class HandleApiService:
             "Content-Type": "application/json",
         }
         response = requests.put(url, headers=headers, json=request_body)
+        response.raise_for_status()
         return response.json()
 
     def set_handle(self, handle_value: str, target_url: str) -> dict:
         segments = handle_value.split("/")
+        if len(segments) < 2:
+            raise ValueError(
+                f"Invalid handle: {handle_value!r}, expected 'prefix/suffix'"
+            )
         suffix = segments.pop()
         prefix = segments.pop()
         return self.update_handle(prefix, suffix, {"uri": target_url})

@@ -2,6 +2,8 @@ import csv
 import json
 
 import boto3
+import pytest
+import requests
 import responses
 from click.testing import CliRunner
 from moto import mock_aws
@@ -67,6 +69,12 @@ def test_hit_contains_handle_no_match():
     assert service._hit_contains_handle(hit, "11250/2497055") is False
 
 
+def test_hit_contains_handle_no_prefix_false_positive():
+    service = SearchApiService.__new__(SearchApiService)
+    hit = _a_hit("11250/24970550000")
+    assert service._hit_contains_handle(hit, "11250/2497055") is False
+
+
 def test_hit_contains_handle_empty():
     service = SearchApiService.__new__(SearchApiService)
     hit = {"id": A_PUBLICATION_ID, "otherIdentifiers": {"handle": []}}
@@ -95,6 +103,22 @@ def test_find_by_handle_filters_non_matching_hit():
     result = SearchApiService(None).find_by_handle(A_HANDLE)
 
     assert result == []
+
+
+@mock_aws
+@responses.activate
+def test_update_handle_raises_on_error_response(tmp_path):
+    from commands.services.handle_api import HandleApiService
+
+    _seed_ssm()
+    responses.add(
+        responses.POST, COGNITO_URL, json={"access_token": "token", "expires_in": 3600}
+    )
+    responses.add(responses.PUT, HANDLE_URL, status=404)
+
+    service = HandleApiService(None)
+    with pytest.raises(requests.exceptions.HTTPError):
+        service.set_handle(A_HANDLE, "https://nva.example.org/registration/abc")
 
 
 @mock_aws

@@ -36,7 +36,7 @@ class SearchApiService:
 
     def _hit_contains_handle(self, hit: dict, handle_value: str) -> bool:
         handles = hit.get("otherIdentifiers", {}).get("handle", [])
-        return any(handle_value in handle_url for handle_url in handles)
+        return any(handle_url.endswith(f"/{handle_value}") for handle_url in handles)
 
     @retry(
         stop=stop_after_attempt(5),

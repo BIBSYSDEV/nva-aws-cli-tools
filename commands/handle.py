@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime
 from commands.utils import AppContext
+from commands.services.aws_utils import get_ssm_parameter
 from commands.services.handle_api import HandleApiService
 from commands.services.publication_api import extract_publication_identifier
 from commands.services.search_api import SearchApiService
@@ -41,11 +42,11 @@ def redirect_to_nva(ctx: AppContext, handles: tuple, dry_run: bool) -> None:
     """
     handle_service = HandleApiService(ctx.profile)
     search_service = SearchApiService(ctx.profile)
-    app_domain = handle_service._get_system_parameter(APPLICATION_DOMAIN_PARAMETER)
+    app_domain = get_ssm_parameter(ctx.session, APPLICATION_DOMAIN_PARAMETER)
     registration_base_url = f"https://{app_domain}/{REGISTRATION_PATH}"
 
     if dry_run:
-        click.echo("DRY RUN - no handles will be updated")
+        logger.info("DRY RUN - no handles will be updated")
 
     done = _load_done(DONE_CSV)
     for handle_value in handles:
@@ -69,7 +70,7 @@ def set_handle(ctx: AppContext, handle_value: str, target_url: str) -> None:
     """Update a single handle to point to TARGET_URL."""
     handle_service = HandleApiService(ctx.profile)
     result = handle_service.set_handle(handle_value, target_url)
-    click.echo(f"UPDATED {handle_value} → {target_url} ({result})")
+    logger.info("UPDATED %s → %s (%s)", handle_value, target_url, result)
 
 
 def _load_done(csv_path: str) -> set:
