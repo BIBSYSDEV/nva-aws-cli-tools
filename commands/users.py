@@ -4,12 +4,14 @@ import click
 import sys
 import logging
 from collections import Counter
+from operator import itemgetter
 
 from rich.console import Console
 from rich.table import Table
 
 from commands.utils import AppContext
 from commands.services.users_api import UsersAndRolesService
+from commands.services.user_models import User
 from commands.services.aws_utils import prettify
 from commands.services.external_user import ExternalUserService
 from commands.services.user_export import UserExportService
@@ -151,6 +153,20 @@ def export_roles(
     logger.info(f"Excel file saved to: {result.filename}")
 
 
+def _count_users_per_role(
+    users: list[User], role_filter: set[str] | None
+) -> list[tuple[str, int]]:
+    role_counts: Counter = Counter(
+        role.name
+        for user in users
+        for role in user.roles
+        if role.name and (role_filter is None or role.name in role_filter)
+    )
+    sorted_counts = sorted(role_counts.items())
+    sorted_counts.sort(key=itemgetter(1), reverse=True)
+    return sorted_counts
+
+
 @users.command(help="Show number of users per role")
 @click.option(
     "--roles",
@@ -163,13 +179,7 @@ def role_summary(ctx: AppContext, roles: str, csv_output: bool) -> None:
 
     all_users = UsersAndRolesService(ctx.profile).get_all_users()
 
-    role_counts: Counter = Counter()
-    for user in all_users:
-        for role in user.roles:
-            if role.name and (role_filter is None or role.name in role_filter):
-                role_counts[role.name] += 1
-
-    sorted_counts = sorted(role_counts.items(), key=lambda item: -item[1])
+    sorted_counts = _count_users_per_role(all_users, role_filter)
 
     if csv_output:
         writer = csv.writer(sys.stdout)
