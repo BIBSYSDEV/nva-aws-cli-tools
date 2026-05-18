@@ -5,9 +5,9 @@ description = "Python scripts using aws-cli"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "boto3>=1.43.3",
+    "boto3>=1.43.6",
     "click>=8.3.3",
-    "requests>=2.33.1",
+    "requests>=2.34.0",
     "rich>=14.2.0",
     "tabulate>=0.10.0",
     "tqdm>=4.67.3",
