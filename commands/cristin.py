@@ -6,7 +6,13 @@ import csv
 
 from commands.utils import AppContext
 from commands.services.cristin import CristinService
-from commands.services.users_api import UsersAndRolesService
+from commands.services.api_client import ApiClient
+from commands.services.users_api import (
+    add_user,
+    approve_terms,
+    get_user_by_username,
+    update_user,
+)
 from commands.services.aws_utils import prettify
 
 
@@ -76,7 +82,7 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
     """
     Adds users to Cristin from all JSON files in the specified folder and pre-approves their terms.
     """
-    user_service = UsersAndRolesService(ctx.profile)
+    api_client = ApiClient(session=ctx.session)
     cristin_service = CristinService(ctx.profile)
     for filename in os.listdir(folder_path):
         if filename.endswith(".json"):
@@ -102,11 +108,12 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
                     # make sure user also exists in NVA and have accepted terms
                     cristin_person_id = cristin_person.get("cristin_person_id")
                     if cristin_person_id:
-                        nva_user = user_service.get_user_by_username(
-                            f"{cristin_person_id}@20754.0.0.0"
+                        nva_user = get_user_by_username(
+                            api_client, f"{cristin_person_id}@20754.0.0.0"
                         )
                         if not nva_user:
-                            nva_user = user_service.add_user(
+                            nva_user = add_user(
+                                api_client,
                                 {
                                     "cristinIdentifier": cristin_person_id,
                                     "customerId": "https://api.dev.nva.aws.unit.no/customer/bb3d0c0c-5065-4623-9b98-5810983c2478",
@@ -115,7 +122,7 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
                                         "type": "ViewingScope",
                                         "includedUnits": [],
                                     },
-                                }
+                                },
                             )
                         else:
                             click.echo(
@@ -130,10 +137,10 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
                             roles_data = json.loads(roles_file.read())
                             nva_user["roles"] = roles_data
 
-                        user_service.update_user(nva_user)
+                        update_user(api_client, nva_user)
                         click.echo(f"User roles updated in NVA: {nva_user['username']}")
 
-                        user_service.approve_terms(cristin_person_id)
+                        approve_terms(ctx.session, api_client, cristin_person_id)
                         click.echo(f"Terms pre-approved for user {cristin_person_id}")
 
                         with open(

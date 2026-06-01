@@ -1,124 +1,9 @@
-import requests
-import boto3
 import json
-from datetime import datetime, timedelta
 from dataclasses import dataclass
 
-"""
-# example of usage
+import requests
 
-from services import ExternalUserService
-
-
-customer_id = "bb3d0c0c-5065-4623-9b98-5810983c2478" #sikt in dev
-intended_purpose = "handle-migration"
-profile = "sikt-nva-dev"
-scopes = ["https://api.nva.unit.no/scopes/third-party/publication-read"]
-
-external_user_service = ExternalUserService(profile)
-external_user = external_user_service.create(customer_id, intended_purpose, scopes)
-external_user.save_to_file()
-"""
-
-
-class ExternalUserService:
-    def __init__(self, profile):
-        self.session = boto3.Session(profile_name=profile)
-        self.ssm = self.session.client("ssm")
-        self.secretsmanager = self.session.client("secretsmanager")
-        self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
-        self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
-        self.client_credentials = self._get_secret("BackendCognitoClientCredentials")
-        self.token = None
-        self.token_expiry_time = None
-
-    def _get_system_parameter(self, name):
-        response = self.ssm.get_parameter(Name=name)
-        return response["Parameter"]["Value"]
-
-    def _get_secret(self, name):
-        response = self.secretsmanager.get_secret_value(SecretId=name)
-        secret_string = response["SecretString"]
-        secret = json.loads(secret_string)
-        return secret
-
-    def _get_cognito_token(self):
-        url = f"{self.cognito_uri}/oauth2/token"
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        data = {
-            "grant_type": "client_credentials",
-            "client_id": self.client_credentials["backendClientId"],
-            "client_secret": self.client_credentials["backendClientSecret"],
-        }
-        response = requests.post(url, headers=headers, data=data)
-        response.raise_for_status()
-        response_json = response.json()
-        token_expiry_time = datetime.now() + timedelta(
-            seconds=response_json["expires_in"]
-        )
-        return response_json["access_token"], token_expiry_time
-
-    def _get_token(self):
-        if not self.token or self._is_token_expired():
-            self.token, self.token_expiry_time = self._get_cognito_token()
-        return self.token
-
-    def _is_token_expired(self):
-        if not self.token_expiry_time:
-            return True
-        return datetime.now() > self.token_expiry_time - timedelta(seconds=30)
-
-    def _create_external_client_token(self, scopes):
-        url = f"https://{self.api_domain}/users-roles/external-clients"
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {self._get_token()}",
-        }
-        data = {
-            "clientName": f"{self.org_abbreviation}-{self.intended_purpose}-integration",
-            "customerUri": self.customer_id,
-            "cristinOrgUri": self.org_id,
-            "actingUser": f"{self.intended_purpose}-integration@{self.org_abbreviation}",
-            "scopes": scopes,
-        }
-        response = requests.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        response_json = response.json()
-        return {
-            "clientId": response_json["clientId"],
-            "clientSecret": response_json["clientSecret"],
-            "tokenUrl": response_json["clientUrl"],
-            "clientName": data["clientName"],
-            "customerUri": data["customerUri"],
-            "cristinOrgUri": data["cristinOrgUri"],
-            "actingUser": data["actingUser"],
-            "scopes": data["scopes"],
-        }
-
-    def _get_customer_data(self, customer_id):
-        url = f"https://{self.api_domain}/customer/{customer_id}"
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {self._get_token()}",
-        }
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # raises HTTPError for 4xx and 5xx status codes
-        return response.json()
-
-    def create(
-        self, customer_id, intended_purpose, scopes, shortname: str | None = None
-    ):
-        customer_data = self._get_customer_data(customer_id)
-        self.org_id = customer_data["cristinId"]
-        self.customer_id = customer_data["id"]
-        self.org_abbreviation = (
-            shortname.lower() if shortname else customer_data["shortName"].lower()
-        )
-        self.intended_purpose = intended_purpose
-        client_data = self._create_external_client_token(scopes)
-        return ExternalUser(self.org_abbreviation, self.intended_purpose, client_data)
+from commands.services.api_client import ApiClient
 
 
 @dataclass
@@ -127,8 +12,80 @@ class ExternalUser:
     intended_purpose: str
     client_data: dict
 
-    def save_to_file(self):
-        with open(
-            f"{self.org_abbreviation}-{self.intended_purpose}-credentials.json", "w"
-        ) as json_file:
+    def save_to_file(self) -> None:
+        filename = f"{self.org_abbreviation}-{self.intended_purpose}-credentials.json"
+        with open(filename, "w") as json_file:
             json.dump(self.client_data, json_file, indent=4)
+
+
+def create_external_user(
+    client: ApiClient,
+    customer_id: str,
+    intended_purpose: str,
+    scopes: list[str],
+    shortname: str | None = None,
+) -> ExternalUser:
+    customer_data = _get_customer_data(client, customer_id)
+    org_abbreviation = (shortname or customer_data["shortName"]).lower()
+
+    client_data = _create_external_client_token(
+        client=client,
+        customer_uri=customer_data["id"],
+        cristin_org_uri=customer_data["cristinId"],
+        org_abbreviation=org_abbreviation,
+        intended_purpose=intended_purpose,
+        scopes=scopes,
+    )
+    return ExternalUser(org_abbreviation, intended_purpose, client_data)
+
+
+def _get_customer_data(client: ApiClient, customer_id: str) -> dict:
+    response = requests.get(
+        f"https://{client.api_domain}/customer/{customer_id}",
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            **client.auth_header(),
+        },
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _create_external_client_token(
+    *,
+    client: ApiClient,
+    customer_uri: str,
+    cristin_org_uri: str,
+    org_abbreviation: str,
+    intended_purpose: str,
+    scopes: list[str],
+) -> dict:
+    request_body = {
+        "clientName": f"{org_abbreviation}-{intended_purpose}-integration",
+        "customerUri": customer_uri,
+        "cristinOrgUri": cristin_org_uri,
+        "actingUser": f"{intended_purpose}-integration@{org_abbreviation}",
+        "scopes": scopes,
+    }
+    response = requests.post(
+        f"https://{client.api_domain}/users-roles/external-clients",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            **client.auth_header(),
+        },
+    )
+    response.raise_for_status()
+    response_json = response.json()
+    return {
+        "clientId": response_json["clientId"],
+        "clientSecret": response_json["clientSecret"],
+        "tokenUrl": response_json["clientUrl"],
+        "clientName": request_body["clientName"],
+        "customerUri": request_body["customerUri"],
+        "cristinOrgUri": request_body["cristinOrgUri"],
+        "actingUser": request_body["actingUser"],
+        "scopes": request_body["scopes"],
+    }

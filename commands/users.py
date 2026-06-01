@@ -1,20 +1,27 @@
 import csv
 import json
-import click
-import sys
 import logging
+import sys
 from collections import Counter
+from datetime import datetime
 from operator import itemgetter
 
+import click
 from rich.console import Console
 from rich.table import Table
 
-from commands.utils import AppContext
-from commands.services.users_api import UsersAndRolesService
-from commands.services.user_models import User
+from commands.services.api_client import ApiClient
 from commands.services.aws_utils import prettify
-from commands.services.external_user import ExternalUserService
-from commands.services.user_export import UserExportService
+from commands.services.external_user import create_external_user
+from commands.services.user_export import export_users_to_excel
+from commands.services.user_models import User
+from commands.services.users_api import (
+    add_user,
+    approve_terms,
+    get_all_users,
+    search_users,
+)
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 
@@ -28,30 +35,29 @@ def users(ctx: AppContext):
 @users.command(help="Search users by user values")
 @click.argument("search_term", required=True, nargs=-1)
 @click.pass_obj
-def search(ctx: AppContext, search_term: str) -> None:
-    search_term = " ".join(search_term)
-    result = UsersAndRolesService(ctx.profile).search(search_term)
+def search(ctx: AppContext, search_term: tuple[str, ...]) -> None:
+    result = search_users(ctx.session, " ".join(search_term))
     click.echo(prettify(result))
 
 
-@users.command(help="Add user")
+@users.command(name="add-user", help="Add user")
 @click.argument("user_data", type=click.File("r"), default=sys.stdin)
 @click.pass_obj
-def add_user(ctx: AppContext, user_data: str) -> None:
-    if user_data.isatty():
-        user_data_json = sys.stdin.read()
-    else:
-        user_data_json = user_data.read()
+def add_user_cmd(ctx: AppContext, user_data) -> None:
+    user_data_json = sys.stdin.read() if user_data.isatty() else user_data.read()
     user = json.loads(user_data_json)
-    result = UsersAndRolesService(ctx.profile).add_user(user)
+    result = add_user(ApiClient(session=ctx.session), user)
     click.echo(prettify(result))
 
 
-@users.command(help="Approve user terms by passing cristin person ID (e.g. 2009968)")
+@users.command(
+    name="approve-terms",
+    help="Approve user terms by passing cristin person ID (e.g. 2009968)",
+)
 @click.argument("user_id", required=True)
 @click.pass_obj
-def approve_terms(ctx: AppContext, user_id: str) -> None:
-    result = UsersAndRolesService(ctx.profile).approve_terms(user_id)
+def approve_terms_cmd(ctx: AppContext, user_id: str) -> None:
+    result = approve_terms(ctx.session, ApiClient(session=ctx.session), user_id)
     click.echo(prettify(result))
 
 
@@ -88,8 +94,12 @@ def create_external(
     scopes: str,
     shortname: str | None,
 ) -> None:
-    external_user = ExternalUserService(ctx.profile).create(
-        customer, intended_purpose, scopes.split(","), shortname
+    external_user = create_external_user(
+        ApiClient(session=ctx.session),
+        customer,
+        intended_purpose,
+        scopes.split(","),
+        shortname,
     )
     external_user.save_to_file()
     click.echo(prettify(external_user.client_data))
@@ -140,9 +150,10 @@ def export_roles(
     logger.info("Fetching all users from DynamoDB...")
     logger.info("Fetching customer data for institution names...")
 
-    service = UserExportService(ctx.profile)
-    result = service.export_to_excel(
-        output_filename=output,
+    output_filename = output or _default_export_filename(ctx.profile)
+    result = export_users_to_excel(
+        ctx.session,
+        output_filename=output_filename,
         exclude_only_roles=excluded_roles_list,
         include_roles=included_roles_list,
     )
@@ -151,6 +162,12 @@ def export_roles(
         f"Found {result.total_users} users, exported {result.exported_users} users."
     )
     logger.info(f"Excel file saved to: {result.filename}")
+
+
+def _default_export_filename(profile: str | None) -> str:
+    profile_name = profile or "default"
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    return f"users-{profile_name}-{timestamp}.xlsx"
 
 
 def _count_users_per_role(
@@ -177,8 +194,7 @@ def _count_users_per_role(
 def role_summary(ctx: AppContext, roles: str, csv_output: bool) -> None:
     role_filter = {role.strip() for role in roles.split(",")} if roles else None
 
-    all_users = UsersAndRolesService(ctx.profile).get_all_users()
-
+    all_users = get_all_users(ctx.session)
     sorted_counts = _count_users_per_role(all_users, role_filter)
 
     if csv_output:

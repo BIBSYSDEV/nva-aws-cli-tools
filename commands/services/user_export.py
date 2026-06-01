@@ -1,76 +1,66 @@
-import polars as pl
 from datetime import datetime
-from typing import Optional
-from commands.services.aws_utils import build_session
-from commands.services.users_api import UsersAndRolesService
+
+import boto3
+import polars as pl
+
 from commands.services.customers_api import build_customer_lookup
-from commands.services.user_models import User, ExportResult
+from commands.services.user_models import ExportResult, User
+from commands.services.users_api import get_all_users
 
 
-class UserExportService:
-    def __init__(self, profile: Optional[str]):
-        self.profile = profile
-        self.users_service = UsersAndRolesService(profile)
-        self.customer_lookup: Optional[dict[str, str]] = None
+def export_users_to_excel(
+    session: boto3.Session,
+    *,
+    output_filename: str | None = None,
+    exclude_only_roles: list[str] | None = None,
+    include_roles: list[str] | None = None,
+) -> ExportResult:
+    all_users = get_all_users(session)
+    customer_lookup = build_customer_lookup(session)
 
-    def export_to_excel(
-        self,
-        output_filename: Optional[str] = None,
-        exclude_only_roles: Optional[list[str]] = None,
-        include_roles: Optional[list[str]] = None,
-    ) -> ExportResult:
-        all_users = self.users_service.get_all_users()
-        self.customer_lookup = build_customer_lookup(build_session(self.profile))
+    excluded_only_roles_set = set(exclude_only_roles) if exclude_only_roles else set()
+    included_roles_set = set(include_roles) if include_roles else set()
 
-        excluded_only_roles_set = (
-            set(exclude_only_roles) if exclude_only_roles else set()
-        )
-        included_roles_set = set(include_roles) if include_roles else set()
+    filtered_users = _filter_users(
+        all_users, excluded_only_roles_set, included_roles_set
+    )
 
-        filtered_users = self._filter_users(
-            all_users, excluded_only_roles_set, included_roles_set
-        )
+    if not output_filename:
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+        output_filename = f"users-{timestamp}.xlsx"
 
-        if not output_filename:
-            profile_name = self.profile or "default"
-            datetime_str = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-            output_filename = f"users-{profile_name}-{datetime_str}.xlsx"
+    _create_excel_file(filtered_users, customer_lookup, output_filename)
 
-        self._create_excel_file(filtered_users, output_filename)
+    return ExportResult(
+        total_users=len(all_users),
+        exported_users=len(filtered_users),
+        filename=output_filename,
+    )
 
-        return ExportResult(
-            total_users=len(all_users),
-            exported_users=len(filtered_users),
-            filename=output_filename,
-        )
 
-    def _filter_users(
-        self,
-        all_users: list[User],
-        excluded_only_roles_set: set[str],
-        included_roles_set: set[str],
-    ) -> list[User]:
-        filtered_users = []
-        for user in all_users:
-            user_role_names = {role.name for role in user.roles if role.name}
+def _filter_users(
+    all_users: list[User],
+    excluded_only_roles: set[str],
+    included_roles: set[str],
+) -> list[User]:
+    filtered = []
+    for user in all_users:
+        user_role_names = {role.name for role in user.roles if role.name}
+        if excluded_only_roles:
+            if not (user_role_names and user_role_names.issubset(excluded_only_roles)):
+                filtered.append(user)
+        elif included_roles:
+            if user_role_names.intersection(included_roles):
+                filtered.append(user)
+        else:
+            filtered.append(user)
+    return filtered
 
-            if excluded_only_roles_set:
-                if not (
-                    user_role_names
-                    and user_role_names.issubset(excluded_only_roles_set)
-                ):
-                    filtered_users.append(user)
-            elif included_roles_set:
-                if user_role_names.intersection(included_roles_set):
-                    filtered_users.append(user)
-            else:
-                filtered_users.append(user)
 
-        return filtered_users
-
-    def _create_excel_file(self, users: list[User], output_filename: str) -> None:
-        excel_rows = [user.to_excel_row(self.customer_lookup) for user in users]
-        rows = [row.to_list() for row in excel_rows]
-        df = pl.DataFrame(rows, schema=User.ExcelRow.headers(), orient="row")
-
-        df.write_excel(output_filename, worksheet="Users and Roles", autofit=True)
+def _create_excel_file(
+    users: list[User], customer_lookup: dict[str, str], output_filename: str
+) -> None:
+    excel_rows = [user.to_excel_row(customer_lookup) for user in users]
+    rows = [row.to_list() for row in excel_rows]
+    df = pl.DataFrame(rows, schema=User.ExcelRow.headers(), orient="row")
+    df.write_excel(output_filename, worksheet="Users and Roles", autofit=True)
