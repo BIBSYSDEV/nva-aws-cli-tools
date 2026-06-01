@@ -1,8 +1,6 @@
-import json
-from datetime import datetime, timedelta
-
-import boto3
 import requests
+
+from commands.services.api_client import ApiClient
 
 CHANNEL_BASE_PATH = "publication-channels-v2"
 DELETE_PATH_SEGMENT = "channel"
@@ -24,23 +22,14 @@ UPDATE_SERIAL_PUBLICATION_REQUEST_TYPE = "UpdateSerialPublicationRequest"
 CONTENT_TYPE_LD_JSON = "application/ld+json"
 CONTENT_TYPE_JSON = "application/json"
 
-TOKEN_REFRESH_MARGIN_SECONDS = 30
-
 
 class ChannelNotFoundError(Exception):
     pass
 
 
 class ChannelsApiService:
-    def __init__(self, profile: str | None):
-        self.session = boto3.Session(profile_name=profile)
-        self.ssm = self.session.client("ssm")
-        self.secretsmanager = self.session.client("secretsmanager")
-        self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
-        self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
-        self.client_credentials = self._get_secret("BackendCognitoClientCredentials")
-        self.token: str | None = None
-        self.token_expiry_time = datetime.fromtimestamp(0)
+    def __init__(self, client: ApiClient):
+        self.client = client
 
     def search(
         self,
@@ -68,21 +57,12 @@ class ChannelsApiService:
         return response.json()
 
     def fetch_auto(self, identifier: str, year: int | None = None) -> tuple[dict, str]:
-        last_http_error: requests.HTTPError | None = None
         for kind in (KIND_SERIAL, KIND_PUBLISHER):
             try:
                 channel = self.fetch(kind, identifier, year)
                 return channel, kind
             except ChannelNotFoundError:
                 continue
-            except requests.HTTPError as exc:
-                status = exc.response.status_code if exc.response is not None else 0
-                if 500 <= status < 600:
-                    last_http_error = exc
-                    continue
-                raise
-        if last_http_error is not None:
-            raise last_http_error
         raise ChannelNotFoundError(
             f"No channel with identifier {identifier} found in serial-publication or publisher"
         )
@@ -174,10 +154,10 @@ class ChannelsApiService:
 
     def delete_channel(self, identifier: str) -> None:
         url = (
-            f"https://{self.api_domain}/{CHANNEL_BASE_PATH}/"
+            f"https://{self.client.api_domain}/{CHANNEL_BASE_PATH}/"
             f"{DELETE_PATH_SEGMENT}/{identifier}"
         )
-        response = requests.delete(url, headers=self._auth_headers())
+        response = requests.delete(url, headers=self.client.auth_header())
         if response.status_code == 404:
             raise ChannelNotFoundError(f"channel {identifier} not found")
         response.raise_for_status()
@@ -185,13 +165,10 @@ class ChannelsApiService:
     def _channel_url(self, kind: str) -> str:
         if kind not in VALID_KINDS:
             raise ValueError(f"Unknown channel kind: {kind}")
-        return f"https://{self.api_domain}/{CHANNEL_BASE_PATH}/{kind}"
-
-    def _auth_headers(self) -> dict:
-        return {"Authorization": f"Bearer {self._get_token()}"}
+        return f"https://{self.client.api_domain}/{CHANNEL_BASE_PATH}/{kind}"
 
     def _post(self, kind: str, body: dict) -> dict:
-        headers = self._auth_headers() | {"Content-Type": CONTENT_TYPE_LD_JSON}
+        headers = self.client.auth_header() | {"Content-Type": CONTENT_TYPE_LD_JSON}
         response = requests.post(self._channel_url(kind), headers=headers, json=body)
         response.raise_for_status()
         if response.text:
@@ -200,7 +177,7 @@ class ChannelsApiService:
 
     def _put(self, kind: str, identifier: str, body: dict) -> dict:
         url = f"{self._channel_url(kind)}/{identifier}"
-        headers = self._auth_headers() | {"Content-Type": CONTENT_TYPE_JSON}
+        headers = self.client.auth_header() | {"Content-Type": CONTENT_TYPE_JSON}
         response = requests.put(url, headers=headers, json=body)
         response.raise_for_status()
         if response.status_code == 202:
@@ -208,40 +185,6 @@ class ChannelsApiService:
         if response.text:
             return response.json()
         return {}
-
-    def _get_system_parameter(self, name: str) -> str:
-        response = self.ssm.get_parameter(Name=name)
-        return response["Parameter"]["Value"]
-
-    def _get_secret(self, name: str) -> dict:
-        response = self.secretsmanager.get_secret_value(SecretId=name)
-        return json.loads(response["SecretString"])
-
-    def _get_cognito_token(self) -> str:
-        url = f"{self.cognito_uri}/oauth2/token"
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        data = {
-            "grant_type": "client_credentials",
-            "client_id": self.client_credentials["backendClientId"],
-            "client_secret": self.client_credentials["backendClientSecret"],
-        }
-        response = requests.post(url, headers=headers, data=data)
-        response.raise_for_status()
-        response_json = response.json()
-        self.token_expiry_time = datetime.now() + timedelta(
-            seconds=response_json["expires_in"]
-        )
-        return response_json["access_token"]
-
-    def _is_token_expired(self) -> bool:
-        return datetime.now() > self.token_expiry_time - timedelta(
-            seconds=TOKEN_REFRESH_MARGIN_SECONDS
-        )
-
-    def _get_token(self) -> str:
-        if self._is_token_expired():
-            self.token = self._get_cognito_token()
-        return self.token
 
 
 def _drop_none(body: dict) -> dict:

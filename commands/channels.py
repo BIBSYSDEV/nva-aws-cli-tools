@@ -5,6 +5,7 @@ import requests
 from rich.console import Console
 from rich.table import Table
 
+from commands.services.api_client import ApiClient
 from commands.services.channels_api import (
     KIND_JOURNAL,
     KIND_PUBLISHER,
@@ -67,7 +68,7 @@ def search(
     size: int,
 ) -> None:
     """Search channels across journals/series/publishers."""
-    service = ChannelsApiService(ctx.profile)
+    service = ChannelsApiService(ApiClient(session=ctx.session))
     rows, total_hits = _collect_search_rows(service, query, kind, year, offset, size)
     _render_table(rows, query, total_hits)
 
@@ -85,7 +86,7 @@ def search(
 @_handle_api_errors
 def get(ctx: AppContext, identifier: str, year: int | None, kind: str | None) -> None:
     """Fetch a single channel by identifier (auto-detects type)."""
-    service = ChannelsApiService(ctx.profile)
+    service = ChannelsApiService(ApiClient(session=ctx.session))
     if kind is None:
         channel, resolved_kind = service.fetch_auto(identifier, year)
     else:
@@ -117,7 +118,7 @@ def create(
 ) -> None:
     """Create a new channel. Picks publisher vs serial-publication from flags."""
     resolved_kind = _infer_create_kind(kind, isbn, print_issn, online_issn)
-    service = ChannelsApiService(ctx.profile)
+    service = ChannelsApiService(ApiClient(session=ctx.session))
 
     if resolved_kind == KIND_PUBLISHER:
         if print_issn or online_issn:
@@ -161,7 +162,7 @@ def update(
     if name is None and isbn is None and print_issn is None and online_issn is None:
         raise click.UsageError("Specify at least one field to update.")
 
-    service = ChannelsApiService(ctx.profile)
+    service = ChannelsApiService(ApiClient(session=ctx.session))
     _, resolved_kind = service.fetch_auto(identifier)
 
     if resolved_kind == KIND_PUBLISHER:
@@ -184,7 +185,7 @@ def update(
 @_handle_api_errors
 def delete(ctx: AppContext, identifier: str, yes: bool) -> None:
     """Delete a channel by identifier."""
-    service = ChannelsApiService(ctx.profile)
+    service = ChannelsApiService(ApiClient(session=ctx.session))
     existing, resolved_kind = service.fetch_auto(identifier)
 
     name = existing.get("name", "?")

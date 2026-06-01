@@ -7,6 +7,7 @@ from click.testing import CliRunner
 from moto import mock_aws
 
 from commands.channels import _identifier_from_id, channels
+from commands.services.api_client import ApiClient
 from commands.services.channels_api import (
     ChannelNotFoundError,
     ChannelsApiService,
@@ -134,7 +135,7 @@ def test_get_auto_detects_serial_first():
 
 @mock_aws
 @responses.activate
-def test_get_falls_back_to_publisher_on_500_from_serial():
+def test_get_propagates_500_from_serial_without_falling_back():
     _seed_aws()
     _add_cognito()
     responses.add(
@@ -143,15 +144,16 @@ def test_get_falls_back_to_publisher_on_500_from_serial():
         json={"message": "Internal server error"},
         status=500,
     )
-    responses.add(
-        responses.GET, f"{PUBLISHER_URL}/{AN_IDENTIFIER}", json=_a_publisher_hit()
-    )
 
     runner = CliRunner()
     result = runner.invoke(channels, ["get", AN_IDENTIFIER], obj=_ctx())
 
-    assert result.exit_code == 0, result.output
-    assert "Resolved kind: publisher" in result.output
+    assert result.exit_code != 0
+    assert "500" in result.output
+    publisher_calls = [
+        c for c in responses.calls if c.request.url.startswith(f"{PUBLISHER_URL}/")
+    ]
+    assert publisher_calls == []
 
 
 @mock_aws
@@ -384,7 +386,9 @@ def test_fetch_auto_raises_when_not_found():
     responses.add(responses.GET, f"{SERIAL_URL}/{AN_IDENTIFIER}", status=404)
     responses.add(responses.GET, f"{PUBLISHER_URL}/{AN_IDENTIFIER}", status=404)
 
-    service = ChannelsApiService(None)
+    service = ChannelsApiService(
+        ApiClient(session=boto3.Session(region_name="eu-west-1"))
+    )
     with pytest.raises(ChannelNotFoundError):
         service.fetch_auto(AN_IDENTIFIER)
 
