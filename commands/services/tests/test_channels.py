@@ -6,7 +6,7 @@ import responses
 from click.testing import CliRunner
 from moto import mock_aws
 
-from commands.channels import channels
+from commands.channels import _identifier_from_id, channels
 from commands.services.channels_api import (
     ChannelNotFoundError,
     ChannelsApiService,
@@ -188,7 +188,7 @@ def test_get_raises_when_neither_kind_has_channel():
 
 @mock_aws
 @responses.activate
-def test_create_with_isbn_prefix_creates_publisher():
+def test_create_with_isbn_creates_publisher():
     _seed_aws()
     _add_cognito()
     responses.add(
@@ -201,7 +201,7 @@ def test_create_with_isbn_prefix_creates_publisher():
     runner = CliRunner()
     result = runner.invoke(
         channels,
-        ["create", "--name", "Acme", "--isbn-prefix", "978-82-12"],
+        ["create", "--name", "Acme", "--isbn", "978-82-12"],
         obj=_ctx(),
     )
 
@@ -455,3 +455,69 @@ def test_delete_raises_when_channel_not_found():
 
     assert result.exit_code != 0
     assert "no channel" in result.output.lower()
+
+
+@mock_aws
+@responses.activate
+def test_search_passes_year_query_param():
+    _seed_aws()
+    _add_cognito()
+    responses.add(responses.GET, SERIAL_URL, json={"hits": [], "totalHits": 0})
+    responses.add(responses.GET, PUBLISHER_URL, json={"hits": [], "totalHits": 0})
+
+    runner = CliRunner()
+    result = runner.invoke(channels, ["search", "Nature", "--year", "2024"], obj=_ctx())
+
+    assert result.exit_code == 0, result.output
+    get_calls = [c for c in responses.calls if c.request.method == "GET"]
+    assert len(get_calls) == 2
+    for call in get_calls:
+        assert "year=2024" in call.request.url
+
+
+@mock_aws
+@responses.activate
+def test_get_appends_year_path_segment():
+    _seed_aws()
+    _add_cognito()
+    responses.add(
+        responses.GET,
+        f"{SERIAL_URL}/{AN_IDENTIFIER}/2024",
+        json=_a_serial_hit(),
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        channels, ["get", AN_IDENTIFIER, "--year", "2024"], obj=_ctx()
+    )
+
+    assert result.exit_code == 0, result.output
+    get_calls = [c for c in responses.calls if c.request.method == "GET"]
+    assert len(get_calls) == 1
+    assert get_calls[0].request.url.endswith(f"/{AN_IDENTIFIER}/2024")
+
+
+def test_identifier_from_id_handles_year_suffix():
+    channel_id = (
+        f"https://{API_DOMAIN}/publication-channels-v2/"
+        f"serial-publication/{AN_IDENTIFIER}/2024"
+    )
+    assert _identifier_from_id(channel_id) == AN_IDENTIFIER
+
+
+def test_identifier_from_id_handles_no_year_suffix():
+    channel_id = (
+        f"https://{API_DOMAIN}/publication-channels-v2/publisher/{AN_IDENTIFIER}"
+    )
+    assert _identifier_from_id(channel_id) == AN_IDENTIFIER
+
+
+def test_identifier_from_id_handles_journal_kind():
+    channel_id = (
+        f"https://{API_DOMAIN}/publication-channels-v2/journal/{AN_IDENTIFIER}/2024"
+    )
+    assert _identifier_from_id(channel_id) == AN_IDENTIFIER
+
+
+def test_identifier_from_id_empty_string():
+    assert _identifier_from_id("") == ""

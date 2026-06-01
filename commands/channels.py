@@ -11,6 +11,7 @@ from commands.services.channels_api import (
     KIND_SERIAL,
     KIND_SERIES,
     SERIAL_TYPE_JOURNAL,
+    VALID_KINDS,
     ChannelNotFoundError,
     ChannelsApiService,
 )
@@ -86,12 +87,11 @@ def get(ctx: AppContext, identifier: str, year: int | None, kind: str | None) ->
     """Fetch a single channel by identifier (auto-detects type)."""
     service = ChannelsApiService(ctx.profile)
     if kind is None:
-        channel = service.fetch_auto(identifier, year)
+        channel, resolved_kind = service.fetch_auto(identifier, year)
     else:
         resolved_kind = _resolve_kind(kind)
         channel = service.fetch(resolved_kind, identifier, year)
-        channel.setdefault("_resolvedKind", resolved_kind)
-    _print_channel(channel)
+    _print_channel(channel, resolved_kind)
 
 
 @channels.command()
@@ -102,23 +102,21 @@ def get(ctx: AppContext, identifier: str, year: int | None, kind: str | None) ->
     default=None,
     help="Explicit kind. Default: inferred from other flags.",
 )
-@click.option("--isbn-prefix", default=None, help="Publisher only")
+@click.option("--isbn", default=None, help="Publisher only (ISBN prefix)")
 @click.option("--print-issn", default=None, help="Journal/series only")
 @click.option("--online-issn", default=None, help="Journal/series only")
-@click.option("--homepage", default=None, help="Channel homepage URL")
 @click.pass_obj
 @_handle_api_errors
 def create(
     ctx: AppContext,
     name: str,
     kind: str | None,
-    isbn_prefix: str | None,
+    isbn: str | None,
     print_issn: str | None,
     online_issn: str | None,
-    homepage: str | None,
 ) -> None:
     """Create a new channel. Picks publisher vs serial-publication from flags."""
-    resolved_kind = _infer_create_kind(kind, isbn_prefix, print_issn, online_issn)
+    resolved_kind = _infer_create_kind(kind, isbn, print_issn, online_issn)
     service = ChannelsApiService(ctx.profile)
 
     if resolved_kind == KIND_PUBLISHER:
@@ -126,17 +124,17 @@ def create(
             raise click.UsageError(
                 "ISSN flags are not valid for publisher; remove or set --kind"
             )
-        result = service.create_publisher(name, isbn_prefix, homepage)
+        result = service.create_publisher(name, isbn)
     elif resolved_kind == KIND_JOURNAL:
-        _reject_isbn(isbn_prefix)
-        result = service.create_journal(name, print_issn, online_issn, homepage)
+        _reject_isbn(isbn)
+        result = service.create_journal(name, print_issn, online_issn)
     elif resolved_kind == KIND_SERIES:
-        _reject_isbn(isbn_prefix)
-        result = service.create_series(name, print_issn, online_issn, homepage)
+        _reject_isbn(isbn)
+        result = service.create_series(name, print_issn, online_issn)
     else:
-        _reject_isbn(isbn_prefix)
+        _reject_isbn(isbn)
         result = service.create_serial_publication(
-            name, SERIAL_TYPE_JOURNAL, print_issn, online_issn, homepage
+            name, SERIAL_TYPE_JOURNAL, print_issn, online_issn
         )
 
     click.echo(f"CREATED {resolved_kind}: {name}")
@@ -164,8 +162,7 @@ def update(
         raise click.UsageError("Specify at least one field to update.")
 
     service = ChannelsApiService(ctx.profile)
-    existing = service.fetch_auto(identifier)
-    resolved_kind = existing.get("_resolvedKind")
+    _, resolved_kind = service.fetch_auto(identifier)
 
     if resolved_kind == KIND_PUBLISHER:
         if print_issn or online_issn:
@@ -188,10 +185,9 @@ def update(
 def delete(ctx: AppContext, identifier: str, yes: bool) -> None:
     """Delete a channel by identifier."""
     service = ChannelsApiService(ctx.profile)
-    existing = service.fetch_auto(identifier)
+    existing, resolved_kind = service.fetch_auto(identifier)
 
     name = existing.get("name", "?")
-    resolved_kind = existing.get("_resolvedKind", "?")
     if not yes:
         click.confirm(f"Delete {resolved_kind} '{name}' ({identifier})?", abort=True)
 
@@ -214,25 +210,25 @@ def _format_http_error(exc: requests.HTTPError) -> str:
 
 def _infer_create_kind(
     kind: str | None,
-    isbn_prefix: str | None,
+    isbn: str | None,
     print_issn: str | None,
     online_issn: str | None,
 ) -> str:
     if kind:
         return _resolve_kind(kind)
-    if isbn_prefix:
+    if isbn:
         return KIND_PUBLISHER
     if print_issn or online_issn:
         return KIND_SERIAL
     raise click.UsageError(
         "Cannot infer channel kind. Pass --kind or one of "
-        "--isbn-prefix / --print-issn / --online-issn."
+        "--isbn / --print-issn / --online-issn."
     )
 
 
-def _reject_isbn(isbn_prefix: str | None) -> None:
-    if isbn_prefix:
-        raise click.UsageError("--isbn-prefix is only valid for publisher channels")
+def _reject_isbn(isbn: str | None) -> None:
+    if isbn:
+        raise click.UsageError("--isbn is only valid for publisher channels")
 
 
 def _collect_search_rows(
@@ -283,11 +279,11 @@ def _row_from_hit(hit: dict) -> dict:
 def _identifier_from_id(channel_id: str) -> str:
     if not channel_id:
         return ""
-    stripped = channel_id.rstrip("/")
-    parts = stripped.split("/")
-    if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 4:
-        return parts[-2]
-    return parts[-1]
+    parts = [segment for segment in channel_id.split("/") if segment]
+    for index, segment in enumerate(parts):
+        if segment in VALID_KINDS and index + 1 < len(parts):
+            return parts[index + 1]
+    return parts[-1] if parts else ""
 
 
 def _render_table(rows: list, query: str, total_hits: int) -> None:
@@ -320,11 +316,10 @@ def _render_table(rows: list, query: str, total_hits: int) -> None:
     console.print(table)
 
 
-def _print_channel(channel: dict) -> None:
+def _print_channel(channel: dict, resolved_kind: str | None = None) -> None:
     console = Console()
-    resolved = channel.get("_resolvedKind")
-    if resolved:
-        console.print(f"[bold]Resolved kind:[/bold] {resolved}")
+    if resolved_kind:
+        console.print(f"[bold]Resolved kind:[/bold] {resolved_kind}")
     keys = [
         "id",
         "location",

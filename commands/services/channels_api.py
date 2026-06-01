@@ -40,7 +40,7 @@ class ChannelsApiService:
         self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
         self.client_credentials = self._get_secret("BackendCognitoClientCredentials")
         self.token: str | None = None
-        self.token_expiry_time = datetime.min
+        self.token_expiry_time = datetime.fromtimestamp(0)
 
     def search(
         self,
@@ -67,13 +67,12 @@ class ChannelsApiService:
         response.raise_for_status()
         return response.json()
 
-    def fetch_auto(self, identifier: str, year: int | None = None) -> dict:
+    def fetch_auto(self, identifier: str, year: int | None = None) -> tuple[dict, str]:
         last_http_error: requests.HTTPError | None = None
         for kind in (KIND_SERIAL, KIND_PUBLISHER):
             try:
                 channel = self.fetch(kind, identifier, year)
-                channel.setdefault("_resolvedKind", kind)
-                return channel
+                return channel, kind
             except ChannelNotFoundError:
                 continue
             except requests.HTTPError as exc:
@@ -92,11 +91,8 @@ class ChannelsApiService:
         self,
         name: str,
         isbn_prefix: str | None = None,
-        homepage: str | None = None,
     ) -> dict:
-        body = _drop_none(
-            {"name": name, "isbnPrefix": isbn_prefix, "homepage": homepage}
-        )
+        body = _drop_none({"name": name, "isbnPrefix": isbn_prefix})
         return self._post(KIND_PUBLISHER, body)
 
     def create_serial_publication(
@@ -105,7 +101,6 @@ class ChannelsApiService:
         serial_type: str,
         print_issn: str | None = None,
         online_issn: str | None = None,
-        homepage: str | None = None,
     ) -> dict:
         if serial_type not in VALID_SERIAL_TYPES:
             raise ValueError(f"serial_type must be one of {sorted(VALID_SERIAL_TYPES)}")
@@ -115,7 +110,6 @@ class ChannelsApiService:
                 "type": serial_type,
                 "printIssn": print_issn,
                 "onlineIssn": online_issn,
-                "homepage": homepage,
             }
         )
         return self._post(KIND_SERIAL, body)
@@ -125,14 +119,12 @@ class ChannelsApiService:
         name: str,
         print_issn: str | None = None,
         online_issn: str | None = None,
-        homepage: str | None = None,
     ) -> dict:
         body = _drop_none(
             {
                 "name": name,
                 "printIssn": print_issn,
                 "onlineIssn": online_issn,
-                "homepage": homepage,
             }
         )
         return self._post(KIND_JOURNAL, body)
@@ -142,14 +134,12 @@ class ChannelsApiService:
         name: str,
         print_issn: str | None = None,
         online_issn: str | None = None,
-        homepage: str | None = None,
     ) -> dict:
         body = _drop_none(
             {
                 "name": name,
                 "printIssn": print_issn,
                 "onlineIssn": online_issn,
-                "homepage": homepage,
             }
         )
         return self._post(KIND_SERIES, body)
@@ -249,7 +239,7 @@ class ChannelsApiService:
         )
 
     def _get_token(self) -> str:
-        if self.token is None or self._is_token_expired():
+        if self._is_token_expired():
             self.token = self._get_cognito_token()
         return self.token
 
