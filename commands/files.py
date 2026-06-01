@@ -238,6 +238,7 @@ def fix_log_source(
     console.print(f"Table: {table.name}  dry_run={dry_run}")
 
     updated_count = 0
+    failed_count = 0
     candidate_count = 0
     for result_id in sorted(result_ids):
         rows = _query_log_entries(table, result_id)
@@ -252,11 +253,16 @@ def fix_log_source(
                 f"log={log_entry_id} topic={topic} OTHER→DLR"
             )
             if not dry_run:
-                _update_log_source_to_dlr(table, row)
-                updated_count += 1
+                try:
+                    _update_log_source_to_dlr(table, row)
+                    updated_count += 1
+                except Exception as exc:
+                    failed_count += 1
+                    console.print(f"FAIL {result_id} log={log_entry_id}: {exc}")
 
     console.print(
-        f"Done. candidates={candidate_count} updated={updated_count} dry_run={dry_run}"
+        f"Done. candidates={candidate_count} updated={updated_count} "
+        f"failed={failed_count} dry_run={dry_run}"
     )
 
 
