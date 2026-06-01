@@ -15,18 +15,6 @@ Filopplastingen bruker det eksisterende multipart-upload-API-et (samme flyt som 
 `create → prepare (per del) → PUT til presignert URL → complete`. Krever ikke direkte tilgang til
 NVAs S3-bøtte, kun et gyldig bearer-token.
 
-## ⚠️ Rotårsak / kritisk: `System: DLR`-header på ALLE skrive-kall
-
-Ekstern-klient-operasjoner utleder `importSource` fra HTTP-headeren **`System`**
-(`RequestUtil` → `ThirdPartySystem.fromValue`). **Mangler headeren (eller ukjent verdi) → faller
-tilbake til `Source.OTHER`.** `System: DLR` → `Source.DLR`. Hvert event
-(`FileUploadedEvent`/`PublishedResourceEvent`/`UpdatedResourceEvent`) persisteres som et eget
-**LogEntry** (egne DynamoDB-rader). Det er derfor de tidligere logg-innslagene fikk source `Other`
-— de ble laget av en senere fil-/oppdateringsoperasjon uten `System: DLR`.
-
-➡️ **Send `System: DLR` på complete-upload OG publish.** Håndtert i `file_upload_api.py`
-(`FileUploadApiService.system = "DLR"`, settes i `_headers()`).
-
 ## Kilde for filene
 
 - S3-bøtte: **`loke.storage`**. Alle miljøene våre har allerede tilgang (boto3 via profil/`AWS_PROFILE`).
@@ -198,11 +186,14 @@ nøkkel, ikke bare «riktig eierskap». Verifiser matchen før batch.
 
 ## Steg 3 — Rette historiske `Other`-innslag til `DLR` (BESLUTTET: vi retter dem)
 
-«Logg-innslag» = persisterte `LogEntry`-rader (`LogEntryDao`) i **`resources`-tabellen**. De
-feilaktige `Other`-innslagene ble laget av en tidligere fil-/oppdateringsoperasjon **uten**
-`System: DLR`. Nye unngås nå via headeren (se rotårsak-seksjonen); de allerede-skrevne rettes med
-direkte DynamoDB-skriving (ingen API: `UpdatePublicationRequest.importDetails` ignoreres i
-`generateUpdate(...)`).
+«Logg-innslag» = persisterte `LogEntry`-rader (`LogEntryDao`) i **`resources`-tabellen**.
+Ekstern-klient-operasjoner utleder `importSource` fra HTTP-headeren `System`
+(`RequestUtil` → `ThirdPartySystem.fromValue`); mangler den, faller den tilbake til `OTHER`.
+Hvert event (`FileUploadedEvent`/`PublishedResourceEvent`/`UpdatedResourceEvent`) persisteres
+som et eget LogEntry, og de gamle innslagene ble laget av tidligere fil-/oppdaterings-
+operasjoner uten headeren. Nye innslag fra denne kjøringen er trygge (vi sender `System: DLR`
+fra `file_upload_api.py`); de gamle rettes med direkte DynamoDB-skriving (ingen API:
+`UpdatePublicationRequest.importDetails` ignoreres i `generateUpdate(...)`).
 
 ### Lagringsmodell (verifisert)
 - Nøkler: **PK0 = `Resource:{resourceIdentifier}`**, **SK0 = `LogEntry:{logEntryIdentifier}`**.
@@ -236,7 +227,7 @@ For hver `result_id` fra manifestene:
   - [x] `upload(...)` — hele `create → prepare → PUT → complete`-flyten (`ExternalCompleteUpload`,
     `fileType=OpenFile` default).
   - [x] `publish(publication_identifier)` — direkte publisering (idempotent, 409 = ok).
-  - [x] `System: DLR` på alle skrive-kall via `_headers()` (rotårsak-fiksen).
+  - [x] `System: DLR` på alle skrive-kall via `_headers()`.
 - [x] `LocalFileSource` og `S3ObjectSource` (Range-GET fra `loke.storage`).
 - [x] `resolve_api_domain(session)`.
 - Bruker **ikke** `ApiClient` (med vilje — feil credential).
