@@ -5,6 +5,7 @@ import logging
 from commands.cognito import cognito
 from commands.dlq import dlq
 from commands.dynamodb import dynamodb
+from commands.files import files
 from commands.handle import handle
 from commands.users import users
 from commands.customers import customers
@@ -54,6 +55,7 @@ def cli(ctx: click.Context, log_level: int, profile: str | None):
 cli.add_command(cognito)
 cli.add_command(dlq)
 cli.add_command(dynamodb)
+cli.add_command(files)
 cli.add_command(handle)
 cli.add_command(users)
 cli.add_command(customers)
