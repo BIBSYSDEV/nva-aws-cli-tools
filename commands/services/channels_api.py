@@ -1,6 +1,5 @@
 import json
 from datetime import datetime, timedelta
-from typing import Optional
 
 import boto3
 import requests
@@ -15,27 +14,39 @@ KIND_SERIES = "series"
 
 VALID_KINDS = {KIND_PUBLISHER, KIND_SERIAL, KIND_JOURNAL, KIND_SERIES}
 
+SERIAL_TYPE_JOURNAL = "Journal"
+SERIAL_TYPE_SERIES = "Series"
+VALID_SERIAL_TYPES = {SERIAL_TYPE_JOURNAL, SERIAL_TYPE_SERIES}
+
+UPDATE_PUBLISHER_REQUEST_TYPE = "UpdatePublisherRequest"
+UPDATE_SERIAL_PUBLICATION_REQUEST_TYPE = "UpdateSerialPublicationRequest"
+
+CONTENT_TYPE_LD_JSON = "application/ld+json"
+CONTENT_TYPE_JSON = "application/json"
+
+TOKEN_REFRESH_MARGIN_SECONDS = 30
+
 
 class ChannelNotFoundError(Exception):
     pass
 
 
 class ChannelsApiService:
-    def __init__(self, profile: Optional[str]):
+    def __init__(self, profile: str | None):
         self.session = boto3.Session(profile_name=profile)
         self.ssm = self.session.client("ssm")
         self.secretsmanager = self.session.client("secretsmanager")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
         self.cognito_uri = self._get_system_parameter("/NVA/CognitoUri")
         self.client_credentials = self._get_secret("BackendCognitoClientCredentials")
-        self.token: Optional[str] = None
-        self.token_expiry_time = datetime.now()
+        self.token: str | None = None
+        self.token_expiry_time = datetime.min
 
     def search(
         self,
         kind: str,
         query: str,
-        year: Optional[int] = None,
+        year: int | None = None,
         offset: int = 0,
         size: int = 10,
     ) -> dict:
@@ -46,7 +57,7 @@ class ChannelsApiService:
         response.raise_for_status()
         return response.json()
 
-    def fetch(self, kind: str, identifier: str, year: Optional[int] = None) -> dict:
+    def fetch(self, kind: str, identifier: str, year: int | None = None) -> dict:
         url = f"{self._channel_url(kind)}/{identifier}"
         if year is not None:
             url = f"{url}/{year}"
@@ -56,8 +67,8 @@ class ChannelsApiService:
         response.raise_for_status()
         return response.json()
 
-    def fetch_auto(self, identifier: str, year: Optional[int] = None) -> dict:
-        last_http_error: Optional[requests.HTTPError] = None
+    def fetch_auto(self, identifier: str, year: int | None = None) -> dict:
+        last_http_error: requests.HTTPError | None = None
         for kind in (KIND_SERIAL, KIND_PUBLISHER):
             try:
                 channel = self.fetch(kind, identifier, year)
@@ -80,8 +91,8 @@ class ChannelsApiService:
     def create_publisher(
         self,
         name: str,
-        isbn_prefix: Optional[str] = None,
-        homepage: Optional[str] = None,
+        isbn_prefix: str | None = None,
+        homepage: str | None = None,
     ) -> dict:
         body = _drop_none(
             {"name": name, "isbnPrefix": isbn_prefix, "homepage": homepage}
@@ -92,12 +103,12 @@ class ChannelsApiService:
         self,
         name: str,
         serial_type: str,
-        print_issn: Optional[str] = None,
-        online_issn: Optional[str] = None,
-        homepage: Optional[str] = None,
+        print_issn: str | None = None,
+        online_issn: str | None = None,
+        homepage: str | None = None,
     ) -> dict:
-        if serial_type not in ("Series", "Journal"):
-            raise ValueError("serial_type must be 'Series' or 'Journal'")
+        if serial_type not in VALID_SERIAL_TYPES:
+            raise ValueError(f"serial_type must be one of {sorted(VALID_SERIAL_TYPES)}")
         body = _drop_none(
             {
                 "name": name,
@@ -112,9 +123,9 @@ class ChannelsApiService:
     def create_journal(
         self,
         name: str,
-        print_issn: Optional[str] = None,
-        online_issn: Optional[str] = None,
-        homepage: Optional[str] = None,
+        print_issn: str | None = None,
+        online_issn: str | None = None,
+        homepage: str | None = None,
     ) -> dict:
         body = _drop_none(
             {
@@ -129,9 +140,9 @@ class ChannelsApiService:
     def create_series(
         self,
         name: str,
-        print_issn: Optional[str] = None,
-        online_issn: Optional[str] = None,
-        homepage: Optional[str] = None,
+        print_issn: str | None = None,
+        online_issn: str | None = None,
+        homepage: str | None = None,
     ) -> dict:
         body = _drop_none(
             {
@@ -146,24 +157,24 @@ class ChannelsApiService:
     def update_publisher(
         self,
         identifier: str,
-        name: Optional[str] = None,
-        isbn: Optional[str] = None,
+        name: str | None = None,
+        isbn: str | None = None,
     ) -> dict:
         body = _drop_none(
-            {"type": "UpdatePublisherRequest", "name": name, "isbn": isbn}
+            {"type": UPDATE_PUBLISHER_REQUEST_TYPE, "name": name, "isbn": isbn}
         )
         return self._put(KIND_PUBLISHER, identifier, body)
 
     def update_serial_publication(
         self,
         identifier: str,
-        name: Optional[str] = None,
-        print_issn: Optional[str] = None,
-        online_issn: Optional[str] = None,
+        name: str | None = None,
+        print_issn: str | None = None,
+        online_issn: str | None = None,
     ) -> dict:
         body = _drop_none(
             {
-                "type": "UpdateSerialPublicationRequest",
+                "type": UPDATE_SERIAL_PUBLICATION_REQUEST_TYPE,
                 "name": name,
                 "printIssn": print_issn,
                 "onlineIssn": online_issn,
@@ -190,7 +201,7 @@ class ChannelsApiService:
         return {"Authorization": f"Bearer {self._get_token()}"}
 
     def _post(self, kind: str, body: dict) -> dict:
-        headers = self._auth_headers() | {"Content-Type": "application/ld+json"}
+        headers = self._auth_headers() | {"Content-Type": CONTENT_TYPE_LD_JSON}
         response = requests.post(self._channel_url(kind), headers=headers, json=body)
         response.raise_for_status()
         if response.text:
@@ -199,7 +210,7 @@ class ChannelsApiService:
 
     def _put(self, kind: str, identifier: str, body: dict) -> dict:
         url = f"{self._channel_url(kind)}/{identifier}"
-        headers = self._auth_headers() | {"Content-Type": "application/json"}
+        headers = self._auth_headers() | {"Content-Type": CONTENT_TYPE_JSON}
         response = requests.put(url, headers=headers, json=body)
         response.raise_for_status()
         if response.status_code == 202:
@@ -233,7 +244,9 @@ class ChannelsApiService:
         return response_json["access_token"]
 
     def _is_token_expired(self) -> bool:
-        return datetime.now() > self.token_expiry_time - timedelta(seconds=30)
+        return datetime.now() > self.token_expiry_time - timedelta(
+            seconds=TOKEN_REFRESH_MARGIN_SECONDS
+        )
 
     def _get_token(self) -> str:
         if self.token is None or self._is_token_expired():

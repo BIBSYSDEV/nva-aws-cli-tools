@@ -1,6 +1,4 @@
 import functools
-import logging
-from typing import Optional
 
 import click
 import requests
@@ -12,14 +10,15 @@ from commands.services.channels_api import (
     KIND_PUBLISHER,
     KIND_SERIAL,
     KIND_SERIES,
+    SERIAL_TYPE_JOURNAL,
     ChannelNotFoundError,
     ChannelsApiService,
 )
 from commands.utils import AppContext
 
-logger = logging.getLogger(__name__)
-
-KIND_CHOICES = ["serial", "journal", "series", "publisher"]
+KIND_ALIAS_SERIAL = "serial"
+KIND_CHOICES = [KIND_ALIAS_SERIAL, KIND_JOURNAL, KIND_SERIES, KIND_PUBLISHER]
+SERIAL_LIKE_CHOICES = (None, KIND_ALIAS_SERIAL, KIND_JOURNAL, KIND_SERIES)
 
 
 def _handle_api_errors(func):
@@ -61,15 +60,15 @@ def channels(ctx: AppContext):
 def search(
     ctx: AppContext,
     query: str,
-    kind: Optional[str],
-    year: Optional[int],
+    kind: str | None,
+    year: int | None,
     offset: int,
     size: int,
 ) -> None:
     """Search channels across journals/series/publishers."""
     service = ChannelsApiService(ctx.profile)
-    rows = _collect_search_rows(service, query, kind, year, offset, size)
-    _render_table(rows, query)
+    rows, total_hits = _collect_search_rows(service, query, kind, year, offset, size)
+    _render_table(rows, query, total_hits)
 
 
 @channels.command()
@@ -83,16 +82,15 @@ def search(
 )
 @click.pass_obj
 @_handle_api_errors
-def get(
-    ctx: AppContext, identifier: str, year: Optional[int], kind: Optional[str]
-) -> None:
+def get(ctx: AppContext, identifier: str, year: int | None, kind: str | None) -> None:
     """Fetch a single channel by identifier (auto-detects type)."""
     service = ChannelsApiService(ctx.profile)
     if kind is None:
         channel = service.fetch_auto(identifier, year)
     else:
-        channel = service.fetch(_resolve_kind(kind), identifier, year)
-        channel.setdefault("_resolvedKind", _resolve_kind(kind))
+        resolved_kind = _resolve_kind(kind)
+        channel = service.fetch(resolved_kind, identifier, year)
+        channel.setdefault("_resolvedKind", resolved_kind)
     _print_channel(channel)
 
 
@@ -100,7 +98,7 @@ def get(
 @click.option("--name", required=True, help="Channel name")
 @click.option(
     "--kind",
-    type=click.Choice(["publisher", "journal", "series", "serial"]),
+    type=click.Choice(KIND_CHOICES),
     default=None,
     help="Explicit kind. Default: inferred from other flags.",
 )
@@ -113,11 +111,11 @@ def get(
 def create(
     ctx: AppContext,
     name: str,
-    kind: Optional[str],
-    isbn_prefix: Optional[str],
-    print_issn: Optional[str],
-    online_issn: Optional[str],
-    homepage: Optional[str],
+    kind: str | None,
+    isbn_prefix: str | None,
+    print_issn: str | None,
+    online_issn: str | None,
+    homepage: str | None,
 ) -> None:
     """Create a new channel. Picks publisher vs serial-publication from flags."""
     resolved_kind = _infer_create_kind(kind, isbn_prefix, print_issn, online_issn)
@@ -138,7 +136,7 @@ def create(
     else:
         _reject_isbn(isbn_prefix)
         result = service.create_serial_publication(
-            name, "Journal", print_issn, online_issn, homepage
+            name, SERIAL_TYPE_JOURNAL, print_issn, online_issn, homepage
         )
 
     click.echo(f"CREATED {resolved_kind}: {name}")
@@ -156,10 +154,10 @@ def create(
 def update(
     ctx: AppContext,
     identifier: str,
-    name: Optional[str],
-    isbn: Optional[str],
-    print_issn: Optional[str],
-    online_issn: Optional[str],
+    name: str | None,
+    isbn: str | None,
+    print_issn: str | None,
+    online_issn: str | None,
 ) -> None:
     """Update an existing channel. Type is detected from the channel itself."""
     if name is None and isbn is None and print_issn is None and online_issn is None:
@@ -202,7 +200,7 @@ def delete(ctx: AppContext, identifier: str, yes: bool) -> None:
 
 
 def _resolve_kind(kind: str) -> str:
-    return KIND_SERIAL if kind == "serial" else kind
+    return KIND_SERIAL if kind == KIND_ALIAS_SERIAL else kind
 
 
 def _format_http_error(exc: requests.HTTPError) -> str:
@@ -215,10 +213,10 @@ def _format_http_error(exc: requests.HTTPError) -> str:
 
 
 def _infer_create_kind(
-    kind: Optional[str],
-    isbn_prefix: Optional[str],
-    print_issn: Optional[str],
-    online_issn: Optional[str],
+    kind: str | None,
+    isbn_prefix: str | None,
+    print_issn: str | None,
+    online_issn: str | None,
 ) -> str:
     if kind:
         return _resolve_kind(kind)
@@ -232,7 +230,7 @@ def _infer_create_kind(
     )
 
 
-def _reject_isbn(isbn_prefix: Optional[str]) -> None:
+def _reject_isbn(isbn_prefix: str | None) -> None:
     if isbn_prefix:
         raise click.UsageError("--isbn-prefix is only valid for publisher channels")
 
@@ -240,22 +238,30 @@ def _reject_isbn(isbn_prefix: Optional[str]) -> None:
 def _collect_search_rows(
     service: ChannelsApiService,
     query: str,
-    kind: Optional[str],
-    year: Optional[int],
+    kind: str | None,
+    year: int | None,
     offset: int,
     size: int,
-) -> list:
+) -> tuple[list, int]:
     rows: list = []
-    if kind in (None, "serial", "journal", "series"):
+    total_hits = 0
+    if kind in SERIAL_LIKE_CHOICES:
         serial_kind = _resolve_kind(kind) if kind else KIND_SERIAL
-        rows.extend(
-            _rows_from_hits(service.search(serial_kind, query, year, offset, size))
-        )
-    if kind in (None, "publisher"):
-        rows.extend(
-            _rows_from_hits(service.search(KIND_PUBLISHER, query, year, offset, size))
-        )
-    return rows
+        payload = service.search(serial_kind, query, year, offset, size)
+        rows.extend(_rows_from_hits(payload))
+        total_hits += _total_hits(payload)
+    if kind in (None, KIND_PUBLISHER):
+        payload = service.search(KIND_PUBLISHER, query, year, offset, size)
+        rows.extend(_rows_from_hits(payload))
+        total_hits += _total_hits(payload)
+    return rows, total_hits
+
+
+def _total_hits(payload: dict) -> int:
+    value = payload.get("totalHits")
+    if isinstance(value, int):
+        return value
+    return len(payload.get("hits", []))
 
 
 def _rows_from_hits(payload: dict) -> list:
@@ -284,15 +290,19 @@ def _identifier_from_id(channel_id: str) -> str:
     return parts[-1]
 
 
-def _render_table(rows: list, query: str) -> None:
+def _render_table(rows: list, query: str, total_hits: int) -> None:
     console = Console()
     if not rows:
         console.print(f"[yellow]No hits for {query!r}[/yellow]")
         return
+    title = (
+        f"[bold magenta]Channels matching {query!r} "
+        f"(showing {len(rows)} of {total_hits})[/bold magenta]"
+    )
     table = Table(
         show_header=True,
         header_style="bold cyan",
-        title=f"[bold magenta]Channels matching {query!r} ({len(rows)} hits)[/bold magenta]",
+        title=title,
     )
     table.add_column("Type")
     table.add_column("Identifier")
@@ -317,6 +327,7 @@ def _print_channel(channel: dict) -> None:
         console.print(f"[bold]Resolved kind:[/bold] {resolved}")
     keys = [
         "id",
+        "location",
         "type",
         "name",
         "printIssn",

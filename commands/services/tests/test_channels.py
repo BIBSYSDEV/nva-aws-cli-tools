@@ -358,6 +358,26 @@ def test_update_requires_at_least_one_field():
 
 @mock_aws
 @responses.activate
+def test_update_rejects_isbn_for_serial_channel():
+    _seed_aws()
+    _add_cognito()
+    responses.add(responses.GET, f"{SERIAL_URL}/{AN_IDENTIFIER}", json=_a_serial_hit())
+
+    runner = CliRunner()
+    result = runner.invoke(
+        channels,
+        ["update", AN_IDENTIFIER, "--isbn", "978-1"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code != 0
+    assert "isbn" in result.output.lower()
+    put_calls = [c for c in responses.calls if c.request.method == "PUT"]
+    assert len(put_calls) == 0
+
+
+@mock_aws
+@responses.activate
 def test_fetch_auto_raises_when_not_found():
     _seed_aws()
     _add_cognito()
