@@ -130,6 +130,7 @@ class ChannelsApiService:
         name: str | None = None,
         isbn: str | None = None,
     ) -> dict:
+        # Backend uses 'isbn' on update but 'isbnPrefix' on create — see UpdatePublisherRequest.java
         body = _drop_none(
             {"type": UPDATE_PUBLISHER_REQUEST_TYPE, "name": name, "isbn": isbn}
         )

@@ -55,8 +55,15 @@ def channels(ctx: AppContext):
     help="Restrict to a single channel kind. Default: search all kinds.",
 )
 @click.option("--year", type=int, default=None, help="Limit results to a given year")
-@click.option("--offset", type=int, default=0)
-@click.option("--size", type=int, default=10)
+@click.option(
+    "--offset", type=int, default=0, help="Applied per kind when --kind is omitted"
+)
+@click.option(
+    "--size",
+    type=int,
+    default=10,
+    help="Max hits per kind (when --kind is omitted, both serial and publisher are queried, so up to 2x this many rows are returned)",
+)
 @click.pass_obj
 @_handle_api_errors
 def search(
