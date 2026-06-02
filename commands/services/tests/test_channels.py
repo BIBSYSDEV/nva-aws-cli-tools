@@ -273,6 +273,36 @@ def test_create_with_kind_series_uses_series_endpoint():
     assert len(series_posts) == 1
 
 
+@mock_aws
+@responses.activate
+def test_create_with_kind_journal_uses_journal_endpoint():
+    _seed_aws()
+    _add_cognito()
+    responses.add(
+        responses.POST,
+        JOURNAL_URL,
+        json={"id": "x", "type": "Journal", "name": "Baz"},
+        status=201,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        channels,
+        ["create", "--name", "Baz", "--kind", "journal", "--print-issn", "1234-5678"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code == 0, result.output
+    journal_posts = [
+        c
+        for c in responses.calls
+        if c.request.method == "POST" and c.request.url.endswith("/journal")
+    ]
+    assert len(journal_posts) == 1
+    body = json.loads(journal_posts[0].request.body)
+    assert body == {"name": "Baz", "printIssn": "1234-5678"}
+
+
 def test_create_without_inferrable_kind_fails():
     runner = CliRunner()
     result = runner.invoke(channels, ["create", "--name", "Foo"], obj=_ctx())
@@ -324,6 +354,39 @@ def test_update_auto_detects_kind_and_calls_serial_put():
     assert len(put_calls) == 1
     body = json.loads(put_calls[0].request.body)
     assert body == {"type": "UpdateSerialPublicationRequest", "name": "New name"}
+
+
+@mock_aws
+@responses.activate
+def test_update_serial_sends_issn_fields_in_body():
+    _seed_aws()
+    _add_cognito()
+    responses.add(responses.GET, f"{SERIAL_URL}/{AN_IDENTIFIER}", json=_a_serial_hit())
+    responses.add(responses.PUT, f"{SERIAL_URL}/{AN_IDENTIFIER}", status=202)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        channels,
+        [
+            "update",
+            AN_IDENTIFIER,
+            "--print-issn",
+            "1234-5678",
+            "--online-issn",
+            "8765-4321",
+        ],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code == 0, result.output
+    put_calls = [c for c in responses.calls if c.request.method == "PUT"]
+    assert len(put_calls) == 1
+    body = json.loads(put_calls[0].request.body)
+    assert body == {
+        "type": "UpdateSerialPublicationRequest",
+        "printIssn": "1234-5678",
+        "onlineIssn": "8765-4321",
+    }
 
 
 @mock_aws

@@ -1,7 +1,6 @@
 import functools
 
 import click
-import requests
 from rich.console import Console
 from rich.table import Table
 
@@ -13,8 +12,12 @@ from commands.services.channels_api import (
     KIND_SERIES,
     SERIAL_TYPE_JOURNAL,
     VALID_KINDS,
-    ChannelNotFoundError,
+    ChannelApiError,
     ChannelsApiService,
+    PublisherCreate,
+    PublisherUpdate,
+    SerialCreate,
+    SerialUpdate,
 )
 from commands.utils import AppContext
 
@@ -28,10 +31,8 @@ def _handle_api_errors(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ChannelNotFoundError as exc:
+        except ChannelApiError as exc:
             raise click.ClickException(str(exc))
-        except requests.HTTPError as exc:
-            raise click.ClickException(_format_http_error(exc))
 
     return wrapper
 
@@ -132,17 +133,26 @@ def create(
             raise click.UsageError(
                 "ISSN flags are not valid for publisher; remove or set --kind"
             )
-        result = service.create_publisher(name, isbn)
+        result = service.create_publisher(PublisherCreate(name=name, isbn_prefix=isbn))
     elif resolved_kind == KIND_JOURNAL:
         _reject_isbn(isbn)
-        result = service.create_journal(name, print_issn, online_issn)
+        result = service.create_journal(
+            SerialCreate(name=name, print_issn=print_issn, online_issn=online_issn)
+        )
     elif resolved_kind == KIND_SERIES:
         _reject_isbn(isbn)
-        result = service.create_series(name, print_issn, online_issn)
+        result = service.create_series(
+            SerialCreate(name=name, print_issn=print_issn, online_issn=online_issn)
+        )
     else:
         _reject_isbn(isbn)
         result = service.create_serial_publication(
-            name, SERIAL_TYPE_JOURNAL, print_issn, online_issn
+            SerialCreate(
+                name=name,
+                serial_type=SERIAL_TYPE_JOURNAL,
+                print_issn=print_issn,
+                online_issn=online_issn,
+            )
         )
 
     click.echo(f"CREATED {resolved_kind}: {name}")
@@ -175,12 +185,13 @@ def update(
     if resolved_kind == KIND_PUBLISHER:
         if print_issn or online_issn:
             raise click.UsageError("ISSN flags are not valid for a publisher channel")
-        service.update_publisher(identifier, name=name, isbn=isbn)
+        service.update_publisher(identifier, PublisherUpdate(name=name, isbn=isbn))
     else:
         if isbn:
             raise click.UsageError("--isbn is only valid for publisher channels")
         service.update_serial_publication(
-            identifier, name=name, print_issn=print_issn, online_issn=online_issn
+            identifier,
+            SerialUpdate(name=name, print_issn=print_issn, online_issn=online_issn),
         )
     click.echo(f"UPDATED {resolved_kind} {identifier}")
 
@@ -205,15 +216,6 @@ def delete(ctx: AppContext, identifier: str, yes: bool) -> None:
 
 def _resolve_kind(kind: str) -> str:
     return KIND_SERIAL if kind == KIND_ALIAS_SERIAL else kind
-
-
-def _format_http_error(exc: requests.HTTPError) -> str:
-    response = exc.response
-    if response is None:
-        return f"API error: {exc}"
-    snippet = response.text[:500].strip() if response.text else ""
-    base = f"API error {response.status_code} from {response.url}"
-    return f"{base}\n  {snippet}" if snippet else base
 
 
 def _infer_create_kind(
