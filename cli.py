@@ -2,6 +2,7 @@
 
 import click
 import logging
+from commands.channels import channels
 from commands.cognito import cognito
 from commands.dlq import dlq
 from commands.dynamodb import dynamodb
@@ -52,6 +53,7 @@ def cli(ctx: click.Context, log_level: int, profile: str | None):
     )
 
 
+cli.add_command(channels)
 cli.add_command(cognito)
 cli.add_command(dlq)
 cli.add_command(dynamodb)
