@@ -87,7 +87,7 @@ def test_find_by_handle_returns_matching_hit():
     _seed_ssm()
     responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit()], "totalHits": 1})
 
-    result = SearchApiService(None).find_by_handle(A_HANDLE)
+    result = SearchApiService(_a_session()).find_by_handle(A_HANDLE)
 
     assert len(result) == 1
     assert result[0]["id"] == A_PUBLICATION_ID
@@ -100,7 +100,7 @@ def test_find_by_handle_filters_non_matching_hit():
     wrong_hit = _a_hit("11250/9999999")
     responses.add(responses.GET, SEARCH_URL, json={"hits": [wrong_hit], "totalHits": 1})
 
-    result = SearchApiService(None).find_by_handle(A_HANDLE)
+    result = SearchApiService(_a_session()).find_by_handle(A_HANDLE)
 
     assert result == []
 
@@ -116,7 +116,7 @@ def test_update_handle_raises_on_error_response(tmp_path):
     )
     responses.add(responses.PUT, HANDLE_URL, status=404)
 
-    service = HandleApiService(None)
+    service = HandleApiService(_a_session())
     with pytest.raises(requests.exceptions.HTTPError):
         service.set_handle(A_HANDLE, "https://nva.example.org/registration/abc")
 
@@ -214,9 +214,11 @@ def _read_done_csv() -> list:
         return []
 
 
+def _a_session() -> boto3.Session:
+    return boto3.Session(region_name="eu-west-1")
+
+
 def _ctx():
     from commands.utils import AppContext
 
-    return AppContext(
-        log_level=0, profile=None, session=boto3.Session(region_name="eu-west-1")
-    )
+    return AppContext(log_level=0, profile=None, session=_a_session())

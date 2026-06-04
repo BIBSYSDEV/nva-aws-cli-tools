@@ -12,19 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 class DynamodbPublications:
-    def __init__(self, profile, table_pattern):
+    def __init__(self, session: boto3.Session, table_pattern):
         """
         Initializes the DynamoDB service with the specified parameters.
 
         Args:
-            profile (str): The AWS profile to use for authentication.
+            session (boto3.Session): The AWS session to use for authentication.
             table_pattern (str): A pattern to match DynamoDB table name.
             condition (Attr): The condition to filter items during export.
         """
         self.table_pattern = table_pattern
         self.batch_counter = 0
-        self.profile = profile
-        self.session = boto3.Session(profile_name=self.profile)
+        self.session = session
         self.dynamodb = self.session.client("dynamodb")
         self.table = self.get_table()
 

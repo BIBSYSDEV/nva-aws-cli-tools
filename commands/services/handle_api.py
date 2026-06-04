@@ -6,10 +6,11 @@ from datetime import datetime, timedelta
 """
 # example of usage
 
+import boto3
 from services import HandleApiService
 
-# Initialize the service
-service = HandleApiService()
+# Initialize the service with a boto3 session
+service = HandleApiService(boto3.Session())
 
 # Define request body for the update and create operations
 request_body = {
@@ -29,8 +30,8 @@ print(create_response)
 
 
 class HandleApiService:
-    def __init__(self, profile):
-        self.session = boto3.Session(profile_name=profile)
+    def __init__(self, session: boto3.Session):
+        self.session = session
         self.ssm = self.session.client("ssm")
         self.secretsmanager = self.session.client("secretsmanager")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")

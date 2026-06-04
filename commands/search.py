@@ -204,7 +204,7 @@ def resources(
         # Use additional query parameters
         uv run cli.py search resources --query "funding=some-id" --query "status=published" --aggregation all
     """
-    search_service = SearchApiService(profile=ctx.profile)
+    search_service = SearchApiService(session=ctx.session)
     search_params = SearchParams.from_kwargs(**kwargs)
     query_params = search_params.to_query_params(search_service.api_domain)
 

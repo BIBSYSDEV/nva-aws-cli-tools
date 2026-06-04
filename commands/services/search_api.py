@@ -8,14 +8,14 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
-from typing import Dict, Any, Generator, Optional
+from typing import Dict, Any, Generator
 
 logger = logging.getLogger(__name__)
 
 
 class SearchApiService:
-    def __init__(self, profile: Optional[str]) -> None:
-        self.session = boto3.Session(profile_name=profile)
+    def __init__(self, session: boto3.Session) -> None:
+        self.session = session
         self.ssm = self.session.client("ssm")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")
 

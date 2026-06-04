@@ -60,7 +60,7 @@ def export(
     if filter_expressions:
         condition = _parse_multiple_filters(filter_expressions)
 
-    exporter = GenericDynamodbExporter(ctx.profile, table)
+    exporter = GenericDynamodbExporter(ctx.session, table)
     exporter.export(output_dir, condition, limit, segments)
 
 
