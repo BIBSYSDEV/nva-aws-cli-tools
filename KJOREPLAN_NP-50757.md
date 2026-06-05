@@ -11,7 +11,8 @@
 git checkout NP-50757-dlr-file-upload
 uv run pytest commands/services/tests/test_file_upload_api.py
 uv run ruff check
-uv run cli.py files --help    # skal liste 5 subkommandoer
+uv run cli.py files --help    # skal liste 7 subkommandoer
+mkdir -p state handles
 ```
 
 **Sjekkliste før noe rør prod:**
@@ -55,10 +56,11 @@ uv run cli.py files publish-one \
 1. **Filen vises på publikasjonen i NVA-UI.**
 2. **LogEntry-source = DLR** (ikke OTHER):
    ```bash
-   uv run cli.py dynamodb export --table resources \
-       --filter "PK0:eq:Resource:<result_id>" \
-       --output-dir verify/smoke
-   # Åpne JSONL, søk etter "LogEntry:" — sjekk data.importSource.source == "DLR"
+   # Lag et lite engangs-manifest med kun denne ene ressursen, eller bruk
+   # det fulle manifestet + --institution for å avgrense.
+   uv run cli.py files check-source ~/Downloads/data_to_keep.json \
+       --institution uib.no --detail
+   # Sjekk: ressursens nye LogEntry-rader har source=DLR (ikke OTHER)
    ```
 3. **Publisering OK** (status `PUBLISHED` i UI).
 
@@ -102,7 +104,11 @@ uv run cli.py files upload-manifest $MANIFEST \
 
 **Stikkprøve etter hver institusjon:**
 - Én tilfeldig ressurs har alle forventede filer i UI
-- LogEntry-source på samme ressurs = DLR
+- LogEntry-source på alle ressurser i denne kjøringen:
+  ```bash
+  uv run cli.py files check-source $MANIFEST --institution $DOMAINS
+  ```
+  Skal vise `OTHER`-rader kun for *gamle* entries (rettes i steg 4).
 
 Resume ved feil: kjør samme kommando på nytt — state-fila hopper over `ok`-rader.
 
@@ -127,17 +133,46 @@ Idempotent (409 = allerede publisert = OK), trygt å re-kjøre.
 
 ---
 
-## 4. Rett historiske `OTHER`→`DLR` på LogEntry
+## 3.5 Migrér handles til NVA
 
-**Backup først** (eksporter LogEntry-rader med `OTHER`-source bredt):
+Hver ressurs som har `handle`-felt i manifestet skal redirigeres til sin nye
+NVA-side. Først dumpes handle-listen til fil (for audit + resume), så kjøres
+`handle redirect-to-nva` som har egen state via `handle-done.csv`.
 
 ```bash
-uv run cli.py dynamodb export --table resources \
-    --filter "SK0:begins_with:LogEntry:" \
-    --output-dir backups/logentries-$(date +%Y%m%d-%H%M)
+# 3.5a — Hent ut handles per institusjon
+uv run cli.py files extract-handles $MANIFEST --institution $DOMAINS \
+    --output handles/${INST}.txt
+
+# 3.5b — Tørrkjør (én linje per handle, viser planlagt NVA-URL)
+xargs uv run cli.py handle redirect-to-nva --dry-run < handles/${INST}.txt
+
+# 3.5c — Ekte
+xargs uv run cli.py handle redirect-to-nva < handles/${INST}.txt
 ```
 
-**Tørrkjør** (default — trygt):
+`handle redirect-to-nva` søker hver handle opp i NVA og oppdaterer den til
+`https://<ApplicationDomain>/registration/<identifier>` hvis det finnes nøyaktig
+ett treff. Resultatene appendes til `handle-done.csv` slik at re-kjøring hopper
+over allerede prosesserte handles.
+
+---
+
+## 4. Rett historiske `OTHER`→`DLR` på LogEntry
+
+**Forhåndsbilde** (read-only sjekk, ingen scan):
+
+```bash
+uv run cli.py files check-source \
+    ~/Downloads/data_to_keep.json ~/Downloads/data_to_keep_usn.json
+# Noter:
+#   - Total OTHER-count (skal matche dry-run-tellingen i neste steg)
+#   - "Resources with owner mismatch" SKAL være 0. Er den ikke det,
+#     stopp og verifiser hvilke ressurser som ikke eies av dlr-import-integration.
+```
+
+**Tørrkjør** (default — trygt). Owner-gate er på som default og hopper over
+partisjoner der `resourceOwner.owner` ikke inneholder `dlr-import-integration`:
 
 ```bash
 uv run cli.py files fix-log-source \
@@ -157,16 +192,22 @@ uv run cli.py files fix-log-source \
 
 Conditional update (`source = OTHER`) hindrer dobbeltskriving.
 
+> ⚠️ **Owner-gate**: hvis output viser `skipped_owner > 0`, har minst én ressurs
+> en eier som ikke matcher `dlr-import-integration`. Det er som regel et signal
+> om at feil result_id har sneket seg inn i manifestet — *ikke* en grunn til å
+> kjøre `--force`. Verifiser først.
+
 ---
 
 ## 5. Etterkontroll
 
 - [ ] Antall publiserte ressurser ≈ 147
 - [ ] 5 tilfeldige ressurser har alle filene fra manifestet, korrekt mimetype/størrelse
-- [ ] Spot-check LogEntry: alle nye entries har `source=DLR`, ingen gjenværende `Other`
-      på de migrerte ressursene
-- [ ] State-filer arkivert (intern lagring eller `state/`-folder pushet til repoet
-      som artefakt — vurder hva som er passende)
+- [ ] LogEntry-status: `files check-source` på alle manifestene viser 0 `OTHER`-rader
+- [ ] Handles: åpne et utvalg `https://hdl.handle.net/...`-URLer fra manifestet og
+      bekreft at de redirigerer til NVA-registrering, ikke gammel DLR-side
+- [ ] State-filer (`state/`) + handles-filer (`handles/`) + `handle-done.csv`
+      arkivert (intern lagring eller pushet til repoet som artefakt)
 
 ---
 

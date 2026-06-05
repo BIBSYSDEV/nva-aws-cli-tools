@@ -1,11 +1,15 @@
+import base64
 import json
 import logging
 import re
+import zlib
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
 import click
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.types import Binary
 from rich.console import Console
 
 from commands.services.file_upload_api import (
@@ -28,6 +32,10 @@ SOURCE_OTHER = "OTHER"
 SOURCE_DLR = "DLR"
 CONTENT_TYPE_FILE = "file"
 GENERATED_TRUE = "true"
+HANDLE_URL_PREFIX = "https://hdl.handle.net/"
+DEFAULT_OWNER_SUBSTRING = "dlr-import-integration"
+OWNER_MISMATCH_MARKER = "OWNER-MISMATCH"
+OWNER_MISSING_MARKER = "OWNER-MISSING"
 
 
 @click.group()
@@ -212,6 +220,138 @@ def publish_manifest(
             console.print(f"FAIL publish {result_id}: {exc}")
 
 
+@files.command("extract-handles")
+@click.argument("manifest", type=click.Path(exists=True))
+@click.option(
+    "--institution",
+    default=None,
+    help="Comma-separated email domains. Default: all resources in manifest.",
+)
+@click.option(
+    "--output",
+    "output_path",
+    default=None,
+    type=click.Path(),
+    help="Write to this file (one handle per line). Default: stdout.",
+)
+def extract_handles(
+    manifest: str,
+    institution: str | None,
+    output_path: str | None,
+) -> None:
+    """Extract handles from a manifest as input for `handle redirect-to-nva`.
+
+    Strips the https://hdl.handle.net/ prefix so the output can be piped
+    directly into `xargs uv run cli.py handle redirect-to-nva`.
+    """
+    handles = _extract_handles_from_manifest(manifest, institution)
+    text = "\n".join(handles) + ("\n" if handles else "")
+    if output_path:
+        Path(output_path).write_text(text)
+        Console().print(f"Wrote {len(handles)} handles to {output_path}")
+    else:
+        click.echo(text, nl=False)
+
+
+def _extract_handles_from_manifest(
+    manifest_path: str, institution: str | None
+) -> list[str]:
+    raw = json.loads(Path(manifest_path).read_text())
+    domains = _split_domains(institution) if institution else None
+    handles: list[str] = []
+    for resource in raw.values():
+        if domains is not None and _resource_domain(resource) not in domains:
+            continue
+        handle = _normalise_handle(resource.get("handle"))
+        if handle:
+            handles.append(handle)
+    return handles
+
+
+def _normalise_handle(raw_handle: Any) -> str | None:
+    if not isinstance(raw_handle, str) or not raw_handle.strip():
+        return None
+    stripped = raw_handle.strip()
+    if stripped.startswith(HANDLE_URL_PREFIX):
+        return stripped[len(HANDLE_URL_PREFIX) :]
+    return stripped
+
+
+@files.command("check-source")
+@click.argument("manifests", nargs=-1, required=True, type=click.Path(exists=True))
+@click.option(
+    "--institution",
+    default=None,
+    help="Comma-separated email domains. Default: all resources in manifest.",
+)
+@click.option("--detail", is_flag=True, default=False, help="Print every LogEntry row")
+@click.option(
+    "--require-owner-contains",
+    default=DEFAULT_OWNER_SUBSTRING,
+    show_default=True,
+    help="Flag rows whose Resource.resourceOwner.owner does not contain this string. "
+    "Pass empty string to disable.",
+)
+@click.pass_obj
+def check_source(
+    ctx: AppContext,
+    manifests: tuple[str, ...],
+    institution: str | None,
+    detail: bool,
+    require_owner_contains: str,
+) -> None:
+    """Read-only: per-resource Query that tallies LogEntry sources.
+
+    One DynamoDB Query per result_id (single partition) — never scans.
+    Also fetches the Resource row to surface resourceOwner.owner alongside the
+    source counts so you can spot rows that don't belong to the expected importer.
+    """
+    result_ids = _collect_filtered_result_ids(manifests, institution)
+    console = Console()
+    console.print(f"Result-ids to check: {len(result_ids)}")
+
+    table = _resolve_resources_table(ctx)
+    owner_substring = require_owner_contains or None
+    console.print(f"Table: {table.name}  owner_gate={owner_substring or '<disabled>'}")
+
+    grand_total: Counter[str] = Counter()
+    resources_with_other = 0
+    resources_missing = 0
+    resources_owner_mismatch = 0
+
+    for result_id in sorted(result_ids):
+        owner = _fetch_resource_owner(table, result_id)
+        owner_ok = _owner_matches(owner, owner_substring)
+        if not owner_ok:
+            resources_owner_mismatch += 1
+        rows = _query_log_entries(table, result_id)
+        if not rows:
+            resources_missing += 1
+            console.print(
+                f"{result_id}  MISSING (no LogEntry rows)  owner={owner or '<missing>'}"
+            )
+            continue
+        per_resource = Counter(_import_source(row) or "<missing>" for row in rows)
+        grand_total.update(per_resource)
+        if per_resource.get(SOURCE_OTHER):
+            resources_with_other += 1
+        owner_tag = "" if owner_ok else f"  [{OWNER_MISMATCH_MARKER}]"
+        console.print(
+            f"{result_id}  logs={len(rows)}  {_format_sources(per_resource)}  "
+            f"owner={owner or '<missing>'}{owner_tag}"
+        )
+        if detail:
+            for row in rows:
+                _print_detail_row(console, row)
+
+    console.print("---")
+    console.print(f"Resources: {len(result_ids)}  missing: {resources_missing}")
+    console.print(f"Resources with any OTHER: {resources_with_other}")
+    console.print(f"Resources with owner mismatch: {resources_owner_mismatch}")
+    console.print(f"LogEntries total: {sum(grand_total.values())}")
+    console.print(f"Sources: {_format_sources(grand_total)}")
+
+
 @files.command("fix-log-source")
 @click.argument("manifests", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option(
@@ -220,27 +360,57 @@ def publish_manifest(
     show_default=True,
     help="Default true; pass --no-dry-run to apply",
 )
+@click.option(
+    "--require-owner-contains",
+    default=DEFAULT_OWNER_SUBSTRING,
+    show_default=True,
+    help="Skip partition if Resource.resourceOwner.owner does not contain this string",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Bypass the resourceOwner check (use with care)",
+)
 @click.pass_obj
 def fix_log_source(
     ctx: AppContext,
     manifests: tuple[str, ...],
     dry_run: bool,
+    require_owner_contains: str,
+    force: bool,
 ) -> None:
     """Repair LogEntry rows where data.importSource.source = OTHER → DLR.
 
     Targets only result_ids found in the supplied manifests (no broad scan).
+    By default each partition is gated by a Resource.resourceOwner.owner check
+    so that an unrelated OTHER entry cannot be overwritten by accident.
     """
     result_ids = _collect_result_ids(manifests)
     console = Console()
     console.print(f"Result-ids from manifests: {len(result_ids)}")
 
     table = _resolve_resources_table(ctx)
-    console.print(f"Table: {table.name}  dry_run={dry_run}")
+    owner_substring = None if force else require_owner_contains
+    console.print(
+        f"Table: {table.name}  dry_run={dry_run}  "
+        f"owner_gate={owner_substring or '<disabled>'}"
+    )
 
     updated_count = 0
     failed_count = 0
     candidate_count = 0
+    skipped_owner_count = 0
     for result_id in sorted(result_ids):
+        if owner_substring is not None:
+            owner = _fetch_resource_owner(table, result_id)
+            if not _owner_matches(owner, owner_substring):
+                skipped_owner_count += 1
+                console.print(
+                    f"SKIP {result_id} owner={owner or '<missing>'} "
+                    f"({OWNER_MISMATCH_MARKER if owner else OWNER_MISSING_MARKER})"
+                )
+                continue
         rows = _query_log_entries(table, result_id)
         for row in rows:
             if _import_source(row) != SOURCE_OTHER:
@@ -262,7 +432,8 @@ def fix_log_source(
 
     console.print(
         f"Done. candidates={candidate_count} updated={updated_count} "
-        f"failed={failed_count} dry_run={dry_run}"
+        f"failed={failed_count} skipped_owner={skipped_owner_count} "
+        f"dry_run={dry_run}"
     )
 
 
@@ -379,6 +550,34 @@ def _collect_result_ids(manifest_paths: tuple[str, ...]) -> set[str]:
     return ids
 
 
+def _collect_filtered_result_ids(
+    manifest_paths: tuple[str, ...], institution: str | None
+) -> set[str]:
+    if institution is None:
+        return _collect_result_ids(manifest_paths)
+    domains = _split_domains(institution)
+    ids: set[str] = set()
+    for path in manifest_paths:
+        for result_id, _resource in _load_manifest_for_domains(path, domains):
+            ids.add(result_id)
+    return ids
+
+
+def _format_sources(counter: Counter[str]) -> str:
+    return "  ".join(f"{name}={count}" for name, count in sorted(counter.items()))
+
+
+def _print_detail_row(console: Console, row: dict) -> None:
+    log_entry_id = _log_entry_identifier(row.get("SK0", ""))
+    data = row.get("data", {})
+    topic = data.get("topic", "?")
+    log_type = data.get("type", "?")
+    source = _import_source(row) or "<missing>"
+    console.print(
+        f"    log={log_entry_id}  type={log_type}  topic={topic}  source={source}"
+    )
+
+
 def _resolve_resources_table(ctx: AppContext) -> Any:
     dynamodb = ctx.session.client("dynamodb")
     response = dynamodb.list_tables()
@@ -425,6 +624,56 @@ def _import_source(row: dict) -> str | None:
 def _log_entry_identifier(sort_key: str) -> str:
     match = re.match(rf"^{re.escape(LOG_ENTRY_SK_PREFIX)}(.+)$", sort_key)
     return match.group(1) if match else sort_key
+
+
+def _fetch_resource_owner(table: Any, result_id: str) -> str | None:
+    """GetItem the Resource row and pull resourceOwner.owner out of the zlib data blob.
+
+    Returns None if the row is missing or the owner field can't be extracted.
+    """
+    key_value = f"{RESOURCE_PK_PREFIX}{result_id}"
+    response = table.get_item(Key={"PK0": key_value, "SK0": key_value})
+    item = response.get("Item")
+    if not item:
+        return None
+    data = _inflate_resource_data(item.get("data"))
+    if not isinstance(data, dict):
+        return None
+    resource_owner = data.get("resourceOwner")
+    if not isinstance(resource_owner, dict):
+        return None
+    owner = resource_owner.get("owner")
+    return owner if isinstance(owner, str) else None
+
+
+def _inflate_resource_data(blob: Any) -> dict | None:
+    if isinstance(blob, dict):
+        return blob
+    if isinstance(blob, Binary):
+        raw = bytes(blob)
+    elif isinstance(blob, bytes):
+        raw = blob
+    elif isinstance(blob, str):
+        try:
+            raw = base64.b64decode(blob)
+        except Exception:
+            return None
+    else:
+        return None
+    try:
+        inflated = zlib.decompress(raw, -zlib.MAX_WBITS)
+        return json.loads(inflated.decode("utf-8"))
+    except Exception as error:
+        logger.warning("Failed to inflate Resource data: %s", error)
+        return None
+
+
+def _owner_matches(owner: str | None, required_substring: str | None) -> bool:
+    if not required_substring:
+        return True
+    if owner is None:
+        return False
+    return required_substring in owner
 
 
 def _update_log_source_to_dlr(table: Any, row: dict) -> None:
