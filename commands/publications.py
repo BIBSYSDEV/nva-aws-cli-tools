@@ -34,7 +34,7 @@ def publications(ctx: AppContext):
 @click.argument("publication_identifier", required=True, nargs=1)
 @click.pass_obj
 def copy(ctx: AppContext, publication_identifier: str) -> None:
-    service = PublicationApiService(ctx.profile)
+    service = PublicationApiService(ctx.session)
     original = service.fetch_publication(publication_identifier)
     original["associatedArtifacts"] = []
     original.pop("identifier")
@@ -55,7 +55,7 @@ def copy(ctx: AppContext, publication_identifier: str) -> None:
 @click.argument("publication_identifier", required=True, nargs=1)
 @click.pass_obj
 def edit(ctx: AppContext, editor: str, publication_identifier: str) -> None:
-    service = PublicationApiService(ctx.profile)
+    service = PublicationApiService(ctx.session)
     publication = service.fetch_publication(publication_identifier)
     publication.pop("@context", None)
 
@@ -69,7 +69,7 @@ def edit(ctx: AppContext, editor: str, publication_identifier: str) -> None:
 @click.argument("publication_identifier", required=True, nargs=1)
 @click.pass_obj
 def fetch(ctx: AppContext, publication_identifier: str) -> None:
-    service = PublicationApiService(ctx.profile)
+    service = PublicationApiService(ctx.session)
     publication = service.fetch_publication(publication_identifier)
 
     if not publication:
@@ -89,7 +89,7 @@ def export(ctx: AppContext, folder: str) -> None:
         "Resource:"
     )
     batch_size = 700
-    DynamodbPublications(ctx.profile, table_pattern).save_to_folder(
+    DynamodbPublications(ctx.session, table_pattern).save_to_folder(
         condition, batch_size, folder
     )
 
@@ -99,7 +99,7 @@ def export(ctx: AppContext, folder: str) -> None:
 @click.pass_obj
 def fetch_dynamodb(ctx: AppContext, publication_identifier: str) -> None:
     _, _, resource = DynamodbPublications(
-        ctx.profile, table_pattern
+        ctx.session, table_pattern
     ).fetch_resource_by_identifier(publication_identifier)
     click.echo(prettify(resource))
 
@@ -108,7 +108,7 @@ def fetch_dynamodb(ctx: AppContext, publication_identifier: str) -> None:
 @click.argument("publication_identifier", required=True, nargs=1)
 @click.pass_obj
 def edit_dynamodb(ctx: AppContext, publication_identifier: str) -> None:
-    service = DynamodbPublications(ctx.profile, table_pattern)
+    service = DynamodbPublications(ctx.session, table_pattern)
     pk0, sk0, resource = service.fetch_resource_by_identifier(publication_identifier)
 
     def update_callback(updated_publication):
@@ -125,7 +125,7 @@ def edit_dynamodb(ctx: AppContext, publication_identifier: str) -> None:
 @click.argument("input", type=click.Path(exists=True), required=True, nargs=1)
 @click.pass_obj
 def migrate_by_dynamodb(ctx: AppContext, input: str) -> None:
-    service = DynamodbPublications(ctx.profile, table_pattern)
+    service = DynamodbPublications(ctx.session, table_pattern)
 
     update_statements = []
     batch_size = 15
@@ -233,7 +233,7 @@ def reindex(
     import os
 
     # Initialize the batch job service
-    service = ResourceBatchJobService(ctx.profile)
+    service = ResourceBatchJobService(ctx.session)
 
     # Display input information based on type
     if os.path.isfile(input_source):
@@ -311,7 +311,7 @@ def logs(ctx: AppContext, publication_identifier: str, output: str | None) -> No
         # Export logs to specific file
         cli.py publications logs 019aa050798d-54f5e9a6-2f77-47f3-b59a-0c78d60728db --output /tmp/logs.json
     """
-    service = DynamodbPublications(ctx.profile, table_pattern)
+    service = DynamodbPublications(ctx.session, table_pattern)
     log_entries = service.fetch_log_entries(publication_identifier)
     if len(log_entries) == 0:
         logger.warning(f"No log entries found for publication {publication_identifier}")

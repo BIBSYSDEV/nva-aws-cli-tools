@@ -22,9 +22,8 @@ class BatchJobType(Enum):
 class ResourceBatchJobService:
     """Service for handling resource batch job operations via SQS."""
 
-    def __init__(self, profile: str):
-        self.profile = profile
-        self.session = boto3.Session(profile_name=profile)
+    def __init__(self, session: boto3.Session):
+        self.session = session
         self.sqs = self.session.client("sqs")
         self._queue_url = None
         self._find_batch_job_queue()

@@ -37,7 +37,7 @@ def add_person(ctx: AppContext, input_file) -> None:
     else:
         user_data_json = input_file.read()
     user_data = json.loads(user_data_json)
-    result = CristinService(ctx.profile).add_person(user_data)
+    result = CristinService(ctx.session).add_person(user_data)
     click.echo(prettify(result))
 
 
@@ -51,14 +51,14 @@ def update_person(ctx: AppContext, input_file, user_id) -> None:
     else:
         user_data_json = input_file.read()
     user_data = json.loads(user_data_json)
-    CristinService(ctx.profile).update_person(user_id, user_data)
+    CristinService(ctx.session).update_person(user_id, user_data)
 
 
 @cristin.command(help="Get person from Cristin.")
 @click.argument("user_id", required=True)
 @click.pass_obj
 def get_person(ctx: AppContext, user_id) -> None:
-    result = CristinService(ctx.profile).get_person(user_id)
+    result = CristinService(ctx.session).get_person(user_id)
     click.echo(prettify(result))
 
 
@@ -66,7 +66,7 @@ def get_person(ctx: AppContext, user_id) -> None:
 @click.argument("norwegian_national_id", required=True)
 @click.pass_obj
 def get_person_by_nin(ctx: AppContext, norwegian_national_id: str) -> None:
-    result = CristinService(ctx.profile).get_person_by_nin(norwegian_national_id)
+    result = CristinService(ctx.session).get_person_by_nin(norwegian_national_id)
     click.echo(prettify(result))
 
 
@@ -83,7 +83,7 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
     Adds users to Cristin from all JSON files in the specified folder and pre-approves their terms.
     """
     api_client = ApiClient(session=ctx.session)
-    cristin_service = CristinService(ctx.profile)
+    cristin_service = CristinService(ctx.session)
     for filename in os.listdir(folder_path):
         if filename.endswith(".json"):
             file_path = os.path.join(folder_path, filename)
@@ -169,7 +169,7 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
 @click.argument("project_id", required=True)
 @click.pass_obj
 def get_project(ctx: AppContext, project_id) -> None:
-    result = CristinService(ctx.profile).get_project(project_id)
+    result = CristinService(ctx.session).get_project(project_id)
     click.echo(prettify(result))
 
 
@@ -183,7 +183,7 @@ def add_project(ctx: AppContext, input_file) -> None:
         data = input_file.read()
     project = json.loads(data)
 
-    result = CristinService(ctx.profile).add_project(project)
+    result = CristinService(ctx.session).add_project(project)
     click.echo(prettify(result))
 
 
@@ -198,7 +198,7 @@ def update_project(ctx: AppContext, project_id: str, input_file) -> None:
         data = input_file.read()
     project = json.loads(data)
 
-    CristinService(ctx.profile).update_project(project_id, project)
+    CristinService(ctx.session).update_project(project_id, project)
     click.echo("Project updated successfully.")
 
 
@@ -209,7 +209,7 @@ def update_project(ctx: AppContext, project_id: str, input_file) -> None:
 @click.argument("manager_id", required=True)
 @click.pass_obj
 def import_projects(ctx: AppContext, input_folder: str, manager_id: str) -> None:
-    cristin_service = CristinService(ctx.profile)
+    cristin_service = CristinService(ctx.session)
     for filename in os.listdir(input_folder):
         if filename.endswith(".json"):
             file_path = os.path.join(input_folder, filename)
@@ -255,7 +255,7 @@ def import_projects(ctx: AppContext, input_folder: str, manager_id: str) -> None
 @click.pass_obj
 def put_person_image(ctx: AppContext, user_id: str, image_file) -> None:
     image_data = image_file.read()
-    CristinService(ctx.profile).put_person_image(user_id, image_data)
+    CristinService(ctx.session).put_person_image(user_id, image_data)
     click.echo("OK")
 
 
@@ -265,7 +265,7 @@ def put_person_image(ctx: AppContext, user_id: str, image_file) -> None:
 @click.argument("input_file", type=click.File("r"))
 @click.pass_obj
 def update_names_job(ctx: AppContext, input_file) -> None:
-    cristin = CristinService(ctx.profile)
+    cristin = CristinService(ctx.session)
     # PERSONLOPENR;FORNAVN;ETTERNAVN;FODSELSDATO;PERSONNR;DATO_OPPRETTET;;NIN;NAME
     reader = csv.DictReader(input_file, delimiter=";")
 

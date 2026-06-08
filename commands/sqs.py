@@ -41,7 +41,7 @@ def sqs(ctx: AppContext):
 def drain(
     ctx: AppContext, queue_name, output_dir, messages_per_file, delete, threads, yes
 ):
-    sqs_service = SqsService(profile=ctx.profile)
+    sqs_service = SqsService(session=ctx.session)
 
     queue_url = get_queue_url(sqs_service, queue_name)
     delete_after_write = delete
@@ -78,7 +78,7 @@ def drain(
 @click.argument("queue_name", type=str)
 @click.pass_obj
 def info(ctx: AppContext, queue_name):
-    sqs_service = SqsService(profile=ctx.profile)
+    sqs_service = SqsService(session=ctx.session)
 
     queue_url = get_queue_url(sqs_service, queue_name)
     show_queue_details(sqs_service, queue_url)
@@ -97,7 +97,7 @@ def analyze(ctx: AppContext, folder_path):
     - Stack trace locations
     - Message and attribute statistics
     """
-    sqs_service = SqsService(profile=ctx.profile)
+    sqs_service = SqsService(session=ctx.session)
     results = sqs_service.analyze_drained_messages(folder_path)
 
     if not results:
@@ -110,7 +110,7 @@ def analyze(ctx: AppContext, folder_path):
 @click.pass_obj
 def list(ctx: AppContext, filter):
     """List all SQS queues in the account."""
-    sqs_service = SqsService(profile=ctx.profile)
+    sqs_service = SqsService(session=ctx.session)
 
     try:
         response = sqs_service.sqs_client.list_queues()
@@ -145,7 +145,7 @@ def list(ctx: AppContext, filter):
 )
 @click.pass_obj
 def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int):
-    sqs_service = SqsService(profile=ctx.profile)
+    sqs_service = SqsService(session=ctx.session)
     queue_url = get_queue_url(sqs_service, queue_name)
 
     show_queue_summary(sqs_service, queue_url)
@@ -172,7 +172,7 @@ def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int):
 @click.pass_obj
 def redrive(ctx: AppContext, queue_name: str, destination: str, yes: bool):
     """Start a DLQ redrive, moving messages from source to destination queue."""
-    sqs_service = SqsService(profile=ctx.profile)
+    sqs_service = SqsService(session=ctx.session)
 
     source_url = get_queue_url(sqs_service, queue_name)
     destination_url = get_queue_url(sqs_service, destination)

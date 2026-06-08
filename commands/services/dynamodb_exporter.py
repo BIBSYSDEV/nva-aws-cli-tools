@@ -36,12 +36,9 @@ class DynamoDBEncoder(json.JSONEncoder):
 
 
 class GenericDynamodbExporter:
-    def __init__(self, profile: str | None, table_name_substring: str) -> None:
-        self.profile = profile
+    def __init__(self, session: boto3.Session, table_name_substring: str) -> None:
         self.table_name_substring = table_name_substring
-        self.session = (
-            boto3.Session(profile_name=profile) if profile else boto3.Session()
-        )
+        self.session = session
         self.dynamodb = self.session.client("dynamodb")
         self.table = self._get_table()
         self.table_name: str = self.table.name
@@ -90,10 +87,11 @@ class GenericDynamodbExporter:
 
     def _get_table_for_thread(self) -> Any:
         if not hasattr(self._thread_local, "table"):
-            session = (
-                boto3.Session(profile_name=self.profile)
-                if self.profile
-                else boto3.Session()
+            # boto3 Session objects are not thread-safe, so each worker thread
+            # gets its own session derived from the injected session's config.
+            session = boto3.Session(
+                profile_name=self.session.profile_name,
+                region_name=self.session.region_name,
             )
             self._thread_local.table = session.resource("dynamodb").Table(
                 self.table_name

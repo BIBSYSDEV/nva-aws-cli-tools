@@ -57,13 +57,10 @@ EXCEPTION_CONTEXT_PATTERNS = [
 
 
 class SqsService:
-    def __init__(self, profile: Optional[str] = None):
-        if profile:
-            self.session = boto3.Session(profile_name=profile)
-        else:
-            self.session = boto3.Session()
+    def __init__(self, session: boto3.Session):
+        self.session = session
         self.sqs_client = self.session.client("sqs")
-        self.profile = profile or "default"
+        self.profile = session.profile_name or "default"
 
     def find_queue_url(self, queue_name_partial: str) -> Optional[str]:
         try:

@@ -12,8 +12,8 @@ def extract_publication_identifier(publication_id: str) -> str:
 
 
 class PublicationApiService:
-    def __init__(self, profile, client_id=None, client_secret=None):
-        self.session = boto3.Session(profile_name=profile)
+    def __init__(self, session: boto3.Session, client_id=None, client_secret=None):
+        self.session = session
         self.ssm = self.session.client("ssm")
         self.secretsmanager = self.session.client("secretsmanager")
         self.api_domain = self._get_system_parameter("/NVA/ApiDomain")

@@ -13,27 +13,27 @@ from commands.dynamodb import _parse_filter_expression, _parse_multiple_filters
 from commands.services.dynamodb_exporter import DynamoDBEncoder, GenericDynamodbExporter
 
 
-@pytest.fixture
-def mock_session():
-    with patch("commands.services.dynamodb_exporter.boto3.Session") as mock:
-        yield mock
-
-
-@pytest.fixture
-def mock_exporter(mock_session):
+def _make_mock_session(table_names, table_name=None):
     mock_client = Mock()
-    mock_client.list_tables.return_value = {"TableNames": ["test-table"]}
+    mock_client.list_tables.return_value = {"TableNames": table_names}
 
     mock_table = Mock()
+    if table_name is not None:
+        mock_table.name = table_name
+
     mock_resource = Mock()
     mock_resource.Table.return_value = mock_table
 
-    mock_session_instance = Mock()
-    mock_session_instance.client.return_value = mock_client
-    mock_session_instance.resource.return_value = mock_resource
-    mock_session.return_value = mock_session_instance
+    mock_session = Mock()
+    mock_session.client.return_value = mock_client
+    mock_session.resource.return_value = mock_resource
+    return mock_session
 
-    return GenericDynamodbExporter(None, "test-table")
+
+@pytest.fixture
+def mock_exporter():
+    session = _make_mock_session(["test-table"])
+    return GenericDynamodbExporter(session, "test-table")
 
 
 @pytest.fixture
@@ -62,40 +62,23 @@ def sample_uncompressed_item():
     }
 
 
-def test_get_table_success(mock_session):
-    mock_client = Mock()
-    mock_client.list_tables.return_value = {
-        "TableNames": ["my-table-dev-123", "other-table", "my-table-prod-456"]
-    }
+def test_get_table_success():
+    session = _make_mock_session(
+        ["my-table-dev-123", "other-table", "my-table-prod-456"],
+        table_name="my-table-prod-456",
+    )
 
-    mock_resource = Mock()
-    mock_table = Mock()
-    mock_table.name = "my-table-prod-456"
-    mock_resource.Table.return_value = mock_table
-
-    mock_session_instance = Mock()
-    mock_session_instance.client.return_value = mock_client
-    mock_session_instance.resource.return_value = mock_resource
-    mock_session.return_value = mock_session_instance
-
-    exporter = GenericDynamodbExporter("test-profile", "prod")
+    exporter = GenericDynamodbExporter(session, "prod")
 
     assert exporter.table is not None
     assert exporter.table_name == "my-table-prod-456"
 
 
-def test_get_table_not_found(mock_session):
-    mock_client = Mock()
-    mock_client.list_tables.return_value = {
-        "TableNames": ["other-table", "another-table"]
-    }
-
-    mock_session_instance = Mock()
-    mock_session_instance.client.return_value = mock_client
-    mock_session.return_value = mock_session_instance
+def test_get_table_not_found():
+    session = _make_mock_session(["other-table", "another-table"])
 
     with pytest.raises(ValueError, match="No table found containing 'resources'"):
-        GenericDynamodbExporter("test-profile", "resources")
+        GenericDynamodbExporter(session, "resources")
 
 
 def test_decompress_data(mock_exporter):

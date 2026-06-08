@@ -10,18 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 class CristinService:
-    def __init__(self, profile):
-        self.profile = profile
-        session = (
-            boto3.Session(profile_name=self.profile)
-            if self.profile
-            else boto3.Session()
-        )
+    def __init__(self, session: boto3.Session):
+        self.session = session
         self.ssm = session.client("ssm")
         self.secretsmanager = session.client("secretsmanager")
 
-        # Set API URL based on profile
-        if self.profile and "prod" in self.profile.lower():
+        # Set API URL based on the session's profile
+        profile_name = session.profile_name
+        if profile_name and "prod" in profile_name.lower():
             self.cristin_api = "https://api.cristin.no/v2"
         else:
             self.cristin_api = "https://api.cristin-test.uio.no/v2"

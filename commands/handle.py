@@ -40,8 +40,8 @@ def redirect_to_nva(ctx: AppContext, handles: tuple, dry_run: bool) -> None:
       handle redirect-to-nva 11250/2497055 11250/2496565
       tail -n +2 nve-handles.csv | cut -d',' -f2 | xargs handle redirect-to-nva
     """
-    handle_service = HandleApiService(ctx.profile)
-    search_service = SearchApiService(ctx.profile)
+    handle_service = HandleApiService(ctx.session)
+    search_service = SearchApiService(ctx.session)
     app_domain = get_ssm_parameter(ctx.session, APPLICATION_DOMAIN_PARAMETER)
     registration_base_url = f"https://{app_domain}/{REGISTRATION_PATH}"
 
@@ -68,7 +68,7 @@ def redirect_to_nva(ctx: AppContext, handles: tuple, dry_run: bool) -> None:
 @click.pass_obj
 def set_handle(ctx: AppContext, handle_value: str, target_url: str) -> None:
     """Update a single handle to point to TARGET_URL."""
-    handle_service = HandleApiService(ctx.profile)
+    handle_service = HandleApiService(ctx.session)
     result = handle_service.set_handle(handle_value, target_url)
     logger.info("UPDATED %s → %s (%s)", handle_value, target_url, result)
 

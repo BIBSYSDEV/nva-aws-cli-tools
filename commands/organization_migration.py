@@ -34,7 +34,7 @@ def organization_migration(ctx: AppContext):
 def list_publications(
     ctx: AppContext, organization_identifier: str, filename: str
 ) -> dict:
-    service = SearchApiService(ctx.profile)
+    service = SearchApiService(ctx.session)
     params = {"unit": organization_identifier}
     contributors_response = fetch_all(service, params)
     params = {"userAffiliation": organization_identifier}
@@ -65,7 +65,7 @@ def update_publications(
     with open(filename, "r") as file:
         report = json.load(file)
 
-    database = DynamodbPublications(ctx.profile, table_pattern)
+    database = DynamodbPublications(ctx.session, table_pattern)
     contributors = report.get("contributors", [])
     for identifier in contributors:
         (pk0, sk0, resource) = database.fetch_resource_by_identifier(identifier)
