@@ -219,6 +219,33 @@ def test_build_git_history_creates_commits(tmp_path: Path, monkeypatch):
     assert any("20240101_120000_v1" in msg for msg in commit_messages)
 
 
+def test_build_git_history_commits_identical_versions(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "Test")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@test.com")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Test")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "test@test.com")
+    version_dir = tmp_path / "versions"
+    version_dir.mkdir()
+
+    same_payload = json.dumps({"version": 1})
+    (version_dir / "20240101_120000_v1").write_text(same_payload)
+    (version_dir / "20240102_120000_v2").write_text(same_payload)
+
+    build_git_history(version_dir)
+
+    result = subprocess.run(
+        ["git", "log", "--oneline"],
+        cwd=version_dir,
+        capture_output=True,
+        text=True,
+    )
+    commit_messages = result.stdout.strip().splitlines()
+    # init + v1 + v2 — even though v1 and v2 are byte-identical, both must commit.
+    assert len(commit_messages) == 3
+    assert any("20240101_120000_v1" in msg for msg in commit_messages)
+    assert any("20240102_120000_v2" in msg for msg in commit_messages)
+
+
 def test_build_git_history_skips_if_git_exists(tmp_path: Path):
     version_dir = tmp_path / "versions"
     version_dir.mkdir()

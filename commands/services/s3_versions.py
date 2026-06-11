@@ -23,13 +23,21 @@ def _git(cwd: Path, *args: str) -> None:
     env = {
         **os.environ,
         **{k: v for k, v in _GIT_IDENTITY_DEFAULTS.items() if k not in os.environ},
+        # Isolate from the user's global/system git config (templates, hooks, signing, includeIf).
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
     }
     try:
         subprocess.run(
             ["git", *args], cwd=cwd, check=True, capture_output=True, env=env
         )
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError(exc.stderr.decode(errors="replace").strip()) from exc
+        stderr = exc.stderr.decode(errors="replace").strip() if exc.stderr else ""
+        stdout = exc.stdout.decode(errors="replace").strip() if exc.stdout else ""
+        details = stderr or stdout or "(no output)"
+        raise RuntimeError(
+            f"git {' '.join(args)} failed (exit {exc.returncode}) in {cwd}: {details}"
+        ) from exc
 
 
 def sanitize_to_folder_name(path: str) -> str:
@@ -146,7 +154,8 @@ def build_git_history(output_dir: Path, key: str = "") -> None:
     for filepath in version_files:
         object_file.write_bytes(filepath.read_bytes())
         _git(output_dir, "add", tracked_filename)
-        _git(output_dir, "commit", "-m", filepath.name)
+        # --allow-empty keeps a 1:1 commit-per-version mapping even when consecutive S3 versions are byte-identical.
+        _git(output_dir, "commit", "--allow-empty", "-m", filepath.name)
 
     logger.info(
         "Git history created with %d commits in %s", len(version_files), output_dir
