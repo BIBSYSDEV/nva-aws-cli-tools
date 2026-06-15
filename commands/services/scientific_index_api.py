@@ -9,6 +9,7 @@ from commands.services.api_client import ApiClient
 logger = logging.getLogger(__name__)
 
 XLSX_AUTHOR_SHARES_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares"
+XLSX_AUTHOR_SHARES_CONTROL_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares-control"
 ALL_INSTITUTIONS_REPORT_PATH = "scientific-index/reports/{year}/institutions"
 POLL_INTERVAL_SECONDS = 5
 
@@ -16,10 +17,26 @@ POLL_INTERVAL_SECONDS = 5
 def get_all_institutions_report(
     client: ApiClient, year: int, timeout_minutes: int = 5
 ) -> bytes:
+    return _fetch_institutions_report(
+        client, year, XLSX_AUTHOR_SHARES_ACCEPT, timeout_minutes
+    )
+
+
+def get_all_institutions_report_control(
+    client: ApiClient, year: int, timeout_minutes: int = 5
+) -> bytes:
+    return _fetch_institutions_report(
+        client, year, XLSX_AUTHOR_SHARES_CONTROL_ACCEPT, timeout_minutes
+    )
+
+
+def _fetch_institutions_report(
+    client: ApiClient, year: int, accept: str, timeout_minutes: int
+) -> bytes:
     url = (
         f"https://{client.api_domain}/{ALL_INSTITUTIONS_REPORT_PATH.format(year=year)}"
     )
-    headers = {**client.auth_header(), "Accept": XLSX_AUTHOR_SHARES_ACCEPT}
+    headers = {**client.auth_header(), "Accept": accept}
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     presigned_url = response.json()["uri"]
