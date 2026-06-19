@@ -9,17 +9,48 @@ from commands.services.api_client import ApiClient
 logger = logging.getLogger(__name__)
 
 XLSX_AUTHOR_SHARES_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares"
+XLSX_AUTHOR_SHARES_CONTROL_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares-control"
 ALL_INSTITUTIONS_REPORT_PATH = "scientific-index/reports/{year}/institutions"
+INSTITUTION_REPORT_PATH = "scientific-index/reports/{year}/institutions/{institution}"
 POLL_INTERVAL_SECONDS = 5
 
 
 def get_all_institutions_report(
-    client: ApiClient, year: int, timeout_minutes: int = 5
+    client: ApiClient,
+    year: int,
+    timeout_minutes: int = 5,
+    institution: str | None = None,
 ) -> bytes:
-    url = (
-        f"https://{client.api_domain}/{ALL_INSTITUTIONS_REPORT_PATH.format(year=year)}"
+    return _fetch_institutions_report(
+        client, year, XLSX_AUTHOR_SHARES_ACCEPT, timeout_minutes, institution
     )
-    headers = {**client.auth_header(), "Accept": XLSX_AUTHOR_SHARES_ACCEPT}
+
+
+def get_all_institutions_report_control(
+    client: ApiClient,
+    year: int,
+    timeout_minutes: int = 5,
+    institution: str | None = None,
+) -> bytes:
+    return _fetch_institutions_report(
+        client, year, XLSX_AUTHOR_SHARES_CONTROL_ACCEPT, timeout_minutes, institution
+    )
+
+
+def _fetch_institutions_report(
+    client: ApiClient,
+    year: int,
+    accept: str,
+    timeout_minutes: int,
+    institution: str | None = None,
+) -> bytes:
+    path = (
+        INSTITUTION_REPORT_PATH.format(year=year, institution=institution)
+        if institution
+        else ALL_INSTITUTIONS_REPORT_PATH.format(year=year)
+    )
+    url = f"https://{client.api_domain}/{path}"
+    headers = {**client.auth_header(), "Accept": accept}
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     presigned_url = response.json()["uri"]
