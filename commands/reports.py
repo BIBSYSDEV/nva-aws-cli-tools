@@ -1,7 +1,5 @@
 import io
 import json
-import logging
-import warnings
 from datetime import datetime
 
 import click
@@ -49,6 +47,12 @@ def reports(ctx: AppContext):
     default=None,
     help="Save the freshly fetched xlsx to this file (default name used when omitted and not comparing)",
 )
+@click.option(
+    "--key",
+    default="NVAID,PERSONLOPENR,INSTITUSJON,TITTEL,ETTERNAVN,FORNAVN",
+    show_default=True,
+    help="Comma-separated key columns used to match rows when comparing",
+)
 @click.pass_obj
 def author_shares(
     ctx: AppContext,
@@ -56,6 +60,7 @@ def author_shares(
     institution: str | None,
     baseline: str | None,
     save: str | None,
+    key: str,
 ):
     client = ApiClient(session=ctx.session)
     scope = f"institution {institution}" if institution else "all institutions"
@@ -63,20 +68,22 @@ def author_shares(
         f"Fetching author shares report for {year} ({scope}) (may take a few minutes)..."
     )
     data = get_all_institutions_report(client, year, institution=institution)
-    if not logging.getLogger().isEnabledFor(logging.DEBUG):
-        warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
     if save or not baseline:
         _save_xlsx(data, save or _default_xlsx_filename(ctx.profile, year, institution))
     if baseline:
+        key_columns = [column.strip() for column in key.split(",") if column.strip()]
         render_dataframe_diff(
-            diff_dataframes(pl.read_excel(baseline), pl.read_excel(io.BytesIO(data)))
+            diff_dataframes(
+                pl.read_excel(baseline),
+                pl.read_excel(io.BytesIO(data)),
+                key_columns,
+            )
         )
 
 
 def _save_xlsx(data: bytes, filename: str) -> None:
-    pl.read_excel(io.BytesIO(data)).write_excel(
-        filename, autofit=True, table_style="Table Style Medium 9"
-    )
+    with open(filename, "wb") as output_file:
+        output_file.write(data)
     click.echo(f"Saved to {filename}")
 
 
