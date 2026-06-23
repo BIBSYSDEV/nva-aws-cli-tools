@@ -75,8 +75,12 @@ Toppnivå er en dict nøklet på DLR-resurs-UUID. Hver verdi:
 
 ### `dlr_content_type` — bekreftede verdier (telt i `data_to_keep.json`)
 - `file` (239) — faktiske filer i `loke.storage`, **disse lastes opp**.
-- `link` (89) — eksterne URL-er (f.eks. `https://www.solstien3.no/`), **ikke filer** (AssociatedLink-metadata).
-- `sharing_link` (2) — delings-URL-er, **ikke filer**.
+- `link` (89) — eksterne URL-er (Panopto-streaming etc.). DLR-metadata-migreringen
+  la dem *ikke* inn, så vi knytter dem på som `AdditionalIdentifier`
+  (`sourceName=dlr@<inst>`) via `files add-links-manifest`. (Vi prøvde først
+  `AssociatedLink` via `UpdatePublicationRequest`/`PartialUpdate`-body, men NVA
+  silently droppet `associatedArtifacts`-endringer på publiserte ressurser.)
+- `sharing_link` (2) — delings-URL-er, kun pekere til samme fil. **Ignoreres.**
 
 ### master vs ikke-master (blant ekte `file`-items)
 - `master=true` (116): hovedfila i ressursen.
@@ -227,6 +231,9 @@ For hver `result_id` fra manifestene:
   - [x] `upload(...)` — hele `create → prepare → PUT → complete`-flyten (`ExternalCompleteUpload`,
     `fileType=OpenFile` default).
   - [x] `publish(publication_identifier)` — direkte publisering (idempotent, 409 = ok).
+  - [x] `get_publication(...)` / `update_publication(...)` — GET + PUT mot `/publication/{id}`.
+  - [x] `add_additional_identifiers(publication_id, urls, source_name)` — GET → dedupliser → PUT (idempotent).
+  - [x] `create_publication(title)` — for dev-smoke-test (DLR-shape med Event-context).
   - [x] `System: DLR` på alle skrive-kall via `_headers()`.
 - [x] `LocalFileSource` og `S3ObjectSource` (Range-GET fra `loke.storage`).
 - [x] `resolve_api_domain(session)`.
@@ -250,16 +257,25 @@ Felles wiring: `token = ExternalClientToken.from_key_file(key_file)`,
     `S3ObjectSource(s3, "loke.storage", c["dlr_content_identifier"], filename_override=c["dlr_content"],
     mimetype_override=c.get("dlr_content_mime_type"))` → `service.upload(result_id, source, license=v["license"])`.
   - Hopp over allerede ferdige `(result_id, dlr_content_identifier)` via `--state`-fil (ikke idempotent).
-- [ ] **`files publish-manifest`** (eller flagg på upload) — `service.publish(result_id)` for hver
-  ferdig-opplastede ressurs. Idempotent, så trygt å kjøre separat etter opplasting.
-- [ ] **`files fix-log-source`** — Steg 3, retter `data.importSource.source` `OTHER`→`DLR` på
-  `LogEntry`-rader for de kjente result_id-ene (se Steg 3-seksjonen). `--dry-run` default + backup først.
+- [x] **`files add-links-manifest`** — knytter `dlr_content_type==link` til publikasjonen som
+  `AdditionalIdentifier` (`sourceName=dlr@<inst>`). Idempotent: dedupliserer mot eksisterende
+  (sourceName, value)-par.
+- [x] **`files publish-manifest`** — `service.publish(result_id)` for hver ferdig-opplastede
+  ressurs. Idempotent, så trygt å kjøre separat etter opplasting.
+- [x] **`files fix-log-source`** — Steg 3, retter `data.importSource.source` `OTHER`→`DLR` på
+  `LogEntry`-rader for de kjente result_id-ene. `--dry-run` default, owner-gate på som default.
+- [x] **`files check-source`** — read-only verifisering, viser source-fordeling per ressurs
+  via GSI `ResourcesByIdentifier`.
+- [x] **`files extract-handles`** — dumper handles for `handle redirect-to-nva`.
+- [x] **`files create-test-publication`** — bootstrap av dev-smoke-test (kan tvinge OTHER via
+  `--system UNKNOWN`).
 - [ ] **Test** `commands/services/tests/test_file_upload_api.py` med `responses` + `LocalFileSource`
   (uten nettverk). Sjekk bl.a. at `System: DLR` sendes på complete og publish.
 
 ## Avklart
 - **S3-nøkkel** = `dlr_content_identifier`, ingen prefix i `loke.storage`.
-- **content_type**: kun `file` lastes opp; `link`/`sharing_link` er ikke filer.
+- **content_type**: `file` lastes opp; `link` knyttes på som `AdditionalIdentifier`
+  (`sourceName=dlr@<inst>`) via `add-links-manifest`; `sharing_link` ignoreres.
 - **Utvelgelse**: `file` + ikke `generated` (master *og* ikke-master).
 - **`fileType` = `OpenFile`** (filene går rett til Open).
 - **Eierskap**: én kjøring per institusjon med egen nøkkelfil (NTNU-kjøringen tar også `hist.no`).

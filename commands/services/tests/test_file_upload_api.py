@@ -245,6 +245,214 @@ def test_upload_passes_publisher_version_and_embargo(tmp_path: Path) -> None:
 
 
 @responses.activate
+def test_create_publication_posts_minimal_body_with_dlr_header(
+    tmp_path: Path,
+) -> None:
+    _add_token_response()
+    responses.add(
+        responses.POST,
+        f"https://{API_DOMAIN}/publication",
+        json={"identifier": "new-pub-id", "status": "DRAFT"},
+        status=201,
+    )
+    service = _build_service(tmp_path)
+
+    result = service.create_publication("My test title")
+
+    assert result["identifier"] == "new-pub-id"
+    create_call = _find_call(f"https://{API_DOMAIN}/publication")
+    body = json.loads(create_call.request.body)
+    assert body["type"] == "Publication"
+    assert body["entityDescription"]["mainTitle"] == "My test title"
+    assert (
+        body["entityDescription"]["reference"]["publicationInstance"]["type"]
+        == "OtherPresentation"
+    )
+    assert (
+        body["entityDescription"]["reference"]["publicationContext"]["type"] == "Event"
+    )
+    contributors = body["entityDescription"]["contributors"]
+    assert len(contributors) == 1
+    assert contributors[0]["role"]["type"] == "Creator"
+    publication_date = body["entityDescription"]["publicationDate"]
+    assert publication_date["type"] == "PublicationDate"
+    assert publication_date["year"].isdigit()
+    event_time = body["entityDescription"]["reference"]["publicationContext"]["time"]
+    assert event_time["type"] == "Period"
+    assert "T00:00:00" in event_time["from"]
+    assert create_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
+
+
+SOURCE_NAME = "dlr@test"
+
+
+@responses.activate
+def test_add_additional_identifiers_skips_dupes_and_puts_new_ones(
+    tmp_path: Path,
+) -> None:
+    _add_token_response()
+    existing = {
+        "type": "Publication",
+        "additionalIdentifiers": [
+            {
+                "type": "AdditionalIdentifier",
+                "sourceName": SOURCE_NAME,
+                "value": "https://existing.example/already",
+            },
+        ],
+    }
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json=existing,
+    )
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={
+            "identifier": PUBLICATION_IDENTIFIER,
+            "additionalIdentifiers": existing["additionalIdentifiers"]
+            + [
+                {
+                    "type": "AdditionalIdentifier",
+                    "sourceName": SOURCE_NAME,
+                    "value": "https://new.example/panopto",
+                }
+            ],
+        },
+    )
+    service = _build_service(tmp_path)
+
+    added, skipped = service.add_additional_identifiers(
+        PUBLICATION_IDENTIFIER,
+        [
+            "https://existing.example/already",
+            "https://new.example/panopto",
+        ],
+        SOURCE_NAME,
+    )
+
+    assert added == 1
+    assert skipped == 1
+    put_call = next(c for c in responses.calls if c.request.method == "PUT")
+    body = json.loads(put_call.request.body)
+    assert body["type"] == "Publication"
+    assert body["identifier"] == PUBLICATION_IDENTIFIER
+    identifiers = body["additionalIdentifiers"]
+    assert len(identifiers) == 2
+    new_identifier = next(
+        identifier
+        for identifier in identifiers
+        if identifier.get("value") == "https://new.example/panopto"
+    )
+    assert new_identifier["sourceName"] == SOURCE_NAME
+    assert new_identifier["type"] == "AdditionalIdentifier"
+    assert put_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
+
+
+@responses.activate
+def test_add_additional_identifiers_round_trips_metadata_fields(
+    tmp_path: Path,
+) -> None:
+    _add_token_response()
+    entity_description = {"type": "EntityDescription", "mainTitle": "Title"}
+    project = {"type": "ResearchProject", "id": "https://example.org/p/1"}
+    funding = {"type": "ConfirmedFunding", "id": "https://example.org/f/1"}
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={
+            "type": "Publication",
+            "entityDescription": entity_description,
+            "projects": [project],
+            "fundings": [funding],
+            "rightsHolder": "Some Holder",
+            "additionalIdentifiers": [],
+        },
+    )
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={
+            "identifier": PUBLICATION_IDENTIFIER,
+            "additionalIdentifiers": [
+                {
+                    "type": "AdditionalIdentifier",
+                    "sourceName": SOURCE_NAME,
+                    "value": "https://new.example/x",
+                }
+            ],
+        },
+    )
+    service = _build_service(tmp_path)
+
+    service.add_additional_identifiers(
+        PUBLICATION_IDENTIFIER, ["https://new.example/x"], SOURCE_NAME
+    )
+
+    put_call = next(c for c in responses.calls if c.request.method == "PUT")
+    body = json.loads(put_call.request.body)
+    assert body["entityDescription"] == entity_description
+    assert body["projects"] == [project]
+    assert body["fundings"] == [funding]
+    assert body["rightsHolder"] == "Some Holder"
+
+
+@responses.activate
+def test_add_additional_identifiers_raises_when_response_omits_new_value(
+    tmp_path: Path,
+) -> None:
+    _add_token_response()
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={"type": "Publication", "additionalIdentifiers": []},
+    )
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={"identifier": PUBLICATION_IDENTIFIER, "additionalIdentifiers": []},
+    )
+    service = _build_service(tmp_path)
+
+    with pytest.raises(RuntimeError, match="silently dropped"):
+        service.add_additional_identifiers(
+            PUBLICATION_IDENTIFIER, ["https://lost.example/url"], SOURCE_NAME
+        )
+
+
+@responses.activate
+def test_add_additional_identifiers_no_put_when_all_dupes(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={
+            "type": "Publication",
+            "additionalIdentifiers": [
+                {
+                    "type": "AdditionalIdentifier",
+                    "sourceName": SOURCE_NAME,
+                    "value": "https://known.example/x",
+                }
+            ],
+        },
+    )
+    service = _build_service(tmp_path)
+
+    added, skipped = service.add_additional_identifiers(
+        PUBLICATION_IDENTIFIER,
+        ["https://known.example/x"],
+        SOURCE_NAME,
+    )
+
+    assert added == 0
+    assert skipped == 1
+    put_calls = [c for c in responses.calls if c.request.method == "PUT"]
+    assert put_calls == []
+
+
+@responses.activate
 def test_publish_sends_system_dlr_and_empty_body(tmp_path: Path) -> None:
     _add_token_response()
     responses.add(

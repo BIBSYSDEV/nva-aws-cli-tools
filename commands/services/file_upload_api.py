@@ -4,7 +4,7 @@ import math
 import mimetypes
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Protocol
@@ -32,6 +32,16 @@ PUBLISHER_VERSION_PUBLISHED = "PublishedVersion"
 PUBLISHER_VERSION_ACCEPTED = "AcceptedVersion"
 
 EXTERNAL_COMPLETE_TYPE = "ExternalCompleteUpload"
+
+ADDITIONAL_IDENTIFIER_TYPE = "AdditionalIdentifier"
+UPDATE_PUBLICATION_TYPE = "Publication"
+ROUND_TRIP_FIELDS = (
+    "entityDescription",
+    "projects",
+    "subjects",
+    "fundings",
+    "rightsHolder",
+)
 
 # HTTP header read by RequestUtil -> ThirdPartySystem.fromValue. Drives the
 # importSource on the resource log entries (FileUploadedEvent/PublishedResourceEvent).
@@ -146,6 +156,7 @@ class S3ObjectSource:
     key: str
     filename_override: str | None = None
     mimetype_override: str | None = None
+    size_override: int | None = None
 
     @cached_property
     def _head(self) -> dict:
@@ -169,6 +180,8 @@ class S3ObjectSource:
 
     @property
     def size(self) -> int:
+        if self.size_override is not None:
+            return self.size_override
         return self._head["ContentLength"]
 
     def read_part(self, part_number: int, part_size: int) -> bytes:
@@ -263,7 +276,7 @@ class FileUploadApiService:
         )
         presigned_url = prepare_body["url"]
         response = requests.put(presigned_url, data=chunk, timeout=PART_PUT_TIMEOUT)
-        response.raise_for_status()
+        _raise_for_status_with_body(response)
         return response.headers["ETag"].strip('"')
 
     def _complete(
@@ -292,6 +305,142 @@ class FileUploadApiService:
             body["embargoDate"] = embargo_date
         return self._post(publication_identifier, "complete", body)
 
+    def create_publication(self, title: str) -> dict:
+        """Create a minimal DLR-shaped draft via the third-party endpoint.
+
+        Mirrors the shape of real DLR-imported resources (OtherPresentation with
+        Event publicationContext + one Contributor) so the NVA frontend can
+        actually render the registration page. Without publicationContext or
+        contributors the public registration view crashes client-side.
+        """
+        url = f"https://{self.api_domain}/publication"
+        today = date.today()
+        body = {
+            "type": "Publication",
+            "entityDescription": {
+                "type": "EntityDescription",
+                "mainTitle": title,
+                "publicationDate": {
+                    "type": "PublicationDate",
+                    "year": str(today.year),
+                    "month": f"{today.month:02d}",
+                    "day": f"{today.day:02d}",
+                },
+                "contributors": [
+                    {
+                        "type": "Contributor",
+                        "identity": {
+                            "type": "Identity",
+                            "name": "DLR smoke-test",
+                        },
+                        "role": {"type": "Creator"},
+                        "sequence": 1,
+                        "correspondingAuthor": False,
+                    }
+                ],
+                "reference": {
+                    "type": "Reference",
+                    "publicationContext": {
+                        "type": "Event",
+                        "name": "dlr-smoke-test",
+                        "agent": {
+                            "type": "UnconfirmedOrganization",
+                            "name": "dlr",
+                        },
+                        "time": {
+                            "type": "Period",
+                            "from": f"{today.isoformat()}T00:00:00.000Z",
+                        },
+                    },
+                    "publicationInstance": {
+                        "type": "OtherPresentation",
+                        "pages": {"type": "NullPages"},
+                    },
+                },
+            },
+        }
+        response = requests.post(
+            url, headers=self._headers(), json=body, timeout=API_TIMEOUT
+        )
+        _raise_for_status_with_body(response)
+        publication = response.json()
+        logger.info("Created publication %s", publication.get("identifier"))
+        return publication
+
+    def get_publication(self, publication_identifier: str) -> dict:
+        url = f"https://{self.api_domain}/publication/{publication_identifier}"
+        response = requests.get(url, headers=self._headers(), timeout=API_TIMEOUT)
+        _raise_for_status_with_body(response)
+        return response.json()
+
+    def update_publication(
+        self, publication_identifier: str, publication: dict
+    ) -> dict:
+        url = f"https://{self.api_domain}/publication/{publication_identifier}"
+        response = requests.put(
+            url, headers=self._headers(), json=publication, timeout=API_TIMEOUT
+        )
+        _raise_for_status_with_body(response)
+        return response.json()
+
+    def add_additional_identifiers(
+        self,
+        publication_identifier: str,
+        values: list[str],
+        source_name: str,
+    ) -> tuple[int, int]:
+        """GET the publication, append AdditionalIdentifier entries for missing
+        values, PUT it back as an UpdatePublicationRequest.
+
+        Returns (added_count, skipped_count). Skipped = (sourceName, value)
+        already present. Idempotent: re-running is a no-op.
+
+        Round-trips entityDescription, projects, subjects, fundings, rightsHolder
+        from the GET response because UpdatePublicationRequest replaces every
+        field it accepts; omitting any of these would wipe existing data.
+        """
+        publication = self.get_publication(publication_identifier)
+        identifiers = list(publication.get("additionalIdentifiers") or [])
+        existing_pairs = {
+            (identifier.get("sourceName"), identifier.get("value"))
+            for identifier in identifiers
+        }
+        new_identifiers = [
+            {
+                "type": ADDITIONAL_IDENTIFIER_TYPE,
+                "sourceName": source_name,
+                "value": value,
+            }
+            for value in values
+            if value and (source_name, value) not in existing_pairs
+        ]
+        if not new_identifiers:
+            return (0, len(values))
+        body = {
+            "type": UPDATE_PUBLICATION_TYPE,
+            "identifier": publication_identifier,
+            "additionalIdentifiers": identifiers + new_identifiers,
+        }
+        for field_name in ROUND_TRIP_FIELDS:
+            if field_name in publication:
+                body[field_name] = publication[field_name]
+        updated = self.update_publication(publication_identifier, body)
+        persisted_pairs = {
+            (identifier.get("sourceName"), identifier.get("value"))
+            for identifier in (updated.get("additionalIdentifiers") or [])
+        }
+        intended_pairs = {
+            (source_name, identifier["value"]) for identifier in new_identifiers
+        }
+        missing = intended_pairs - persisted_pairs
+        if missing:
+            raise RuntimeError(
+                f"PUT returned 200 but the following AdditionalIdentifier values "
+                f"are not in the response (NVA silently dropped them): "
+                f"{sorted(missing)}"
+            )
+        return (len(new_identifiers), len(values) - len(new_identifiers))
+
     def publish(self, publication_identifier: str) -> None:
         """Publish a draft directly (no ticket). Idempotent: 409/already-published is ok.
 
@@ -302,7 +451,7 @@ class FileUploadApiService:
         if response.status_code == 409:
             logger.info("%s already published", publication_identifier)
             return
-        response.raise_for_status()
+        _raise_for_status_with_body(response)
         logger.info("Published %s (%d)", publication_identifier, response.status_code)
 
     def _post(self, publication_identifier: str, action: str, body: dict) -> dict:
@@ -313,7 +462,7 @@ class FileUploadApiService:
         response = requests.post(
             url, headers=self._headers(), json=body, timeout=API_TIMEOUT
         )
-        response.raise_for_status()
+        _raise_for_status_with_body(response)
         return response.json()
 
     def _headers(self) -> dict[str, str]:
@@ -328,3 +477,13 @@ class FileUploadApiService:
 def resolve_api_domain(session: Any) -> str:
     response = session.client("ssm").get_parameter(Name=API_DOMAIN_PARAMETER)
     return response["Parameter"]["Value"]
+
+
+def _raise_for_status_with_body(response: requests.Response) -> None:
+    if response.ok:
+        return
+    snippet = (response.text or "").strip()[:1000]
+    raise requests.HTTPError(
+        f"{response.status_code} {response.reason} for {response.url}: {snippet}",
+        response=response,
+    )

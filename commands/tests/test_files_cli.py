@@ -138,6 +138,92 @@ def test_upload_manifest_dry_run_filters_by_domain_and_skips_non_files(
 
 @mock_aws
 @responses.activate
+def test_create_test_publication_prints_identifier_to_stdout(
+    tmp_path: Path,
+) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    responses.add(
+        responses.POST,
+        f"https://{API_DOMAIN}/publication",
+        json={"identifier": "new-id-abc", "status": "DRAFT"},
+        status=201,
+    )
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "create-test-publication",
+            "--key-file",
+            str(key),
+            "--title",
+            "Smoke test",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "new-id-abc" in result.output
+    create_calls = [
+        call
+        for call in responses.calls
+        if call.request.url == f"https://{API_DOMAIN}/publication"
+    ]
+    assert len(create_calls) == 1
+    body = json.loads(create_calls[0].request.body)
+    assert body["entityDescription"]["mainTitle"] == "Smoke test"
+    assert create_calls[0].request.headers.get("System") == "DLR"
+
+
+@mock_aws
+@responses.activate
+def test_create_test_publication_system_flag_overrides_header(
+    tmp_path: Path,
+) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    responses.add(
+        responses.POST,
+        f"https://{API_DOMAIN}/publication",
+        json={"identifier": "new-id"},
+        status=201,
+    )
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "create-test-publication",
+            "--key-file",
+            str(key),
+            "--system",
+            "UNKNOWN",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    create_calls = [
+        call
+        for call in responses.calls
+        if call.request.url == f"https://{API_DOMAIN}/publication"
+    ]
+    assert create_calls[0].request.headers.get("System") == "UNKNOWN"
+
+
+@mock_aws
+@responses.activate
 def test_publish_one_posts_to_publish_endpoint_with_dlr_header(
     tmp_path: Path,
 ) -> None:
@@ -171,6 +257,94 @@ def test_publish_one_posts_to_publish_endpoint_with_dlr_header(
     publish_calls = [call for call in responses.calls if "/publish" in call.request.url]
     assert len(publish_calls) == 1
     assert publish_calls[0].request.headers.get("System") == "DLR"
+
+
+@mock_aws
+@responses.activate
+def test_add_links_manifest_skips_dupes_per_resource(
+    tmp_path: Path,
+) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    manifest_path = tmp_path / "links.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "x": {
+                    "result_id": RESULT_ID_VID,
+                    "content": [
+                        {
+                            "dlr_content_type": "link",
+                            "dlr_content": "https://example.org/video1",
+                            "dlr_submitter_email": "u@vid.no",
+                        },
+                        {
+                            "dlr_content_type": "sharing_link",
+                            "dlr_content": "https://example.org/ignored",
+                            "dlr_submitter_email": "u@vid.no",
+                        },
+                    ],
+                }
+            }
+        )
+    )
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_VID}",
+        json={"type": "Publication", "additionalIdentifiers": []},
+    )
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_VID}",
+        json={
+            "identifier": RESULT_ID_VID,
+            "additionalIdentifiers": [
+                {
+                    "type": "AdditionalIdentifier",
+                    "sourceName": "dlr@vid",
+                    "value": "https://example.org/video1",
+                }
+            ],
+        },
+    )
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "add-links-manifest",
+            str(manifest_path),
+            "--key-file",
+            str(key),
+            "--institution",
+            "vid.no",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "sourceName=dlr@vid" in result.output
+    assert "added=1" in result.output
+    put_calls = [c for c in responses.calls if c.request.method == "PUT"]
+    assert len(put_calls) == 1
+    body = json.loads(put_calls[0].request.body)
+    identifiers = [
+        identifier
+        for identifier in body["additionalIdentifiers"]
+        if identifier.get("type") == "AdditionalIdentifier"
+    ]
+    assert len(identifiers) == 1
+    assert identifiers[0]["value"] == "https://example.org/video1"
+    assert identifiers[0]["sourceName"] == "dlr@vid"
+    # sharing_link is ignored
+    assert all(
+        "ignored" not in (identifier.get("value") or "") for identifier in identifiers
+    )
 
 
 def test_extract_handles_strips_prefix_and_filters_by_institution(
@@ -445,9 +619,14 @@ def _resource_row(result_id: str, owner: str = DEFAULT_OWNER) -> dict:
     ).encode("utf-8")
     compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
     compressed = compressor.compress(payload) + compressor.flush()
+    # Real prod rows have PK0 = Resource:<id>@<org>; the ResourcesByIdentifier
+    # GSI uses PK3/SK3 = Resource:<id> which is what _fetch_resource_owner
+    # queries against.
     return {
-        "PK0": f"Resource:{result_id}",
+        "PK0": f"Resource:{result_id}@test-org",
         "SK0": f"Resource:{result_id}",
+        "PK3": f"Resource:{result_id}",
+        "SK3": f"Resource:{result_id}",
         "data": Binary(compressed),
     }
 
@@ -470,6 +649,18 @@ def _seed_resources_table(rows: list[dict]) -> object:
         AttributeDefinitions=[
             {"AttributeName": "PK0", "AttributeType": "S"},
             {"AttributeName": "SK0", "AttributeType": "S"},
+            {"AttributeName": "PK3", "AttributeType": "S"},
+            {"AttributeName": "SK3", "AttributeType": "S"},
+        ],
+        GlobalSecondaryIndexes=[
+            {
+                "IndexName": "ResourcesByIdentifier",
+                "KeySchema": [
+                    {"AttributeName": "PK3", "KeyType": "HASH"},
+                    {"AttributeName": "SK3", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
         ],
         BillingMode="PAY_PER_REQUEST",
     )

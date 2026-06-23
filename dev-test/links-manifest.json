@@ -1,0 +1,17 @@
+{
+  "links-1": {
+    "result_id": "019ecf330a82-607aaaeb-867b-4f9b-8309-d2032ee20770",
+    "content": [
+      {
+        "dlr_content_type": "link",
+        "dlr_content": "https://example.org/dev-test-link-1",
+        "dlr_submitter_email": "smoke@ntnu.no"
+      },
+      {
+        "dlr_content_type": "sharing_link",
+        "dlr_content": "https://example.org/should-be-ignored",
+        "dlr_submitter_email": "smoke@ntnu.no"
+      }
+    ]
+  }
+}

@@ -15,8 +15,10 @@ from rich.console import Console
 from commands.services.file_upload_api import (
     FILE_TYPE_OPEN,
     PUBLISHER_VERSION_ACCEPTED,
+    SYSTEM_DLR,
     ExternalClientToken,
     FileUploadApiService,
+    LocalFileSource,
     S3ObjectSource,
     resolve_api_domain,
 )
@@ -31,6 +33,7 @@ RESOURCE_PK_PREFIX = "Resource:"
 SOURCE_OTHER = "OTHER"
 SOURCE_DLR = "DLR"
 CONTENT_TYPE_FILE = "file"
+CONTENT_TYPE_LINK = "link"
 GENERATED_TRUE = "true"
 HANDLE_URL_PREFIX = "https://hdl.handle.net/"
 DEFAULT_OWNER_SUBSTRING = "dlr-import-integration"
@@ -48,10 +51,29 @@ def files(ctx: AppContext) -> None:
 @files.command("upload-one")
 @click.option("--key-file", required=True, type=click.Path(exists=True))
 @click.option("--publication", "publication_identifier", required=True)
-@click.option("--s3-key", "s3_key", required=True, help="Object key in loke.storage")
+@click.option(
+    "--s3-key",
+    "s3_key",
+    default=None,
+    help="Object key in loke.storage (mutually exclusive with --local-file)",
+)
+@click.option(
+    "--local-file",
+    "local_file",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Local file path (mutually exclusive with --s3-key, useful for dev smoke-tests)",
+)
 @click.option("--bucket", default=LOKE_BUCKET, show_default=True)
 @click.option("--filename", default=None, help="Override filename sent to NVA")
 @click.option("--mimetype", default=None, help="Override mimetype sent to NVA")
+@click.option(
+    "--size",
+    "size_bytes",
+    type=int,
+    default=None,
+    help="Object size in bytes (for --s3-key when HeadObject access is unavailable)",
+)
 @click.option("--license", "license_uri", default=None)
 @click.option(
     "--publisher-version",
@@ -64,21 +86,22 @@ def upload_one(
     ctx: AppContext,
     key_file: str,
     publication_identifier: str,
-    s3_key: str,
+    s3_key: str | None,
+    local_file: str | None,
     bucket: str,
     filename: str | None,
     mimetype: str | None,
+    size_bytes: int | None,
     license_uri: str | None,
     publisher_version: str,
 ) -> None:
-    """Upload a single S3 object to one publication. Useful for smoke-tests."""
+    """Upload one file to a publication. Either --s3-key (loke.storage) or --local-file."""
+    if (s3_key is None) == (local_file is None):
+        raise click.UsageError("Pass exactly one of --s3-key or --local-file")
+
     service = _build_service(ctx, key_file)
-    source = S3ObjectSource(
-        ctx.session.client("s3"),
-        bucket,
-        s3_key,
-        filename_override=filename,
-        mimetype_override=mimetype,
+    source = _build_file_source(
+        ctx, s3_key, local_file, bucket, filename, mimetype, size_bytes
     )
     result = service.upload(
         publication_identifier,
@@ -88,6 +111,60 @@ def upload_one(
         publisher_version=publisher_version or None,
     )
     Console().print(result)
+
+
+def _build_file_source(
+    ctx: AppContext,
+    s3_key: str | None,
+    local_file: str | None,
+    bucket: str,
+    filename: str | None,
+    mimetype: str | None,
+    size_bytes: int | None = None,
+) -> S3ObjectSource | LocalFileSource:
+    if local_file is not None:
+        return LocalFileSource(local_file, mimetype_override=mimetype)
+    return S3ObjectSource(
+        ctx.session.client("s3"),
+        bucket,
+        s3_key,
+        filename_override=filename,
+        mimetype_override=mimetype,
+        size_override=size_bytes,
+    )
+
+
+@files.command("create-test-publication")
+@click.option("--key-file", required=True, type=click.Path(exists=True))
+@click.option("--title", default="Smoke-test", show_default=True)
+@click.option(
+    "--system",
+    "system_header",
+    default=SYSTEM_DLR,
+    show_default=True,
+    help=(
+        "Override the System header. Pass an unknown value (e.g. UNKNOWN) to "
+        "force the resulting LogEntry source to OTHER for testing fix-log-source."
+    ),
+)
+@click.pass_obj
+def create_test_publication(
+    ctx: AppContext,
+    key_file: str,
+    title: str,
+    system_header: str,
+) -> None:
+    """Create a DLR-shaped draft via the third-party endpoint. Prints the identifier.
+
+    Bootstraps a dev smoke-test without polluting prod data. The draft is owned
+    by the key's external client (so owner-gate accepts it) and uses the same
+    shape as real DLR-imported resources (OtherPresentation + Event context +
+    one Contributor) so the NVA frontend can render it.
+    """
+    service = _build_service(ctx, key_file, system=system_header)
+    publication = service.create_publication(title)
+    identifier = publication.get("identifier", "")
+    click.echo(identifier)
 
 
 @files.command("publish-one")
@@ -218,6 +295,95 @@ def publish_manifest(
             console.print(f"OK   published {result_id}")
         except Exception as exc:
             console.print(f"FAIL publish {result_id}: {exc}")
+
+
+@files.command("add-links-manifest")
+@click.argument("manifest", type=click.Path(exists=True))
+@click.option("--key-file", required=True, type=click.Path(exists=True))
+@click.option(
+    "--institution",
+    required=True,
+    help="Comma-separated email domains (e.g. 'ntnu.no,hist.no')",
+)
+@click.option(
+    "--source-name",
+    default=None,
+    help=(
+        "sourceName on each AdditionalIdentifier. Default: 'dlr@<inst>' where "
+        "<inst> is the first institution domain with the TLD stripped."
+    ),
+)
+@click.option("--dry-run", is_flag=True, default=False)
+@click.pass_obj
+def add_links_manifest(
+    ctx: AppContext,
+    manifest: str,
+    key_file: str,
+    institution: str,
+    source_name: str | None,
+    dry_run: bool,
+) -> None:
+    """Attach AdditionalIdentifier entries for `dlr_content_type: "link"` content.
+
+    Per resource: GET the publication, merge new identifiers into
+    additionalIdentifiers, PUT back as UpdatePublicationRequest. Idempotent —
+    re-running with same URLs is a no-op. `sharing_link` items are skipped.
+    """
+    domains = _split_domains(institution)
+    resolved_source_name = source_name or _default_source_name(domains)
+    items = _load_manifest_for_domains(manifest, domains)
+    plans = _plan_link_updates(items)
+    console = Console()
+    console.print(
+        f"Resources: {len(items)}  Resources with links: {len(plans)}  "
+        f"Total link URLs: {sum(len(urls) for _, urls in plans)}  "
+        f"sourceName={resolved_source_name}"
+    )
+
+    if dry_run:
+        for result_id, urls in plans:
+            for url in urls:
+                console.print(f"DRY-RUN {result_id} ← {url}")
+        return
+
+    service = _build_service(ctx, key_file)
+    total_added = 0
+    total_skipped = 0
+    for result_id, urls in plans:
+        try:
+            added, skipped = service.add_additional_identifiers(
+                result_id, urls, resolved_source_name
+            )
+            total_added += added
+            total_skipped += skipped
+            console.print(f"OK   {result_id}  added={added}  skipped={skipped}")
+        except Exception as exc:
+            console.print(f"FAIL {result_id}: {exc}")
+    console.print(f"Done. added={total_added} skipped_existing={total_skipped}")
+
+
+def _default_source_name(domains: list[str]) -> str:
+    if not domains:
+        return "dlr"
+    first = domains[0]
+    short = first.split(".", 1)[0]
+    return f"dlr@{short}"
+
+
+def _plan_link_updates(
+    items: list[tuple[str, dict]],
+) -> list[tuple[str, list[str]]]:
+    plans: list[tuple[str, list[str]]] = []
+    for result_id, resource in items:
+        urls = [
+            content["dlr_content"]
+            for content in resource.get("content", [])
+            if content.get("dlr_content_type") == CONTENT_TYPE_LINK
+            and content.get("dlr_content")
+        ]
+        if urls:
+            plans.append((result_id, urls))
+    return plans
 
 
 @files.command("extract-handles")
@@ -437,10 +603,12 @@ def fix_log_source(
     )
 
 
-def _build_service(ctx: AppContext, key_file: str) -> FileUploadApiService:
+def _build_service(
+    ctx: AppContext, key_file: str, system: str = SYSTEM_DLR
+) -> FileUploadApiService:
     token = ExternalClientToken.from_key_file(key_file)
     api_domain = resolve_api_domain(ctx.session)
-    return FileUploadApiService(api_domain=api_domain, token=token)
+    return FileUploadApiService(api_domain=api_domain, token=token, system=system)
 
 
 def _split_domains(institution: str) -> list[str]:
@@ -480,6 +648,15 @@ def _plan_uploads(
     return planned
 
 
+def _int_or_none(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except TypeError, ValueError:
+        return None
+
+
 def _is_uploadable_content(content: dict) -> bool:
     if content.get("dlr_content_type") != CONTENT_TYPE_FILE:
         return False
@@ -501,6 +678,7 @@ def _upload_one_content(
         content["dlr_content_identifier"],
         filename_override=content.get("dlr_content"),
         mimetype_override=content.get("dlr_content_mime_type"),
+        size_override=_int_or_none(content.get("dlr_content_size_bytes")),
     )
     service.upload(
         result_id,
@@ -627,15 +805,23 @@ def _log_entry_identifier(sort_key: str) -> str:
 
 
 def _fetch_resource_owner(table: Any, result_id: str) -> str | None:
-    """GetItem the Resource row and pull resourceOwner.owner out of the zlib data blob.
+    """Query the Resource row via the ResourcesByIdentifier GSI and pull
+    resourceOwner.owner out of the zlib data blob.
 
+    Cannot use GetItem on PK0=SK0=Resource:<id> because the Resource row's
+    actual PK0 has an `@<topLevelOrg>` suffix; the GSI hides that detail.
     Returns None if the row is missing or the owner field can't be extracted.
     """
     key_value = f"{RESOURCE_PK_PREFIX}{result_id}"
-    response = table.get_item(Key={"PK0": key_value, "SK0": key_value})
-    item = response.get("Item")
-    if not item:
+    response = table.query(
+        IndexName="ResourcesByIdentifier",
+        KeyConditionExpression=Key("PK3").eq(key_value) & Key("SK3").eq(key_value),
+        Limit=1,
+    )
+    items = response.get("Items", [])
+    if not items:
         return None
+    item = items[0]
     data = _inflate_resource_data(item.get("data"))
     if not isinstance(data, dict):
         return None

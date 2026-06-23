@@ -114,6 +114,30 @@ Resume ved feil: kjør samme kommando på nytt — state-fila hopper over `ok`-r
 
 ---
 
+## 2.5 Knytt eksterne URL-er som AdditionalIdentifier
+
+DLR-metadata-migreringen la *ikke* inn `link`-content på publikasjonene — vi
+må gjøre det selv. `link`-items lages som `AdditionalIdentifier` (generic) med
+`sourceName="dlr@<inst>"` (derives default fra `--institution`, kan overstyres
+med `--source-name`). `sharing_link` ignoreres (kun peker til samme fil).
+
+```bash
+# Tørrkjør (ingen API-kall, viser hvilke URL-er som vil legges til)
+uv run cli.py files add-links-manifest $MANIFEST \
+    --key-file $KEY --institution $DOMAINS --dry-run
+
+# Ekte (GET → merge → PUT som UpdatePublicationRequest; idempotent)
+uv run cli.py files add-links-manifest $MANIFEST \
+    --key-file $KEY --institution $DOMAINS
+```
+
+Output: `added=N skipped_existing=M sourceName=dlr@<inst>` —
+`skipped_existing` teller (sourceName, value)-par som allerede var på
+publikasjonen (trygt å re-kjøre). Servicen verifiserer at NVA persisterer
+identifierne i PUT-responsen — hvis ikke kastes feil per ressurs.
+
+---
+
 ## 3. Publiser draftene
 
 Først etter at *alle* filer for institusjonen er oppe (slik at pending filer blir

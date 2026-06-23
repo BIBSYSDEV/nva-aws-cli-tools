@@ -1,0 +1,11 @@
+{
+  "smoke-1": {
+    "result_id": "019ecf330a82-607aaaeb-867b-4f9b-8309-d2032ee20770",
+    "handle": null,
+    "content": [{
+      "dlr_content_identifier": "3c635ed3-1209-4f7c-b0a3-1296b84a0a39",
+      "dlr_content_type": "file",
+      "dlr_submitter_email": "smoke@example.org"
+    }]
+  }
+}
