@@ -10,9 +10,19 @@ logger = logging.getLogger(__name__)
 
 XLSX_AUTHOR_SHARES_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares"
 XLSX_AUTHOR_SHARES_CONTROL_ACCEPT = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; profile=https://api.nva.unit.no/report/author-shares-control"
+ALL_PERIODS_REPORT_PATH = "scientific-index/reports"
 ALL_INSTITUTIONS_REPORT_PATH = "scientific-index/reports/{year}/institutions"
 INSTITUTION_REPORT_PATH = "scientific-index/reports/{year}/institutions/{institution}"
+JSON_ACCEPT = "application/json"
 POLL_INTERVAL_SECONDS = 5
+
+
+def fetch_report_json(client: ApiClient, path: str) -> dict:
+    url = f"https://{client.api_domain}/{path}"
+    headers = {**client.auth_header(), "Accept": JSON_ACCEPT}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
 
 
 def get_all_institutions_report(

@@ -108,9 +108,134 @@ def test_author_shares_with_institution_targets_institution_and_names_file():
     assert all(c.request.url != ALL_INSTITUTIONS_URL for c in responses.calls)
 
 
+NVI_REPORT_URL = f"https://{API_DOMAIN}/scientific-index/reports/{A_YEAR}/institutions"
+
+
+def _an_institutions_report(valid_points: float) -> dict:
+    return {
+        "type": "AllInstitutionsReport",
+        "id": NVI_REPORT_URL,
+        "institutions": [
+            {
+                "type": "InstitutionReport",
+                "id": f"{NVI_REPORT_URL}/{AN_INSTITUTION}",
+                "institutionSummary": {"totals": {"validPoints": valid_points}},
+            }
+        ],
+    }
+
+
 @mock_aws
 @responses.activate
-def test_author_shares_respects_explicit_output_filename():
+def test_nvi_all_periods_saves_report_by_default():
+    _seed_aws()
+    _add_cognito()
+    all_periods_url = f"https://{API_DOMAIN}/scientific-index/reports"
+    responses.add(responses.GET, all_periods_url, json={"type": "AllPeriodsReport"})
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(reports, ["nvi-all-periods"], obj=_ctx())
+
+        assert result.exit_code == 0, result.output
+        files = glob.glob("*.json")
+        assert len(files) == 1
+        assert files[0].startswith(f"nvi_reports_{A_PROFILE}_all_periods_")
+    assert any(call.request.url == all_periods_url for call in responses.calls)
+
+
+@mock_aws
+@responses.activate
+def test_nvi_institutions_targets_institutions_report_and_saves():
+    _seed_aws()
+    _add_cognito()
+    responses.add(responses.GET, NVI_REPORT_URL, json={"type": "AllInstitutionsReport"})
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            reports,
+            ["nvi-institutions", "--year", str(A_YEAR), "--save", "baseline.json"],
+            obj=_ctx(),
+        )
+
+        assert result.exit_code == 0, result.output
+        assert glob.glob("*.json") == ["baseline.json"]
+    assert any(call.request.url == NVI_REPORT_URL for call in responses.calls)
+
+
+@mock_aws
+@responses.activate
+def test_nvi_institutions_with_baseline_reports_no_differences_when_identical():
+    _seed_aws()
+    _add_cognito()
+    report = _an_institutions_report(123.45)
+    responses.add(responses.GET, NVI_REPORT_URL, json=report)
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open("baseline.json", "w", encoding="utf-8") as baseline_file:
+            json.dump(report, baseline_file)
+        result = runner.invoke(
+            reports,
+            ["nvi-institutions", "--year", str(A_YEAR), "--baseline", "baseline.json"],
+            obj=_ctx(),
+        )
+
+        assert result.exit_code == 0, result.output
+        assert "No differences" in result.output
+        assert glob.glob("*.json") == ["baseline.json"]
+
+
+@mock_aws
+@responses.activate
+def test_nvi_institutions_with_baseline_detects_changed_points():
+    _seed_aws()
+    _add_cognito()
+    baseline = _an_institutions_report(123.45)
+    responses.add(responses.GET, NVI_REPORT_URL, json=_an_institutions_report(999.0))
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open("baseline.json", "w", encoding="utf-8") as baseline_file:
+            json.dump(baseline, baseline_file)
+        result = runner.invoke(
+            reports,
+            ["nvi-institutions", "--year", str(A_YEAR), "--baseline", "baseline.json"],
+            obj=_ctx(),
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "1 difference" in result.output
+    assert "123.45" in result.output
+    assert "999.0" in result.output
+    assert any(call.request.url == NVI_REPORT_URL for call in responses.calls)
+
+
+@mock_aws
+@responses.activate
+def test_author_shares_with_baseline_reports_no_differences_when_identical():
+    _seed_aws()
+    _add_cognito()
+    _add_report(ALL_INSTITUTIONS_URL)
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open("baseline.xlsx", "wb") as baseline_file:
+            baseline_file.write(_an_xlsx_report())
+        result = runner.invoke(
+            reports,
+            ["author-shares", "--year", str(A_YEAR), "--baseline", "baseline.xlsx"],
+            obj=_ctx(),
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "No differences" in result.output
+
+
+@mock_aws
+@responses.activate
+def test_author_shares_respects_explicit_save_filename():
     _seed_aws()
     _add_cognito()
     _add_report(ALL_INSTITUTIONS_URL)
@@ -119,7 +244,7 @@ def test_author_shares_respects_explicit_output_filename():
     with runner.isolated_filesystem():
         result = runner.invoke(
             reports,
-            ["author-shares", "--year", str(A_YEAR), "--output", "custom.xlsx"],
+            ["author-shares", "--year", str(A_YEAR), "--save", "custom.xlsx"],
             obj=_ctx(),
         )
 

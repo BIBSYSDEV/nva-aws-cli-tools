@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 import warnings
 from datetime import datetime
@@ -7,7 +8,18 @@ import click
 import polars as pl
 
 from commands.services.api_client import ApiClient
-from commands.services.scientific_index_api import get_all_institutions_report
+from commands.services.report_compare import (
+    diff_dataframes,
+    diff_json,
+    render_dataframe_diff,
+    render_json_diff,
+)
+from commands.services.scientific_index_api import (
+    ALL_INSTITUTIONS_REPORT_PATH,
+    ALL_PERIODS_REPORT_PATH,
+    fetch_report_json,
+    get_all_institutions_report,
+)
 from commands.utils import AppContext
 
 
@@ -27,21 +39,25 @@ def reports(ctx: AppContext):
     help="Institution identifier (e.g., 20754.0.0.0). Defaults to all institutions.",
 )
 @click.option(
-    "--output",
+    "--baseline",
     default=None,
-    help="Output filename (defaults to author_shares_<profile>_<year>[_<institution>]_<timestamp>.xlsx)",
+    type=click.Path(exists=True, dir_okay=False),
+    help="Compare the freshly fetched xlsx report against this baseline file",
+)
+@click.option(
+    "--save",
+    default=None,
+    help="Save the freshly fetched xlsx to this file (default name used when omitted and not comparing)",
 )
 @click.pass_obj
 def author_shares(
-    ctx: AppContext, year: int, institution: str | None, output: str | None
+    ctx: AppContext,
+    year: int,
+    institution: str | None,
+    baseline: str | None,
+    save: str | None,
 ):
     client = ApiClient(session=ctx.session)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    institution_suffix = f"_{institution}" if institution else ""
-    filename = (
-        output
-        or f"author_shares_{ctx.profile}_{year}{institution_suffix}_{timestamp}.xlsx"
-    )
     scope = f"institution {institution}" if institution else "all institutions"
     click.echo(
         f"Fetching author shares report for {year} ({scope}) (may take a few minutes)..."
@@ -49,7 +65,92 @@ def author_shares(
     data = get_all_institutions_report(client, year, institution=institution)
     if not logging.getLogger().isEnabledFor(logging.DEBUG):
         warnings.filterwarnings("ignore", message="Ignoring URL", category=UserWarning)
+    if save or not baseline:
+        _save_xlsx(data, save or _default_xlsx_filename(ctx.profile, year, institution))
+    if baseline:
+        render_dataframe_diff(
+            diff_dataframes(pl.read_excel(baseline), pl.read_excel(io.BytesIO(data)))
+        )
+
+
+def _save_xlsx(data: bytes, filename: str) -> None:
     pl.read_excel(io.BytesIO(data)).write_excel(
         filename, autofit=True, table_style="Table Style Medium 9"
     )
     click.echo(f"Saved to {filename}")
+
+
+def _default_xlsx_filename(
+    profile: str | None, year: int, institution: str | None
+) -> str:
+    institution_suffix = f"_{institution}" if institution else ""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"author_shares_{profile}_{year}{institution_suffix}_{timestamp}.xlsx"
+
+
+@reports.command(name="nvi-all-periods")
+@click.option(
+    "--baseline",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Compare the freshly fetched report against this baseline file",
+)
+@click.option(
+    "--save",
+    default=None,
+    help="Save the freshly fetched JSON to this file (default name used when omitted and not comparing)",
+)
+@click.pass_obj
+def nvi_all_periods(ctx: AppContext, baseline: str | None, save: str | None):
+    _fetch_json_report(ctx, ALL_PERIODS_REPORT_PATH, "all_periods", baseline, save)
+
+
+@reports.command(name="nvi-institutions")
+@click.option(
+    "--year", default=lambda: datetime.now().year, show_default="current year", type=int
+)
+@click.option(
+    "--baseline",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Compare the freshly fetched report against this baseline file",
+)
+@click.option(
+    "--save",
+    default=None,
+    help="Save the freshly fetched JSON to this file (default name used when omitted and not comparing)",
+)
+@click.pass_obj
+def nvi_institutions(
+    ctx: AppContext, year: int, baseline: str | None, save: str | None
+):
+    path = ALL_INSTITUTIONS_REPORT_PATH.format(year=year)
+    _fetch_json_report(ctx, path, str(year), baseline, save)
+
+
+def _fetch_json_report(
+    ctx: AppContext, path: str, scope: str, baseline: str | None, save: str | None
+) -> None:
+    client = ApiClient(session=ctx.session)
+    click.echo(f"Fetching {path} from {client.api_domain} ...")
+    current_data = fetch_report_json(client, path)
+    if save or not baseline:
+        _save_report(current_data, save or _default_filename(ctx.profile, scope))
+    if baseline:
+        render_json_diff(diff_json(_load_json(baseline), current_data))
+
+
+def _save_report(data: dict, filename: str) -> None:
+    with open(filename, "w", encoding="utf-8") as output_file:
+        json.dump(data, output_file, indent=2, ensure_ascii=False)
+    click.echo(f"Saved to {filename}")
+
+
+def _default_filename(profile: str | None, scope: str) -> str:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"nvi_reports_{profile}_{scope}_{timestamp}.json"
+
+
+def _load_json(path: str) -> dict:
+    with open(path, encoding="utf-8") as json_file:
+        return json.load(json_file)
