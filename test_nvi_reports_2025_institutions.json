@@ -353,10 +353,7 @@
       "sector": "UHI",
       "institution": {
         "id": "https://api.test.nva.aws.unit.no/cristin/organization/186.0.0.0",
-        "labels": {
-          "en": "UiT The Arctic University of Norway",
-          "nb": "Universitetet i Tromsø - Norges arktiske universitet"
-        },
+        "labels": {},
         "type": "Organization"
       },
       "institutionSummary": {

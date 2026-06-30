@@ -1,0 +1,837 @@
+{
+  "type": "AllInstitutionsReport",
+  "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions",
+  "period": {
+    "type": "NviPeriod",
+    "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+    "publishingYear": "2026",
+    "startDate": "2026-04-09T09:05:00Z",
+    "reportingDate": "2027-04-08T22:00:00Z",
+    "status": "OpenPeriod"
+  },
+  "institutions": [
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/185.90.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/185.90.0.0",
+        "labels": {
+          "en": "University of Oslo",
+          "nb": "Universitetet i Oslo"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 7
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 7,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/192.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/192.0.0.0",
+        "labels": {
+          "nb": "Norges miljø- og biovitenskapelige universitet",
+          "nn": "Noregs miljø- og biovitskaplege universitet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 4
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 4,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/20754.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "OTHER",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/20754.0.0.0",
+        "labels": {
+          "en": "Sikt - Norwegian Agency for Shared Services in Education and Research",
+          "nb": "Sikt – Kunnskapssektorens tjenesteleverandør"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 3.0,
+          "disputedCount": 0,
+          "globalApprovedCount": 1,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 1,
+          "undisputedTotalCount": 4
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 3,
+          "pending": 0,
+          "approved": 1,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/194.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/194.0.0.0",
+        "labels": {
+          "nn": "Noregs teknisk-naturvitskaplege universitet",
+          "en": "Norwegian University of Science and Technology",
+          "nb": "Norges teknisk-naturvitenskapelige universitet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 3
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 3,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/215.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/215.0.0.0",
+        "labels": {
+          "en": "OsloMet - Oslo Metropolitan University",
+          "nb": "OsloMet - storbyuniversitetet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 3
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 3,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/184.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/184.0.0.0",
+        "labels": {
+          "en": "University of Bergen",
+          "nb": "Universitetet i Bergen"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0.8165,
+          "disputedCount": 0,
+          "globalApprovedCount": 1,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 2,
+          "undisputedTotalCount": 2
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 2,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/1920.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "HEALTH",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/1920.0.0.0",
+        "labels": {
+          "en": "St. Olavs Hospital, Trondheim University Hospital",
+          "nb": "St. Olavs Hospital HF"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/195.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/195.0.0.0",
+        "labels": {
+          "en": "The University Centre in Svalbard",
+          "nb": "Universitetssenteret på Svalbard"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/1983.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "HEALTH",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/1983.0.0.0",
+        "labels": {
+          "en": "Østfold Hospital Trust",
+          "nb": "Sykehuset Østfold HF"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/1990.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "HEALTH",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/1990.0.0.0",
+        "labels": {
+          "en": "Diakonhjemmet Hospital",
+          "nb": "Diakonhjemmet sykehus"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/1992.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "HEALTH",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/1992.0.0.0",
+        "labels": {
+          "en": "Lovisenberg Diakonale Hospital",
+          "nb": "Lovisenberg Diakonale Sykehus"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/2012.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "HEALTH",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/2012.0.0.0",
+        "labels": {
+          "en": "Oslo University Hospital",
+          "nb": "Oslo universitetssykehus HF"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/2017.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "HEALTH",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/2017.0.0.0",
+        "labels": {
+          "en": "Vestre Viken Hospital Trust",
+          "nb": "Vestre Viken HF"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/204.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/204.0.0.0",
+        "labels": {
+          "en": "Nord University",
+          "nb": "Nord universitet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/2057.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "INSTITUTE",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/2057.0.0.0",
+        "labels": {
+          "en": "NORCE Research AS",
+          "nb": "NORCE Research AS"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/209.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/209.0.0.0",
+        "labels": {
+          "en": "University of Inland Norway",
+          "nb": "Universitetet i Innlandet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/211.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/211.0.0.0",
+        "labels": {
+          "en": "Molde University College - Specialized University in Logistics",
+          "nb": "Høgskolen i Molde - Vitenskapelig høgskole i logistikk"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/222.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/222.0.0.0",
+        "labels": {
+          "nn": "Universitetet i Søraust-Noreg",
+          "en": "University of South-Eastern Norway",
+          "nb": "Universitetet i Sørøst-Norge"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/7401.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "INSTITUTE",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/7401.0.0.0",
+        "labels": {
+          "nn": "SINTEF AS",
+          "en": "SINTEF",
+          "nb": "SINTEF AS"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026/institutions/7431.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "sector": "INSTITUTE",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/7431.0.0.0",
+        "labels": {
+          "en": "Institute of Marine Research",
+          "nb": "Havforskningsinstituttet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0,
+          "disputedCount": 0,
+          "globalApprovedCount": 0,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 0,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 1,
+          "pending": 0,
+          "approved": 0,
+          "rejected": 0
+        }
+      },
+      "units": []
+    }
+  ]
+}

@@ -400,22 +400,22 @@
         "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
         "publishingYear": "2026",
         "startDate": "2026-04-09T09:05:00Z",
-        "reportingDate": "2027-02-28T23:00:00Z",
+        "reportingDate": "2027-04-08T22:00:00Z",
         "status": "OpenPeriod"
       },
       "totals": {
         "type": "PeriodTotals",
-        "validPoints": 3.0,
+        "validPoints": 3.8165,
         "disputedCount": 0,
-        "undisputedProcessedCount": 1,
-        "undisputedTotalCount": 23
+        "undisputedProcessedCount": 2,
+        "undisputedTotalCount": 25
       },
       "byGlobalApprovalStatus": {
         "type": "CandidatesByGlobalApprovalStatus",
         "dispute": 0,
-        "pending": 22,
+        "pending": 23,
         "rejected": 0,
-        "approved": 1
+        "approved": 2
       }
     }
   ]
