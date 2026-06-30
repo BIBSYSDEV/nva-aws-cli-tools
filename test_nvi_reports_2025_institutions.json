@@ -1,0 +1,384 @@
+{
+  "type": "AllInstitutionsReport",
+  "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions",
+  "period": {
+    "type": "NviPeriod",
+    "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+    "publishingYear": "2025",
+    "startDate": "2025-03-31T22:00:00Z",
+    "reportingDate": "2026-06-24T12:00:00Z",
+    "status": "ClosedPeriod"
+  },
+  "institutions": [
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/20754.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "OTHER",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/20754.0.0.0",
+        "labels": {
+          "en": "Sikt - Norwegian Agency for Shared Services in Education and Research",
+          "nb": "Sikt – Kunnskapssektorens tjenesteleverandør"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 8.9506,
+          "disputedCount": 0,
+          "globalApprovedCount": 12,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 12,
+          "undisputedTotalCount": 12
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 12,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/194.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/194.0.0.0",
+        "labels": {
+          "nn": "Noregs teknisk-naturvitskaplege universitet",
+          "en": "Norwegian University of Science and Technology",
+          "nb": "Norges teknisk-naturvitenskapelige universitet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 5.2192,
+          "disputedCount": 0,
+          "globalApprovedCount": 6,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 6,
+          "undisputedTotalCount": 6
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 6,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/184.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/184.0.0.0",
+        "labels": {
+          "en": "University of Bergen",
+          "nb": "Universitetet i Bergen"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 3.4956,
+          "disputedCount": 0,
+          "globalApprovedCount": 4,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 4,
+          "undisputedTotalCount": 4
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 4,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/185.90.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/185.90.0.0",
+        "labels": {
+          "en": "University of Oslo",
+          "nb": "Universitetet i Oslo"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 3.0233,
+          "disputedCount": 0,
+          "globalApprovedCount": 4,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 4,
+          "undisputedTotalCount": 4
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 4,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/204.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/204.0.0.0",
+        "labels": {
+          "en": "Nord University",
+          "nb": "Nord universitet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 3.7577,
+          "disputedCount": 0,
+          "globalApprovedCount": 2,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 2,
+          "undisputedTotalCount": 2
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 2,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/217.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/217.0.0.0",
+        "labels": {
+          "en": "University of Stavanger",
+          "nb": "Universitetet i Stavanger"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 5.7,
+          "disputedCount": 0,
+          "globalApprovedCount": 2,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 2,
+          "undisputedTotalCount": 2
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 2,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/158.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/158.0.0.0",
+        "labels": {
+          "en": "BI Norwegian Business School",
+          "nb": "Handelshøyskolen BI"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 1.0,
+          "disputedCount": 0,
+          "globalApprovedCount": 1,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 1,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 1,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/1615.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/1615.0.0.0",
+        "labels": {
+          "en": "Kristiania University of Applied Sciences",
+          "nb": "Høyskolen Kristiania"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 0.7071,
+          "disputedCount": 0,
+          "globalApprovedCount": 1,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 1,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 1,
+          "rejected": 0
+        }
+      },
+      "units": []
+    },
+    {
+      "type": "InstitutionReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025/institutions/186.0.0.0",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "sector": "UHI",
+      "institution": {
+        "id": "https://api.test.nva.aws.unit.no/cristin/organization/186.0.0.0",
+        "labels": {
+          "en": "UiT The Arctic University of Norway",
+          "nb": "Universitetet i Tromsø - Norges arktiske universitet"
+        },
+        "type": "Organization"
+      },
+      "institutionSummary": {
+        "type": "InstitutionSummary",
+        "totals": {
+          "type": "InstitutionTotals",
+          "validPoints": 2.1213,
+          "disputedCount": 0,
+          "globalApprovedCount": 1,
+          "globalRejectedCount": 0,
+          "undisputedProcessedCount": 1,
+          "undisputedTotalCount": 1
+        },
+        "byLocalApprovalStatus": {
+          "type": "UndisputedCandidatesByLocalApprovalStatus",
+          "new": 0,
+          "pending": 0,
+          "approved": 1,
+          "rejected": 0
+        }
+      },
+      "units": []
+    }
+  ]
+}

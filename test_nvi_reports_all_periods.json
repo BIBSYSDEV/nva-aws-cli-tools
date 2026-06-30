@@ -1,0 +1,422 @@
+{
+  "type": "AllPeriodsReport",
+  "id": "https://api.test.nva.aws.unit.no/scientific-index/reports",
+  "periods": [
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2011",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2011",
+        "publishingYear": "2011",
+        "startDate": "2011-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 20051.5989,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 19268,
+        "undisputedTotalCount": 19268
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 19268
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2012",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2012",
+        "publishingYear": "2012",
+        "startDate": "2012-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 21525.7014,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 21144,
+        "undisputedTotalCount": 21144
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 21144
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2013",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2013",
+        "publishingYear": "2013",
+        "startDate": "2013-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 21289.945,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 20767,
+        "undisputedTotalCount": 20767
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 20767
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2014",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2014",
+        "publishingYear": "2014",
+        "startDate": "2014-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 21812.1384,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 21798,
+        "undisputedTotalCount": 21798
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 21798
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2015",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2015",
+        "publishingYear": "2015",
+        "startDate": "2015-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 30878.453,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 22252,
+        "undisputedTotalCount": 22252
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 22252
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2016",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2016",
+        "publishingYear": "2016",
+        "startDate": "2016-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 33123.0813,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 23569,
+        "undisputedTotalCount": 23569
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 23569
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2017",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2017",
+        "publishingYear": "2017",
+        "startDate": "2017-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 34415.9355,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 24978,
+        "undisputedTotalCount": 24978
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 24978
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2018",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2018",
+        "publishingYear": "2018",
+        "startDate": "2018-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 35865.1947,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 25574,
+        "undisputedTotalCount": 25574
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 25574
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2019",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2019",
+        "publishingYear": "2019",
+        "startDate": "2019-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 37723.9265,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 26948,
+        "undisputedTotalCount": 26948
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 26948
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2020",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2020",
+        "publishingYear": "2020",
+        "startDate": "2020-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 39996.859,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 28064,
+        "undisputedTotalCount": 28064
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 28064
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2021",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2021",
+        "publishingYear": "2021",
+        "startDate": "2021-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 43252.7291,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 30935,
+        "undisputedTotalCount": 30935
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 30935
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2022",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.sandbox.nva.aws.unit.no/scientific-index/period/2022",
+        "publishingYear": "2022",
+        "startDate": "2022-01-01T00:00:00Z",
+        "reportingDate": "2023-03-31T23:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 40719.8515,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 29049,
+        "undisputedTotalCount": 29049
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 29049
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2023",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2023",
+        "publishingYear": "2023",
+        "startDate": "2023-01-01T10:00:00Z",
+        "reportingDate": "2024-03-31T22:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 40836.5178,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 29043,
+        "undisputedTotalCount": 29043
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 29043
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2024",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2024",
+        "publishingYear": "2024",
+        "startDate": "2024-01-01T10:00:00Z",
+        "reportingDate": "2025-03-31T22:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 38997.8184,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 28607,
+        "undisputedTotalCount": 28607
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 28607
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2025",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2025",
+        "publishingYear": "2025",
+        "startDate": "2025-03-31T22:00:00Z",
+        "reportingDate": "2026-06-24T12:00:00Z",
+        "status": "ClosedPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 33.9748,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 32,
+        "undisputedTotalCount": 32
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 0,
+        "rejected": 0,
+        "approved": 32
+      }
+    },
+    {
+      "type": "PeriodReport",
+      "id": "https://api.test.nva.aws.unit.no/scientific-index/reports/2026",
+      "period": {
+        "type": "NviPeriod",
+        "id": "https://api.test.nva.aws.unit.no/scientific-index/period/2026",
+        "publishingYear": "2026",
+        "startDate": "2026-04-09T09:05:00Z",
+        "reportingDate": "2027-02-28T23:00:00Z",
+        "status": "OpenPeriod"
+      },
+      "totals": {
+        "type": "PeriodTotals",
+        "validPoints": 3.0,
+        "disputedCount": 0,
+        "undisputedProcessedCount": 1,
+        "undisputedTotalCount": 23
+      },
+      "byGlobalApprovalStatus": {
+        "type": "CandidatesByGlobalApprovalStatus",
+        "dispute": 0,
+        "pending": 22,
+        "rejected": 0,
+        "approved": 1
+      }
+    }
+  ]
+}
