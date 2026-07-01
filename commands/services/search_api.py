@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class SearchApiService:
+    NEXT_PAGE_FIELD = "nextSearchAfterResults"
+
     def __init__(self, session: boto3.Session) -> None:
         self.session = session
         self.ssm = self.session.client("ssm")
@@ -71,64 +73,68 @@ class SearchApiService:
         api_version: str = "2024-12-01",
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Search resources with automatic pagination.
+        Search resources with automatic pagination using search-after.
+
+        Pagination follows the ``nextSearchAfterResults`` link returned in the
+        response body instead of an incrementing ``from`` offset. This avoids the
+        offset window limit and lets us page through arbitrarily large result sets.
 
         Args:
-            query_parameters: Dictionary of query parameters (without 'from' and 'results')
+            query_parameters: Dictionary of query parameters (without pagination keys)
             page_size: Number of results per page (default: 100)
             api_version: API version to use in Accept header (default: 2024-12-01)
 
         Yields:
             Individual hits from the search results
         """
-        url = self.get_uri("resources")
         headers = {
             "Accept": f"application/json; version={api_version}",
         }
-        offset = 0
+        url = self.get_uri("resources")
+        params = {
+            **query_parameters,
+            "results": page_size,
+        }
 
-        while True:
-            params = {
-                **query_parameters,
-                "from": offset,
-                "results": page_size,
-            }
-
-            try:
-                response = self._make_search_request(url, headers, params)
-            except requests.exceptions.HTTPError as e:
-                logger.error(
-                    f"Failed to search after retries. Status: {e.response.status_code}",
-                )
-                if e.response.status_code >= 400:
-                    try:
-                        error_detail = e.response.json()
-                        logger.error(f"Error detail: {error_detail}")
-                    except ValueError, JSONDecodeError:
-                        logger.error(f"Error detail: {e.response.text}")
-                break
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Network error after retries: {e}")
+        while url:
+            response_data = self._fetch_search_page(url, headers, params)
+            if response_data is None:
                 break
 
-            if response.status_code != 200:
-                logger.error(
-                    f"Failed to search. {response.status_code}: {response.json()}"
-                )
-                break
-
-            response_data = response.json()
             hits = response_data.get("hits", [])
-
             if not hits:
                 break
 
-            for hit in hits:
-                yield hit
+            yield from hits
 
-            # Check if we've retrieved all results
-            total_hits = response_data.get("totalHits", 0)
-            offset += len(hits)
+            url = response_data.get(self.NEXT_PAGE_FIELD)
+            params = None
 
-            if offset >= total_hits:
-                break
+    def _fetch_search_page(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        params: Dict[str, Any] | None,
+    ) -> Dict[str, Any] | None:
+        try:
+            response = self._make_search_request(url, headers, params)
+        except requests.exceptions.HTTPError as e:
+            logger.error(
+                f"Failed to search after retries. Status: {e.response.status_code}",
+            )
+            if e.response.status_code >= 400:
+                try:
+                    error_detail = e.response.json()
+                    logger.error(f"Error detail: {error_detail}")
+                except ValueError, JSONDecodeError:
+                    logger.error(f"Error detail: {e.response.text}")
+            return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error after retries: {e}")
+            return None
+
+        if response.status_code != 200:
+            logger.error(f"Failed to search. {response.status_code}: {response.json()}")
+            return None
+
+        return response.json()
