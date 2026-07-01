@@ -1,7 +1,6 @@
 import boto3
 import logging
 import requests
-from requests.exceptions import JSONDecodeError
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -137,7 +136,7 @@ class SearchApiService:
                 try:
                     error_detail = e.response.json()
                     logger.error(f"Error detail: {error_detail}")
-                except ValueError, JSONDecodeError:
+                except ValueError:
                     logger.error(f"Error detail: {e.response.text}")
             return None
         except requests.exceptions.RequestException as e:
@@ -150,6 +149,6 @@ class SearchApiService:
 
         try:
             return response.json()
-        except ValueError, JSONDecodeError:
+        except ValueError:
             logger.error(f"Search response was not valid JSON: {response.text}")
             return None
