@@ -170,7 +170,7 @@ def search(ctx: AppContext):
     "--output",
     "-o",
     type=click.Path(dir_okay=False, writable=True),
-    help="Write results as JSONL to this file (one JSON object per line). May include a directory path, which is created if missing",
+    help="Write results to this file, one per line: JSON objects, or bare identifiers with --id-only. May include a directory path, which is created if missing",
 )
 @click.option(
     "--batch-size",
@@ -220,11 +220,11 @@ def resources(
         uv run cli.py search resources --publisher 08DC24C9-B7FF-4192-89AC-C629D93AD9CF --id-only
 
         # Write results to JSONL files, split into batches of 1000 (default)
-        uv run cli.py search resources --unit 194.0.0.00 --output resultat.jsonl
+        uv run cli.py search resources --unit 194.0.0.0 --output resultat.jsonl
         # -> resultat_00001.jsonl, resultat_00002.jsonl, ...
 
         # Override the batch size
-        uv run cli.py search resources --unit 194.0.0.00 --output resultat.jsonl --batch-size 500
+        uv run cli.py search resources --unit 194.0.0.0 --output resultat.jsonl --batch-size 500
 
         # Use additional query parameters
         uv run cli.py search resources --query "funding=some-id" --query "status=published" --aggregation all

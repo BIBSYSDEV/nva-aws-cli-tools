@@ -72,9 +72,10 @@ def test_jsonl_sink_rotates_into_batches(tmp_path):
     assert sink.file_count == 3
     assert [os.path.basename(path) for path in sink.paths] == files
 
-    line_counts = [
-        sum(1 for _ in open(tmp_path / name, encoding="utf-8")) for name in files
-    ]
+    line_counts = []
+    for name in files:
+        with open(tmp_path / name, encoding="utf-8") as batch_file:
+            line_counts.append(sum(1 for _ in batch_file))
     assert line_counts == [1000, 1000, 500]
 
 

@@ -116,13 +116,13 @@ class SearchApiService:
             yield from hits
 
             url = response_data.get(self.NEXT_PAGE_FIELD)
-            params = None
+            params = {}
 
     def _fetch_search_page(
         self,
         url: str,
         headers: Dict[str, str],
-        params: Dict[str, Any] | None,
+        params: Dict[str, Any],
     ) -> Dict[str, Any] | None:
         try:
             response = self._make_search_request(url, headers, params)

@@ -64,7 +64,7 @@ def test_follows_next_search_after_link_across_pages():
         SEARCH_URL,
         json={"hits": [_a_hit("a"), _a_hit("b")], "nextSearchAfterResults": NEXT_URL},
     )
-    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("c")]})
+    responses.add(responses.GET, NEXT_URL, json={"hits": [_a_hit("c")]})
 
     hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=2))
 
@@ -82,7 +82,7 @@ def test_next_page_request_follows_link_verbatim_with_accept_header():
         SEARCH_URL,
         json={"hits": [_a_hit("a")], "nextSearchAfterResults": NEXT_URL},
     )
-    responses.add(responses.GET, SEARCH_URL, json={"hits": []})
+    responses.add(responses.GET, NEXT_URL, json={"hits": []})
 
     list(
         _a_service().resource_search(
@@ -133,7 +133,7 @@ def test_reports_total_hits_once_from_first_page():
         },
     )
     responses.add(
-        responses.GET, SEARCH_URL, json={"hits": [_a_hit("c")], "totalHits": 42}
+        responses.GET, NEXT_URL, json={"hits": [_a_hit("c")], "totalHits": 42}
     )
 
     reported = []
