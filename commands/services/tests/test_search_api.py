@@ -171,6 +171,18 @@ def test_client_error_stops_pagination():
 
 @mock_aws
 @responses.activate
+def test_invalid_json_body_yields_nothing_without_crashing():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, body="<html>not json</html>", status=200)
+
+    hits = list(_a_service().resource_search({"aggregation": "none"}))
+
+    assert hits == []
+    assert len(responses.calls) == 1
+
+
+@mock_aws
+@responses.activate
 def test_persistent_server_error_gives_up_and_yields_nothing(monkeypatch):
     monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
     _seed_ssm()

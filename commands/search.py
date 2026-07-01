@@ -170,7 +170,7 @@ def search(ctx: AppContext):
     "--output",
     "-o",
     type=click.Path(dir_okay=False, writable=True),
-    help="Write results to this file, one per line: JSON objects, or bare identifiers with --id-only. May include a directory path, which is created if missing",
+    help="Base path for JSONL output; a zero-padded batch number is inserted before the extension (e.g. out.jsonl -> out_00001.jsonl). Lines are JSON objects, or bare identifiers with --id-only. Missing directories are created",
 )
 @click.option(
     "--batch-size",

@@ -145,7 +145,11 @@ class SearchApiService:
             return None
 
         if response.status_code != 200:
-            logger.error(f"Failed to search. {response.status_code}: {response.json()}")
+            logger.error(f"Failed to search. {response.status_code}: {response.text}")
             return None
 
-        return response.json()
+        try:
+            return response.json()
+        except ValueError, JSONDecodeError:
+            logger.error(f"Search response was not valid JSON: {response.text}")
+            return None
