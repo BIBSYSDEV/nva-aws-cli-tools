@@ -78,6 +78,16 @@ def test_jsonl_sink_rotates_into_batches(tmp_path):
     assert line_counts == [1000, 1000, 500]
 
 
+def test_jsonl_sink_creates_missing_parent_directories(tmp_path):
+    base = str(tmp_path / "nested" / "dir" / "resultat.jsonl")
+
+    with _JsonlSink(base, batch_size=1000) as sink:
+        sink.write('{"identifier": "a"}')
+
+    assert os.path.isfile(tmp_path / "nested" / "dir" / "resultat_00001.jsonl")
+    assert sink.file_count == 1
+
+
 def test_jsonl_sink_stdout_mode_prints_and_writes_no_files(capsys):
     with _JsonlSink(None, batch_size=1000) as sink:
         sink.write('{"identifier": "a"}')
@@ -139,6 +149,24 @@ def test_command_uses_suffixed_filename_by_default():
 
         assert result.exit_code == 0, result.output
         assert glob.glob("*.jsonl") == ["out_00001.jsonl"]
+
+
+@mock_aws
+@responses.activate
+def test_command_creates_output_directory_when_missing():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            search,
+            ["resources", "--unit", A_UNIT, "--output", "exports/data/out.jsonl"],
+            obj=_ctx(),
+        )
+
+        assert result.exit_code == 0, result.output
+        assert os.path.isfile("exports/data/out_00001.jsonl")
 
 
 @mock_aws

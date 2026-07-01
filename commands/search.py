@@ -168,7 +168,7 @@ def search(ctx: AppContext):
     "--output",
     "-o",
     type=click.Path(dir_okay=False, writable=True),
-    help="Write results as JSONL to this file (one JSON object per line)",
+    help="Write results as JSONL to this file (one JSON object per line). May include a directory path, which is created if missing",
 )
 @click.option(
     "--batch-size",
@@ -323,6 +323,7 @@ class _JsonlSink:
         self._close_current_file()
         path = self._batch_path()
         self._paths.append(path)
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         self._file = open(path, "w", encoding="utf-8")
         self._lines_in_batch = 0
 
