@@ -57,6 +57,17 @@ def test_first_request_uses_results_and_no_from_offset():
 
 @mock_aws
 @responses.activate
+def test_sends_identifying_user_agent():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    list(_a_service().resource_search({"aggregation": "none"}))
+
+    assert "nva-aws-cli-tools" in responses.calls[0].request.headers["User-Agent"]
+
+
+@mock_aws
+@responses.activate
 def test_follows_next_search_after_link_across_pages():
     _seed_ssm()
     responses.add(

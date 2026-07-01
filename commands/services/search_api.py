@@ -12,6 +12,8 @@ from typing import Dict, Any, Callable, Generator
 
 logger = logging.getLogger(__name__)
 
+USER_AGENT = "nva-aws-cli-tools (+https://github.com/BIBSYSDEV/nva-aws-cli-tools)"
+
 
 class SearchApiService:
     NEXT_PAGE_FIELD = "nextSearchAfterResults"
@@ -92,6 +94,7 @@ class SearchApiService:
         """
         headers = {
             "Accept": f"application/json; version={api_version}",
+            "User-Agent": USER_AGENT,
         }
         url = self.get_uri("resources")
         params = {
