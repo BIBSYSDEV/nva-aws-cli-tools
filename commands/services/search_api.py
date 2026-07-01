@@ -8,7 +8,7 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
-from typing import Dict, Any, Generator
+from typing import Dict, Any, Callable, Generator
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,7 @@ class SearchApiService:
         query_parameters: Dict[str, Any],
         page_size: int = 100,
         api_version: str = "2024-12-01",
+        on_total_hits: Callable[[int], None] | None = None,
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Search resources with automatic pagination using search-after.
@@ -83,6 +84,8 @@ class SearchApiService:
             query_parameters: Dictionary of query parameters (without pagination keys)
             page_size: Number of results per page (default: 100)
             api_version: API version to use in Accept header (default: 2024-12-01)
+            on_total_hits: Optional callback invoked once with ``totalHits`` from
+                the first page, e.g. to size a progress bar
 
         Yields:
             Individual hits from the search results
@@ -95,11 +98,16 @@ class SearchApiService:
             **query_parameters,
             "results": page_size,
         }
+        total_reported = False
 
         while url:
             response_data = self._fetch_search_page(url, headers, params)
             if response_data is None:
                 break
+
+            if on_total_hits is not None and not total_reported:
+                on_total_hits(response_data.get("totalHits", 0))
+                total_reported = True
 
             hits = response_data.get("hits", [])
             if not hits:

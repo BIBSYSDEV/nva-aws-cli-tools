@@ -121,6 +121,33 @@ def test_empty_first_page_yields_nothing():
 
 @mock_aws
 @responses.activate
+def test_reports_total_hits_once_from_first_page():
+    _seed_ssm()
+    responses.add(
+        responses.GET,
+        SEARCH_URL,
+        json={
+            "hits": [_a_hit("a"), _a_hit("b")],
+            "totalHits": 42,
+            "nextSearchAfterResults": NEXT_URL,
+        },
+    )
+    responses.add(
+        responses.GET, SEARCH_URL, json={"hits": [_a_hit("c")], "totalHits": 42}
+    )
+
+    reported = []
+    list(
+        _a_service().resource_search(
+            {"aggregation": "none"}, page_size=2, on_total_hits=reported.append
+        )
+    )
+
+    assert reported == [42]
+
+
+@mock_aws
+@responses.activate
 def test_client_error_stops_pagination():
     _seed_ssm()
     responses.add(responses.GET, SEARCH_URL, json={"detail": "bad request"}, status=400)

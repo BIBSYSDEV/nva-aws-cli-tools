@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
 
+from tqdm import tqdm
+
 from commands.services.search_api import SearchApiService
 from commands.utils import AppContext
 
@@ -239,13 +241,27 @@ def resources(
             logger.warning(f"Ignoring invalid query parameter: {q}")
 
     compact = output is not None
+    progress_bar = None
+
+    def start_progress(total_hits: int) -> None:
+        nonlocal progress_bar
+        capped_total = min(total_hits, limit) if limit else total_hits
+        progress_bar = tqdm(
+            total=capped_total, unit="hit", desc="Fetching", disable=None
+        )
 
     try:
         with _JsonlSink(output, batch_size) as sink:
             count = 0
             for hit in search_service.resource_search(
-                query_params, page_size, api_version=api_version
+                query_params,
+                page_size,
+                api_version=api_version,
+                on_total_hits=start_progress,
             ):
+                if progress_bar is not None:
+                    progress_bar.update(1)
+
                 line = _format_hit_line(hit, id_only, compact)
                 if line is not None:
                     sink.write(line)
@@ -260,6 +276,9 @@ def resources(
     except Exception as e:
         logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
+    finally:
+        if progress_bar is not None:
+            progress_bar.close()
 
 
 def _format_hit_line(hit: dict, id_only: bool, compact: bool) -> str | None:
