@@ -239,17 +239,52 @@ def test_server_error_is_not_retried_before_reducing_page_size(monkeypatch):
 
 @mock_aws
 @responses.activate
-def test_network_errors_are_retried_before_giving_up(monkeypatch):
+def test_network_errors_are_retried_by_count_without_page_size_backoff(monkeypatch):
     monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
     _seed_ssm()
     responses.add(
         responses.GET, SEARCH_URL, body=requests.exceptions.ConnectionError("boom")
     )
 
-    hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=1))
+    hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=5))
 
     assert hits == []
     assert len(responses.calls) == 3
+    sizes_requested = {_query_params(call)["results"] for call in responses.calls}
+    assert sizes_requested == {"5"}
+
+
+@mock_aws
+@responses.activate
+def test_network_error_is_terminal_without_poison_diagnostics(monkeypatch, caplog):
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+    _seed_ssm()
+    responses.add(
+        responses.GET, SEARCH_URL, body=requests.exceptions.ConnectionError("boom")
+    )
+
+    with caplog.at_level("ERROR"):
+        list(_a_service().resource_search({"aggregation": "none"}, page_size=5))
+
+    assert "poisoned record" not in caplog.text
+    assert "network error" in caplog.text
+
+
+@mock_aws
+@responses.activate
+def test_page_size_params_from_query_do_not_override_adaptive_control():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    list(
+        _a_service().resource_search(
+            {"aggregation": "none", "results": "999", "size": "999"}, page_size=25
+        )
+    )
+
+    params = _query_params(responses.calls[0])
+    assert params["results"] == "25"
+    assert "size" not in params
 
 
 @mock_aws

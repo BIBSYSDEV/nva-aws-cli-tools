@@ -94,10 +94,10 @@ def search(ctx: AppContext):
 @click.option(
     "--page-size",
     type=int,
-    default=500,
+    default=300,
     help="Maximum results per page. The client starts low, ramps up toward this "
     "while pages succeed, and backs off (down to 1) when the server fails a page "
-    "(default: 500)",
+    "(default: 300)",
 )
 @click.option(
     "--limit",
@@ -321,7 +321,7 @@ def resources(
         raise click.Abort()
 
 
-def _split_csv(values: Tuple[str, ...]) -> list:
+def _split_csv(values: Tuple[str, ...]) -> list[str]:
     items = []
     for value in values:
         items.extend(part.strip() for part in value.split(",") if part.strip())

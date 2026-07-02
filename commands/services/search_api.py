@@ -103,6 +103,14 @@ def _search_after_cursor(url: str) -> str | None:
     return None
 
 
+def _without_page_size_params(query_parameters: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        key: value
+        for key, value in query_parameters.items()
+        if key not in PAGE_SIZE_PARAMS
+    }
+
+
 def _accept_header(api_version: str | None) -> str:
     if api_version:
         return f"application/json; version={api_version}"
@@ -197,7 +205,8 @@ class SearchApiService:
         }
         page_size_control = AdaptivePageSize(maximum=page_size)
         url = self.get_uri("resources")
-        params = {**query_parameters, RESULTS_PARAM: page_size_control.current}
+        base_params = _without_page_size_params(query_parameters)
+        params = {**base_params, RESULTS_PARAM: page_size_control.current}
         total_reported = False
         last_identifier = None
 
@@ -241,11 +250,7 @@ class SearchApiService:
                 return outcome.data
 
             if not outcome.should_reduce_page_size:
-                logger.error(
-                    "Search failed with status %s and will not be retried: %s",
-                    outcome.status_code,
-                    outcome.error_body,
-                )
+                self._log_terminal_failure(outcome)
                 return None
 
             if not page_size_control.can_shrink():
@@ -268,9 +273,26 @@ class SearchApiService:
     def _apply_page_size(
         self, url: str, params: Dict[str, Any], page_size: int
     ) -> tuple[str, Dict[str, Any]]:
-        if RESULTS_PARAM in params:
-            return url, {**params, RESULTS_PARAM: page_size}
-        return _url_with_page_size(url, page_size), params
+        carried_keys = [param for param in PAGE_SIZE_PARAMS if param in params]
+        if not carried_keys:
+            return _url_with_page_size(url, page_size), params
+        updated = {**params, RESULTS_PARAM: page_size}
+        for param in carried_keys:
+            updated[param] = page_size
+        return url, updated
+
+    def _log_terminal_failure(self, outcome: SearchPageOutcome) -> None:
+        if outcome.status_code is None:
+            logger.error(
+                "Search failed due to a network error and will not be retried: %s",
+                outcome.error_body,
+            )
+        else:
+            logger.error(
+                "Search failed with status %s and will not be retried: %s",
+                outcome.status_code,
+                outcome.error_body,
+            )
 
     def _log_poison_diagnostics(
         self,
@@ -320,7 +342,7 @@ class SearchApiService:
             )
         except requests.exceptions.RequestException as e:
             logger.debug("Network error after retries: %s", e)
-            return SearchPageOutcome(should_reduce_page_size=True, error_body=str(e))
+            return SearchPageOutcome(should_reduce_page_size=False, error_body=str(e))
 
         if response.status_code != 200:
             logger.debug(
