@@ -2,7 +2,10 @@ import click
 import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple
+
+from tqdm import tqdm
 
 from commands.services.search_api import SearchApiService
 from commands.utils import AppContext
@@ -164,6 +167,19 @@ def search(ctx: AppContext):
     help="Output only identifiers (one per line)",
 )
 @click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, writable=True),
+    help="Base path for JSONL output; a zero-padded batch number is inserted before the extension (e.g. out.jsonl -> out_00001.jsonl). Lines are JSON objects, or bare identifiers with --id-only. Missing directories are created",
+)
+@click.option(
+    "--batch-size",
+    type=click.IntRange(min=1),
+    default=1000,
+    show_default=True,
+    help="When writing to --output, split into files of this many records (a zero-padded counter is inserted before the extension)",
+)
+@click.option(
     "--query",
     type=str,
     multiple=True,
@@ -180,6 +196,8 @@ def resources(
     page_size: int,
     limit: int | None,
     id_only: bool,
+    output: str | None,
+    batch_size: int,
     query: Tuple[str, ...],
     api_version: str,
     **kwargs,
@@ -201,6 +219,13 @@ def resources(
         # Search by publisher (output only IDs)
         uv run cli.py search resources --publisher 08DC24C9-B7FF-4192-89AC-C629D93AD9CF --id-only
 
+        # Write results to JSONL files, split into batches of 1000 (default)
+        uv run cli.py search resources --unit 194.0.0.0 --output resultat.jsonl
+        # -> resultat_00001.jsonl, resultat_00002.jsonl, ...
+
+        # Override the batch size
+        uv run cli.py search resources --unit 194.0.0.0 --output resultat.jsonl --batch-size 500
+
         # Use additional query parameters
         uv run cli.py search resources --query "funding=some-id" --query "status=published" --aggregation all
     """
@@ -215,25 +240,118 @@ def resources(
         else:
             logger.warning(f"Ignoring invalid query parameter: {q}")
 
+    compact = output is not None
+    progress_bar = None
+
+    def start_progress(total_hits: int) -> None:
+        nonlocal progress_bar
+        capped_total = min(total_hits, limit) if limit else total_hits
+        progress_bar = tqdm(
+            total=capped_total, unit="hit", desc="Fetching", disable=None
+        )
+
     try:
-        count = 0
-        for hit in search_service.resource_search(
-            query_params, page_size, api_version=api_version
-        ):
-            if id_only:
-                identifier = hit.get("identifier")
-                if identifier:
-                    print(identifier)
-            else:
-                print(json.dumps(hit, indent=2))
-            count += 1
+        with _JsonlSink(output, batch_size) as sink:
+            count = 0
+            for hit in search_service.resource_search(
+                query_params,
+                page_size,
+                api_version=api_version,
+                on_total_hits=start_progress,
+            ):
+                if progress_bar is not None:
+                    progress_bar.update(1)
 
-            if limit and count >= limit:
-                break
+                line = _format_hit_line(hit, id_only, compact)
+                if line is not None:
+                    sink.write(line)
+                    count += 1
 
-        if count > 0:
-            logger.info(f"Total results: {count}")
+                if limit and count >= limit:
+                    break
+
+            if count > 0:
+                _log_result_summary(count, output, batch_size, sink.paths)
 
     except Exception as e:
         logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
+    finally:
+        if progress_bar is not None:
+            progress_bar.close()
+
+
+def _format_hit_line(hit: dict, id_only: bool, compact: bool) -> str | None:
+    if id_only:
+        return hit.get("identifier")
+    if compact:
+        return json.dumps(hit)
+    return json.dumps(hit, indent=2)
+
+
+def _log_result_summary(
+    count: int, output: str | None, batch_size: int, paths: list
+) -> None:
+    if output is None:
+        logger.info(f"Total results: {count}")
+    elif len(paths) == 1:
+        logger.info(f"Wrote {count} results to {paths[0]}")
+    else:
+        logger.info(
+            f"Wrote {count} results to {len(paths)} files "
+            f"({paths[0]} … {paths[-1]}, {batch_size} per file)"
+        )
+
+
+class _JsonlSink:
+    def __init__(self, output: str | None, batch_size: int) -> None:
+        self._output = output
+        self._batch_size = batch_size
+        self._file = None
+        self._paths = []
+        self._lines_in_batch = 0
+
+    def __enter__(self) -> "_JsonlSink":
+        return self
+
+    def __exit__(self, *exc_info) -> bool:
+        self._close_current_file()
+        return False
+
+    @property
+    def paths(self) -> list:
+        return self._paths
+
+    @property
+    def file_count(self) -> int:
+        return len(self._paths)
+
+    def write(self, line: str) -> None:
+        if self._output is None:
+            print(line)
+            return
+
+        if self._file is None or self._lines_in_batch >= self._batch_size:
+            self._open_next_file()
+
+        self._file.write(line)
+        self._file.write("\n")
+        self._lines_in_batch += 1
+
+    def _open_next_file(self) -> None:
+        self._close_current_file()
+        path = self._batch_path()
+        self._paths.append(path)
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self._file = open(path, "w", encoding="utf-8")
+        self._lines_in_batch = 0
+
+    def _batch_path(self) -> str:
+        next_index = len(self._paths) + 1
+        path = Path(self._output)
+        return str(path.with_name(f"{path.stem}_{next_index:05d}{path.suffix}"))
+
+    def _close_current_file(self) -> None:
+        if self._file is not None:
+            self._file.close()
+            self._file = None

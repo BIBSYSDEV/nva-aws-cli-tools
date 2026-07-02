@@ -1,19 +1,22 @@
 import boto3
 import logging
 import requests
-from requests.exceptions import JSONDecodeError
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
     retry_if_exception_type,
 )
-from typing import Dict, Any, Generator
+from typing import Dict, Any, Callable, Generator
 
 logger = logging.getLogger(__name__)
 
+USER_AGENT = "nva-aws-cli-tools (+https://github.com/BIBSYSDEV/nva-aws-cli-tools)"
+
 
 class SearchApiService:
+    NEXT_PAGE_FIELD = "nextSearchAfterResults"
+
     def __init__(self, session: boto3.Session) -> None:
         self.session = session
         self.ssm = self.session.client("ssm")
@@ -69,66 +72,83 @@ class SearchApiService:
         query_parameters: Dict[str, Any],
         page_size: int = 100,
         api_version: str = "2024-12-01",
+        on_total_hits: Callable[[int], None] | None = None,
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Search resources with automatic pagination.
+        Search resources with automatic pagination using search-after.
+
+        Pagination follows the ``nextSearchAfterResults`` link returned in the
+        response body instead of an incrementing ``from`` offset. This avoids the
+        offset window limit and lets us page through arbitrarily large result sets.
 
         Args:
-            query_parameters: Dictionary of query parameters (without 'from' and 'results')
+            query_parameters: Dictionary of query parameters (without pagination keys)
             page_size: Number of results per page (default: 100)
             api_version: API version to use in Accept header (default: 2024-12-01)
+            on_total_hits: Optional callback invoked once with ``totalHits`` from
+                the first page, e.g. to size a progress bar
 
         Yields:
             Individual hits from the search results
         """
-        url = self.get_uri("resources")
         headers = {
             "Accept": f"application/json; version={api_version}",
+            "User-Agent": USER_AGENT,
         }
-        offset = 0
+        url = self.get_uri("resources")
+        params = {
+            **query_parameters,
+            "results": page_size,
+        }
+        total_reported = False
 
-        while True:
-            params = {
-                **query_parameters,
-                "from": offset,
-                "results": page_size,
-            }
-
-            try:
-                response = self._make_search_request(url, headers, params)
-            except requests.exceptions.HTTPError as e:
-                logger.error(
-                    f"Failed to search after retries. Status: {e.response.status_code}",
-                )
-                if e.response.status_code >= 400:
-                    try:
-                        error_detail = e.response.json()
-                        logger.error(f"Error detail: {error_detail}")
-                    except ValueError, JSONDecodeError:
-                        logger.error(f"Error detail: {e.response.text}")
-                break
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Network error after retries: {e}")
+        while url:
+            response_data = self._fetch_search_page(url, headers, params)
+            if response_data is None:
                 break
 
-            if response.status_code != 200:
-                logger.error(
-                    f"Failed to search. {response.status_code}: {response.json()}"
-                )
-                break
+            if on_total_hits is not None and not total_reported:
+                on_total_hits(response_data.get("totalHits", 0))
+                total_reported = True
 
-            response_data = response.json()
             hits = response_data.get("hits", [])
-
             if not hits:
                 break
 
-            for hit in hits:
-                yield hit
+            yield from hits
 
-            # Check if we've retrieved all results
-            total_hits = response_data.get("totalHits", 0)
-            offset += len(hits)
+            url = response_data.get(self.NEXT_PAGE_FIELD)
+            params = {}
 
-            if offset >= total_hits:
-                break
+    def _fetch_search_page(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        params: Dict[str, Any],
+    ) -> Dict[str, Any] | None:
+        try:
+            response = self._make_search_request(url, headers, params)
+        except requests.exceptions.HTTPError as e:
+            logger.error(
+                f"Failed to search after retries. Status: {e.response.status_code}",
+            )
+            if e.response.status_code >= 400:
+                try:
+                    error_detail = e.response.json()
+                    logger.error(f"Error detail: {error_detail}")
+                except ValueError:
+                    logger.error(f"Error detail: {e.response.text}")
+            return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error after retries: {e}")
+            return None
+
+        if response.status_code != 200:
+            logger.error(f"Failed to search. {response.status_code}: {response.text}")
+            return None
+
+        try:
+            return response.json()
+        except ValueError:
+            logger.error(f"Search response was not valid JSON: {response.text}")
+            return None
