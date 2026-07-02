@@ -1,10 +1,18 @@
 import urllib.parse
 
 import boto3
+import requests
 import responses
 from moto import mock_aws
+from responses import matchers
 
-from commands.services.search_api import SearchApiService
+from commands.services.search_api import (
+    AdaptivePageSize,
+    SearchApiService,
+    _accept_header,
+    _search_after_cursor,
+    _url_with_page_size,
+)
 
 API_DOMAIN = "api.example.org"
 SEARCH_URL = f"https://{API_DOMAIN}/search/resources"
@@ -68,6 +76,26 @@ def test_sends_identifying_user_agent():
 
 @mock_aws
 @responses.activate
+def test_empty_api_version_omits_version_from_accept_header():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    list(_a_service().resource_search({"aggregation": "none"}, api_version=""))
+
+    assert responses.calls[0].request.headers["Accept"] == "application/json"
+
+
+def test_accept_header_includes_version_when_set():
+    assert _accept_header("2024-12-01") == "application/json; version=2024-12-01"
+
+
+def test_accept_header_omits_version_when_empty():
+    assert _accept_header("") == "application/json"
+    assert _accept_header(None) == "application/json"
+
+
+@mock_aws
+@responses.activate
 def test_follows_next_search_after_link_across_pages():
     _seed_ssm()
     responses.add(
@@ -86,7 +114,7 @@ def test_follows_next_search_after_link_across_pages():
 
 @mock_aws
 @responses.activate
-def test_next_page_request_follows_link_verbatim_with_accept_header():
+def test_next_page_keeps_cursor_and_sets_current_page_size():
     _seed_ssm()
     responses.add(
         responses.GET,
@@ -102,7 +130,9 @@ def test_next_page_request_follows_link_verbatim_with_accept_header():
     )
 
     second_request = responses.calls[1].request
-    assert second_request.url == NEXT_URL
+    params = _query_params(responses.calls[1])
+    assert params["searchAfter"] == "next-cursor"
+    assert params["results"] == "2"
     assert "version=2099-01-01" in second_request.headers["Accept"]
 
 
@@ -183,12 +213,181 @@ def test_invalid_json_body_yields_nothing_without_crashing():
 
 @mock_aws
 @responses.activate
-def test_persistent_server_error_gives_up_and_yields_nothing(monkeypatch):
+def test_persistent_server_error_backs_off_to_minimum_then_gives_up(monkeypatch):
     monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
     _seed_ssm()
     responses.add(responses.GET, SEARCH_URL, json={}, status=500)
 
-    hits = list(_a_service().resource_search({"aggregation": "none"}))
+    hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=2))
 
     assert hits == []
-    assert len(responses.calls) == 5
+    sizes_requested = {_query_params(call)["results"] for call in responses.calls}
+    assert sizes_requested == {"2", "1"}
+
+
+@mock_aws
+@responses.activate
+def test_server_error_is_not_retried_before_reducing_page_size(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={}, status=500)
+
+    list(_a_service().resource_search({"aggregation": "none"}, page_size=2))
+
+    assert len(responses.calls) == 2
+
+
+@mock_aws
+@responses.activate
+def test_network_errors_are_retried_before_giving_up(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+    _seed_ssm()
+    responses.add(
+        responses.GET, SEARCH_URL, body=requests.exceptions.ConnectionError("boom")
+    )
+
+    hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=1))
+
+    assert hits == []
+    assert len(responses.calls) == 3
+
+
+@mock_aws
+@responses.activate
+def test_server_error_reduces_page_size_and_recovers(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+    _seed_ssm()
+    responses.add(
+        responses.GET,
+        SEARCH_URL,
+        match=[matchers.query_param_matcher({"results": "2"}, strict_match=False)],
+        json={},
+        status=500,
+    )
+    responses.add(
+        responses.GET,
+        SEARCH_URL,
+        match=[matchers.query_param_matcher({"results": "1"}, strict_match=False)],
+        json={"hits": [_a_hit("a")]},
+    )
+
+    hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=2))
+
+    assert [hit["identifier"] for hit in hits] == ["a"]
+
+
+@mock_aws
+@responses.activate
+def test_poison_diagnostics_logged_at_minimum_page_size(monkeypatch, caplog):
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+    _seed_ssm()
+    poison_next = f"{SEARCH_URL}?search_after=poison-cursor&size=1"
+    responses.add(
+        responses.GET,
+        SEARCH_URL,
+        match=[
+            matchers.query_param_matcher({"aggregation": "none"}, strict_match=False)
+        ],
+        json={"hits": [_a_hit("last-good")], "nextSearchAfterResults": poison_next},
+    )
+    responses.add(
+        responses.GET,
+        SEARCH_URL,
+        match=[
+            matchers.query_param_matcher(
+                {"search_after": "poison-cursor"}, strict_match=False
+            )
+        ],
+        json={},
+        status=500,
+    )
+
+    with caplog.at_level("ERROR"):
+        hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=1))
+
+    assert [hit["identifier"] for hit in hits] == ["last-good"]
+    assert "poisoned record" in caplog.text
+    assert "poison-cursor" in caplog.text
+    assert "last-good" in caplog.text
+
+
+@mock_aws
+@responses.activate
+def test_client_error_does_not_trigger_page_size_backoff(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"detail": "bad request"}, status=400)
+
+    hits = list(_a_service().resource_search({"aggregation": "none"}, page_size=100))
+
+    assert hits == []
+    assert len(responses.calls) == 1
+
+
+def test_adaptive_page_size_ramps_up_additively_after_successes():
+    control = AdaptivePageSize(
+        maximum=500, start=50, step=50, successes_before_growth=2
+    )
+    assert control.current == 50
+    control.register_success()
+    assert control.current == 50
+    control.register_success()
+    assert control.current == 100
+
+
+def test_adaptive_page_size_halves_on_shrink_down_to_minimum():
+    control = AdaptivePageSize(maximum=64, start=64, minimum=1)
+    sizes = []
+    while control.can_shrink():
+        sizes.append(control.shrink())
+    assert sizes == [32, 16, 8, 4, 2, 1]
+    assert control.can_shrink() is False
+
+
+def test_adaptive_page_size_never_grows_past_maximum():
+    control = AdaptivePageSize(maximum=60, start=50, step=50, successes_before_growth=1)
+    control.register_success()
+    assert control.current == 60
+
+
+def test_adaptive_page_size_clamps_start_within_bounds():
+    control = AdaptivePageSize(maximum=10, start=50)
+    assert control.current == 10
+
+
+def test_shrink_resets_success_streak():
+    control = AdaptivePageSize(
+        maximum=500, start=50, step=50, successes_before_growth=2
+    )
+    control.register_success()
+    control.shrink()
+    control.register_success()
+    assert control.current == 25
+
+
+def test_url_with_page_size_overrides_both_size_and_results():
+    url = f"{SEARCH_URL}?search_after=abc%2Cdef&size=25&aggregation=none"
+
+    params = _query_params_from_url(_url_with_page_size(url, 5))
+
+    assert params["size"] == "5"
+    assert params["results"] == "5"
+    assert params["search_after"] == "abc,def"
+
+
+def test_url_with_page_size_adds_results_when_no_size_present():
+    params = _query_params_from_url(_url_with_page_size(f"{SEARCH_URL}?a=1", 3))
+
+    assert params["results"] == "3"
+    assert "size" not in params
+
+
+def test_search_after_cursor_reads_snake_case_and_camel_case():
+    assert _search_after_cursor(f"{SEARCH_URL}?search_after=snake") == "snake"
+    assert _search_after_cursor(f"{SEARCH_URL}?searchAfter=camel") == "camel"
+    assert _search_after_cursor(f"{SEARCH_URL}?other=1") is None
+
+
+def _query_params_from_url(url: str) -> dict:
+    query = urllib.parse.urlparse(url).query
+    return dict(urllib.parse.parse_qsl(query))
