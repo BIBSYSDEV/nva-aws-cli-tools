@@ -5,10 +5,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
 
-from tqdm import tqdm
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from commands.services.search_api import SearchApiService
 from commands.utils import AppContext
+from log_config import log_console
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +94,10 @@ def search(ctx: AppContext):
 @click.option(
     "--page-size",
     type=int,
-    default=50,
-    help="Number of results per page (default: 50)",
+    default=300,
+    help="Maximum results per page. The client starts low, ramps up toward this "
+    "while pages succeed, and backs off (down to 1) when the server fails a page "
+    "(default: 300)",
 )
 @click.option(
     "--limit",
@@ -153,7 +163,9 @@ def search(ctx: AppContext):
 @click.option(
     "--order",
     type=str,
-    help="Order field (e.g., modifiedDate, createdDate)",
+    help="Order field (e.g., modifiedDate, createdDate). For large exports prefer "
+    "an immutable field like createdDate; modifiedDate can cause updated records "
+    "to be skipped (see the command help for details)",
 )
 @click.option(
     "--sort",
@@ -186,10 +198,18 @@ def search(ctx: AppContext):
     help="Additional query parameters in format key=value (can be used multiple times)",
 )
 @click.option(
+    "--exclude-fields",
+    type=str,
+    multiple=True,
+    help="Top-level field(s) to drop from each hit (maps to nodesExcluded). "
+    "Comma-separated or repeated, e.g. --exclude-fields contributorsPreview,tags",
+)
+@click.option(
     "--api-version",
     type=str,
     default="2024-12-01",
-    help="API version to use (default: 2024-12-01)",
+    help="API version for the Accept header (default: 2024-12-01). Pass an empty "
+    'string (--api-version "") to omit the version and use the server default',
 )
 def resources(
     ctx: AppContext,
@@ -199,6 +219,7 @@ def resources(
     output: str | None,
     batch_size: int,
     query: Tuple[str, ...],
+    exclude_fields: Tuple[str, ...],
     api_version: str,
     **kwargs,
 ) -> None:
@@ -206,28 +227,46 @@ def resources(
 
     This command provides automatic pagination and supports all search API parameters.
 
+    Stable pagination (avoiding skipped records): search-after is only stable when
+    the sort key never changes for a document while you page. Sorting on
+    --order modifiedDate is unsafe for large exports, because an updated document
+    gets a new modifiedDate and moves past the cursor, so it is skipped. Prefer an
+    immutable field: --order createdDate never changes after creation, so existing
+    documents are never lost and new ones land at the end (picked up with
+    --sort asc). The API appends the unique 'identifier' as a tie-breaker, so equal
+    sort values between pages are already handled; duplicates may appear (e.g. docs
+    created during the run) but no existing record is dropped.
+
+    \b
+    Recommended for a full export:
+    uv run cli.py search resources --order createdDate --sort asc --output out.jsonl
+
+    \b
     Examples:
         # Search by unit and year range
         uv run cli.py search resources --unit 1965.0.0.0 --year-from 2025 --year-to 2026
-
+    \b
         # Search by project (limit to first 100 results)
         uv run cli.py search resources --project 2744839 --limit 100
-
+    \b
         # Search by funding source and identifier
         uv run cli.py search resources --funding-source NFR --funding-identifier 357438
-
+    \b
         # Search by publisher (output only IDs)
         uv run cli.py search resources --publisher 08DC24C9-B7FF-4192-89AC-C629D93AD9CF --id-only
-
+    \b
         # Write results to JSONL files, split into batches of 1000 (default)
         uv run cli.py search resources --unit 194.0.0.0 --output resultat.jsonl
         # -> resultat_00001.jsonl, resultat_00002.jsonl, ...
-
+    \b
         # Override the batch size
         uv run cli.py search resources --unit 194.0.0.0 --output resultat.jsonl --batch-size 500
-
+    \b
         # Use additional query parameters
         uv run cli.py search resources --query "funding=some-id" --query "status=published" --aggregation all
+    \b
+        # Drop heavy fields from each hit (nodesExcluded)
+        uv run cli.py search resources --exclude-fields contributorsPreview,tags --output out.jsonl
     """
     search_service = SearchApiService(session=ctx.session)
     search_params = SearchParams.from_kwargs(**kwargs)
@@ -240,45 +279,65 @@ def resources(
         else:
             logger.warning(f"Ignoring invalid query parameter: {q}")
 
-    compact = output is not None
-    progress_bar = None
+    excluded = _split_csv(exclude_fields)
+    if excluded:
+        query_params["nodesExcluded"] = ",".join(excluded)
 
-    def start_progress(total_hits: int) -> None:
-        nonlocal progress_bar
-        capped_total = min(total_hits, limit) if limit else total_hits
-        progress_bar = tqdm(
-            total=capped_total, unit="hit", desc="Fetching", disable=None
-        )
+    compact = output is not None
 
     try:
-        with _JsonlSink(output, batch_size) as sink:
-            count = 0
-            for hit in search_service.resource_search(
-                query_params,
-                page_size,
-                api_version=api_version,
-                on_total_hits=start_progress,
-            ):
-                if progress_bar is not None:
-                    progress_bar.update(1)
+        with Progress(*_progress_columns(), console=log_console) as progress:
+            task_id = None
 
-                line = _format_hit_line(hit, id_only, compact)
-                if line is not None:
-                    sink.write(line)
-                    count += 1
+            def start_progress(total_hits: int) -> None:
+                nonlocal task_id
+                capped_total = min(total_hits, limit) if limit else total_hits
+                task_id = progress.add_task("Fetching", total=capped_total)
 
-                if limit and count >= limit:
-                    break
+            with _JsonlSink(output, batch_size) as sink:
+                count = 0
+                for hit in search_service.resource_search(
+                    query_params,
+                    page_size,
+                    api_version=api_version,
+                    on_total_hits=start_progress,
+                ):
+                    if task_id is not None:
+                        progress.advance(task_id)
 
-            if count > 0:
-                _log_result_summary(count, output, batch_size, sink.paths)
+                    line = _format_hit_line(hit, id_only, compact)
+                    if line is not None:
+                        sink.write(line)
+                        count += 1
+
+                    if limit and count >= limit:
+                        break
+
+                if count > 0:
+                    _log_result_summary(count, output, batch_size, sink.paths)
 
     except Exception as e:
         logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
-    finally:
-        if progress_bar is not None:
-            progress_bar.close()
+
+
+def _split_csv(values: Tuple[str, ...]) -> list[str]:
+    items = []
+    for value in values:
+        items.extend(part.strip() for part in value.split(",") if part.strip())
+    return items
+
+
+def _progress_columns() -> tuple:
+    return (
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(complete_style="green", finished_style="green"),
+        MofNCompleteColumn(),
+        TextColumn("hits • elapsed"),
+        TimeElapsedColumn(),
+        TextColumn("• remaining"),
+        TimeRemainingColumn(),
+    )
 
 
 def _format_hit_line(hit: dict, id_only: bool, compact: bool) -> str | None:

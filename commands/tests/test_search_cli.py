@@ -1,13 +1,14 @@
 import glob
 import json
 import os
+import urllib.parse
 
 import boto3
 import responses
 from click.testing import CliRunner
 from moto import mock_aws
 
-from commands.search import search, _JsonlSink, _format_hit_line
+from commands.search import search, _JsonlSink, _format_hit_line, _split_csv
 from commands.utils import AppContext
 
 API_DOMAIN = "api.example.org"
@@ -132,6 +133,41 @@ def test_command_writes_batched_jsonl_files():
         assert len(second_batch) == 1
         assert json.loads(first_batch[0])["identifier"] == "a"
         assert json.loads(second_batch[0])["identifier"] == "c"
+
+
+@mock_aws
+@responses.activate
+def test_exclude_fields_sets_nodes_excluded_query_param():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            search,
+            [
+                "resources",
+                "--unit",
+                A_UNIT,
+                "--exclude-fields",
+                "contributorsPreview,tags",
+                "--exclude-fields",
+                "otherIdentifiers",
+                "--output",
+                "out.jsonl",
+            ],
+            obj=_ctx(),
+        )
+
+    assert result.exit_code == 0, result.output
+    query = urllib.parse.urlparse(responses.calls[0].request.url).query
+    params = dict(urllib.parse.parse_qsl(query))
+    assert params["nodesExcluded"] == "contributorsPreview,tags,otherIdentifiers"
+
+
+def test_split_csv_flattens_trims_and_drops_empty():
+    assert _split_csv(("a,b", " c ", "", "d")) == ["a", "b", "c", "d"]
+    assert _split_csv(()) == []
 
 
 @mock_aws
