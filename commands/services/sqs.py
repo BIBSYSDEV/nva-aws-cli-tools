@@ -4,6 +4,7 @@ import re
 import signal
 import threading
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -54,6 +55,32 @@ EXCEPTION_CONTEXT_PATTERNS = [
     re.compile(r"([A-Z]\w*(?:Exception|Error)):\s*([^\n]{1,200})"),
     re.compile(r"Caused by:\s*([^:\n]+):\s*([^\n]{1,200})"),
 ]
+
+
+@dataclass(frozen=True)
+class QueueMessageCounts:
+    name: str
+    url: str
+    messages_available: int
+    messages_in_flight: int
+
+    @property
+    def has_messages(self) -> bool:
+        return self.messages_available > 0 or self.messages_in_flight > 0
+
+    @property
+    def total_messages(self) -> int:
+        return self.messages_available + self.messages_in_flight
+
+
+@dataclass(frozen=True)
+class QueueListing:
+    queues: List[QueueMessageCounts]
+    hidden_empty_count: int
+
+    @property
+    def total_queue_count(self) -> int:
+        return len(self.queues) + self.hidden_empty_count
 
 
 class SqsService:
@@ -109,6 +136,53 @@ class SqsService:
         except ClientError as e:
             logger.error(f"Error listing queues: {e}")
             raise e
+
+    def list_queue_message_counts(
+        self, name_filter: Optional[str] = None, include_empty: bool = False
+    ) -> QueueListing:
+        queue_urls = self._list_queue_urls(name_filter)
+        counts = [self._get_queue_message_counts(url) for url in queue_urls]
+        counts.sort(key=lambda queue: (-queue.total_messages, queue.name))
+
+        if include_empty:
+            return QueueListing(queues=counts, hidden_empty_count=0)
+
+        non_empty = [queue for queue in counts if queue.has_messages]
+        return QueueListing(
+            queues=non_empty, hidden_empty_count=len(counts) - len(non_empty)
+        )
+
+    def _list_queue_urls(self, name_filter: Optional[str] = None) -> List[str]:
+        paginator = self.sqs_client.get_paginator("list_queues")
+        queue_urls: List[str] = []
+        for page in paginator.paginate():
+            queue_urls.extend(page.get("QueueUrls", []))
+
+        if name_filter:
+            queue_urls = [
+                url
+                for url in queue_urls
+                if name_filter.lower() in url.split("/")[-1].lower()
+            ]
+        return queue_urls
+
+    def _get_queue_message_counts(self, queue_url: str) -> QueueMessageCounts:
+        response = self.sqs_client.get_queue_attributes(
+            QueueUrl=queue_url,
+            AttributeNames=[
+                "ApproximateNumberOfMessages",
+                "ApproximateNumberOfMessagesNotVisible",
+            ],
+        )
+        attributes = response.get("Attributes", {})
+        return QueueMessageCounts(
+            name=queue_url.split("/")[-1],
+            url=queue_url,
+            messages_available=int(attributes.get("ApproximateNumberOfMessages", 0)),
+            messages_in_flight=int(
+                attributes.get("ApproximateNumberOfMessagesNotVisible", 0)
+            ),
+        )
 
     def get_queue_attributes(self, queue_url: str) -> Dict[str, Any]:
         try:
