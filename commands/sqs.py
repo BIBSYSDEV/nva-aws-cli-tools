@@ -2,16 +2,17 @@ import click
 import json
 from rich.console import Console
 from rich.prompt import Confirm
+from rich.table import Table
 
 from commands.utils import AppContext
-from commands.services.sqs import SqsService
+from commands.services.sqs import QueueListing, QueueMessageCounts, SqsService
 
 console = Console()
 
 
 @click.group()
 @click.pass_obj
-def sqs(ctx: AppContext):
+def sqs(ctx: AppContext) -> None:
     """Manage SQS queues and messages."""
     pass
 
@@ -39,8 +40,14 @@ def sqs(ctx: AppContext):
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 @click.pass_obj
 def drain(
-    ctx: AppContext, queue_name, output_dir, messages_per_file, delete, threads, yes
-):
+    ctx: AppContext,
+    queue_name: str,
+    output_dir: str | None,
+    messages_per_file: int,
+    delete: bool,
+    threads: int,
+    yes: bool,
+) -> None:
     sqs_service = SqsService(session=ctx.session)
 
     queue_url = get_queue_url(sqs_service, queue_name)
@@ -77,7 +84,7 @@ def drain(
 @sqs.command()
 @click.argument("queue_name", type=str)
 @click.pass_obj
-def info(ctx: AppContext, queue_name):
+def info(ctx: AppContext, queue_name: str) -> None:
     sqs_service = SqsService(session=ctx.session)
 
     queue_url = get_queue_url(sqs_service, queue_name)
@@ -87,7 +94,7 @@ def info(ctx: AppContext, queue_name):
 @sqs.command()
 @click.argument("folder_path", type=str)
 @click.pass_obj
-def analyze(ctx: AppContext, folder_path):
+def analyze(ctx: AppContext, folder_path: str) -> None:
     """Analyze messages from drained SQS queue JSONL files.
 
     This command analyzes the JSONL files created by the drain command to find:
@@ -107,35 +114,29 @@ def analyze(ctx: AppContext, folder_path):
 
 @sqs.command()
 @click.option("--filter", type=str, help="Filter queues by name pattern")
+@click.option(
+    "--include-empty",
+    is_flag=True,
+    help="Include queues with no messages available or in flight",
+)
 @click.pass_obj
-def list(ctx: AppContext, filter):
-    """List all SQS queues in the account."""
+def list(ctx: AppContext, filter: str | None, include_empty: bool) -> None:
+    """List SQS queues with message counts.
+
+    By default only queues with messages available or in flight are shown.
+    Use --include-empty to show all queues.
+    """
     sqs_service = SqsService(session=ctx.session)
 
     try:
-        response = sqs_service.sqs_client.list_queues()
-        queue_urls = response.get("QueueUrls", [])
-
-        if not queue_urls:
-            console.print("[yellow]No queues found[/yellow]")
-            return
-
-        if filter:
-            queue_urls = [url for url in queue_urls if filter.lower() in url.lower()]
-
-        console.print(
-            f"\n[bold cyan]SQS Queues ({sqs_service.profile} profile):[/bold cyan]\n"
+        listing = sqs_service.list_queue_message_counts(
+            name_filter=filter, include_empty=include_empty
         )
-
-        for url in sorted(queue_urls):
-            queue_name = url.split("/")[-1]
-            console.print(f"  • {queue_name}")
-
-        console.print(f"\n[dim]Total: {len(queue_urls)} queue(s)[/dim]")
-
     except Exception as e:
         console.print(f"[red]Error listing queues: {e}[/red]")
         raise click.Abort()
+
+    show_queue_listing(listing, sqs_service.profile)
 
 
 @sqs.command()
@@ -144,7 +145,7 @@ def list(ctx: AppContext, filter):
     "--max-messages", "-m", type=int, default=1000, help="Max messages to process"
 )
 @click.pass_obj
-def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int):
+def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int) -> None:
     sqs_service = SqsService(session=ctx.session)
     queue_url = get_queue_url(sqs_service, queue_name)
 
@@ -170,7 +171,7 @@ def delete_duplicates(ctx: AppContext, queue_name: str, max_messages: int):
 )
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 @click.pass_obj
-def redrive(ctx: AppContext, queue_name: str, destination: str, yes: bool):
+def redrive(ctx: AppContext, queue_name: str, destination: str, yes: bool) -> None:
     """Start a DLQ redrive, moving messages from source to destination queue."""
     sqs_service = SqsService(session=ctx.session)
 
@@ -191,7 +192,44 @@ def redrive(ctx: AppContext, queue_name: str, destination: str, yes: bool):
     console.print("[green]Redrive started[/green]")
 
 
-def show_queue_summary(sqs_service: SqsService, queue_url: str):
+def show_queue_listing(listing: QueueListing, profile: str) -> None:
+    if listing.total_queue_count == 0:
+        console.print("[yellow]No queues found[/yellow]")
+    elif not listing.queues:
+        console.print(
+            f"[yellow]No queues with messages ({listing.hidden_empty_count} empty "
+            f"queue(s) hidden, use --include-empty to show them)[/yellow]"
+        )
+    else:
+        console.print(build_queue_counts_table(listing.queues, profile))
+        console.print(f"[dim]{format_queue_listing_summary(listing)}[/dim]")
+
+
+def build_queue_counts_table(queues: list[QueueMessageCounts], profile: str) -> Table:
+    table = Table(title=f"SQS Queues ({profile} profile)")
+    table.add_column("Queue Name", style="cyan", no_wrap=True)
+    table.add_column("Messages Available", style="yellow", justify="right")
+    table.add_column("Messages In Flight", style="magenta", justify="right")
+
+    for queue in queues:
+        table.add_row(
+            queue.name,
+            str(queue.messages_available),
+            str(queue.messages_in_flight),
+        )
+    return table
+
+
+def format_queue_listing_summary(listing: QueueListing) -> str:
+    summary = f"Total: {len(listing.queues)} queue(s)"
+    if listing.hidden_empty_count > 0:
+        summary += (
+            f" ({listing.hidden_empty_count} empty hidden, use --include-empty to show)"
+        )
+    return summary
+
+
+def show_queue_summary(sqs_service: SqsService, queue_url: str) -> None:
     queue_full_name = queue_url.split("/")[-1]
     attrs = sqs_service.get_queue_attributes(queue_url)
 
@@ -211,7 +249,7 @@ def show_queue_summary(sqs_service: SqsService, queue_url: str):
     )
 
 
-def show_queue_details(sqs_service: SqsService, queue_url: str):
+def show_queue_details(sqs_service: SqsService, queue_url: str) -> None:
     show_queue_summary(sqs_service, queue_url)
 
     attrs = sqs_service.get_queue_attributes(queue_url)
