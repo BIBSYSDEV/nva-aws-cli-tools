@@ -57,6 +57,15 @@ EXCEPTION_CONTEXT_PATTERNS = [
 ]
 
 
+def _format_exception_context(match) -> str | None:
+    if not (isinstance(match, tuple) and len(match) >= 2 and match[0] and match[1]):
+        return None
+    context = f"{match[0]}: {match[1][:150].strip()}"
+    if len(match) > 2 and match[2]:
+        context += f" [nested: {match[2][:50]}]"
+    return context
+
+
 @dataclass(frozen=True)
 class QueueMessageCounts:
     name: str
@@ -840,14 +849,9 @@ class SqsService:
                                 for pattern in EXCEPTION_CONTEXT_PATTERNS:
                                     context_matches = pattern.findall(body_text)
                                     for match in context_matches:
-                                        if isinstance(match, tuple) and len(match) >= 2:
-                                            if match[0] and match[1]:
-                                                context = f"{match[0]}: {match[1][:150].strip()}"
-                                                if len(match) > 2 and match[2]:
-                                                    context += (
-                                                        f" [nested: {match[2][:50]}]"
-                                                    )
-                                                exception_contexts[context] += 1
+                                        context = _format_exception_context(match)
+                                        if context:
+                                            exception_contexts[context] += 1
                                 if "\tat " in body_text or "Traceback" in body_text:
                                     stack_traces.append(
                                         {
