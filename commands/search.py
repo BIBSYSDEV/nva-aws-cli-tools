@@ -401,7 +401,8 @@ class _JsonlSink:
         path = self._batch_path()
         self._paths.append(path)
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self._file = open(path, "w", encoding="utf-8")
+        # Handle stays open across write() calls, closed by _close_current_file.
+        self._file = open(path, "w", encoding="utf-8")  # noqa: SIM115
         self._lines_in_batch = 0
 
     def _batch_path(self) -> str:
