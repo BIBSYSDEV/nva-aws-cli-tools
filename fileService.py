@@ -106,21 +106,23 @@ def tag_referenced_files(dynamo_client, s3_resource, account_id, resources_table
             identifier = result["identifier"]
             if "entityDescription" in result:
                 entity_description = result["entityDescription"]
-                if "publicationDate" in entity_description:
-                    if "associatedArtifacts" in result:
-                        associated_artifacts = result["associatedArtifacts"]
-                        for associated_artifact in associated_artifacts:
-                            if "identifier" in associated_artifact:
-                                evaluated_files = evaluated_files + 1
-                                key = associated_artifact["identifier"]
-                                tagged_files = tagged_files + update_file_metadata(
-                                    s3_resource, identifier, key, storage_bucket
+                if (
+                    "publicationDate" in entity_description
+                    and "associatedArtifacts" in result
+                ):
+                    associated_artifacts = result["associatedArtifacts"]
+                    for associated_artifact in associated_artifacts:
+                        if "identifier" in associated_artifact:
+                            evaluated_files = evaluated_files + 1
+                            key = associated_artifact["identifier"]
+                            tagged_files = tagged_files + update_file_metadata(
+                                s3_resource, identifier, key, storage_bucket
+                            )
+                            if evaluated_files % 100 == 0:
+                                logger.info(
+                                    f"Evaluated {evaluated_files} files, "
+                                    + f"tagged {tagged_files}"
                                 )
-                                if evaluated_files % 100 == 0:
-                                    logger.info(
-                                        f"Evaluated {evaluated_files} files, "
-                                        + f"tagged {tagged_files}"
-                                    )
 
     logger.info(f"Evaluated {evaluated_files} files, " + f"tagged {tagged_files}")
 
