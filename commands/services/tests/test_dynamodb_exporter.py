@@ -271,7 +271,7 @@ def test_dynamodb_encoder_datetime():
     dt = datetime(2024, 1, 15, 10, 30, 45, tzinfo=UTC)
     data = {"timestamp": dt}
     result = json.dumps(data, cls=DynamoDBEncoder)
-    assert result == '{"timestamp": "2024-01-15T10:30:45"}'
+    assert result == '{"timestamp": "2024-01-15T10:30:45+00:00"}'
 
 
 def test_dynamodb_encoder_date():
