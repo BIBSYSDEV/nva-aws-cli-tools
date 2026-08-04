@@ -213,6 +213,7 @@ def test_build_git_history_creates_commits(tmp_path: Path, monkeypatch):
         cwd=version_dir,
         capture_output=True,
         text=True,
+        check=True,
     )
     commit_messages = result.stdout.strip().splitlines()
     assert any("20240102_120000_v2" in msg for msg in commit_messages)
@@ -238,6 +239,7 @@ def test_build_git_history_commits_identical_versions(tmp_path: Path, monkeypatc
         cwd=version_dir,
         capture_output=True,
         text=True,
+        check=True,
     )
     commit_messages = result.stdout.strip().splitlines()
     # init + v1 + v2 — even though v1 and v2 are byte-identical, both must commit.

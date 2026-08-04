@@ -40,9 +40,12 @@ def edit_and_diff(item, update_callback):
         file.write(prettify(item))
 
     try:
-        subprocess.run(["code", "--new-window", "--wait", file_name])
+        subprocess.run(["code", "--new-window", "--wait", file_name], check=True)
     except FileNotFoundError:
         click.echo("Error: The specified editor could not be found.")
+        return
+    except subprocess.CalledProcessError as error:
+        click.echo(f"Error: The editor exited with an error: {error}")
         return
 
     with open(file_name, "r") as file:
