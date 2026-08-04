@@ -980,24 +980,18 @@ class SqsService:
 
                 console.print(table)
                 console.print()
+
         meaningful_patterns = defaultdict(list)
+        meaningful_pattern_types = {
+            "failure_reasons",
+            "cannot_do",
+            "missing_items",
+            "invalid_items",
+        }
         for pattern_key, count in common_patterns.items():
             pattern_type, pattern_value = pattern_key.split(":", 1)
-
-            if pattern_type not in [
-                "exception_types",
-                "error_types",
-                "java_exceptions",
-                "custom_exceptions",
-                "error_messages",
-            ]:
-                if pattern_type in [
-                    "failure_reasons",
-                    "cannot_do",
-                    "missing_items",
-                    "invalid_items",
-                ]:
-                    meaningful_patterns[pattern_type].append((pattern_value, count))
+            if pattern_type in meaningful_pattern_types:
+                meaningful_patterns[pattern_type].append((pattern_value, count))
         if meaningful_patterns:
             all_failures = []
             for pattern_type, patterns in meaningful_patterns.items():
