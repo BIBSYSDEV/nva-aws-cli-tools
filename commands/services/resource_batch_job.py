@@ -9,6 +9,7 @@ from enum import Enum
 from threading import Lock
 
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class ResourceBatchJobService:
                 # Cache the first matching queue
                 self._queue_url = matching_queues[0]
 
-        except Exception as e:
+        except (BotoCoreError, ClientError) as e:
             logger.error(f"Error finding queue: {e!s}")
 
     def _create_batch_job_message(
@@ -88,7 +89,7 @@ class ResourceBatchJobService:
 
             return successful, len(failed), failed
 
-        except Exception as e:
+        except (BotoCoreError, ClientError) as e:
             logger.error(f"Error sending batch: {e!s}")
             return 0, len(messages), [{"Message": str(e)}]
 
@@ -177,7 +178,7 @@ class ResourceBatchJobService:
             for future in as_completed(futures):
                 try:
                     future.result()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - keep processing remaining batches
                     logger.error(f"Error processing batch: {e!s}")
 
         return {

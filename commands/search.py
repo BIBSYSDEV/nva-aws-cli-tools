@@ -315,7 +315,7 @@ def resources(
                 if count > 0:
                     _log_result_summary(count, output, batch_size, sink.paths)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - top-level CLI boundary, report and abort
         logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
 

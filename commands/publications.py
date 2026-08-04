@@ -192,7 +192,7 @@ def migrate_by_dynamodb(ctx: AppContext, input: str) -> None:
 
             except KeyError as e:
                 click.echo(f"Missing expected column in CSV: {e}", err=True)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep processing remaining rows
                 click.echo(f"Failed to process publication {row}: {e}", err=True)
 
     # Execute any remaining updates in the batch

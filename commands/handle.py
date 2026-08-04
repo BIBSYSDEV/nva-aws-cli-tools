@@ -122,6 +122,6 @@ def _process_handle(
         result = handle_service.set_handle(handle_value, nva_url)
         _append_result(handle_value, nva_url, "ok")
         click.echo(f"UPDATED {handle_value} → {nva_url} ({result})")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - record failure and keep processing remaining handles
         _append_result(handle_value, nva_url, "failed")
         click.echo(f"FAILED {handle_value}: {exc}")

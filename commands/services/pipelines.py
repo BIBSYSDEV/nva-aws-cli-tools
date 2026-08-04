@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from rich.text import Text
 
 logger = logging.getLogger(__name__)
@@ -204,7 +205,7 @@ def get_pipeline_details_for_account(session: boto3.Session) -> list[PipelineDet
             pipeline_details = get_single_pipeline_details(pipeline_name, codepipeline)
             if pipeline_details:
                 results.append(pipeline_details)
-        except Exception as e:
+        except (BotoCoreError, ClientError) as e:
             logger.error(f"Error fetching details for pipeline {pipeline_name}: {e}")
             continue
     return results

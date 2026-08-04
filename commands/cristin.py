@@ -160,7 +160,7 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
 
             except json.JSONDecodeError:
                 click.echo(f"Invalid JSON in file: {file_path}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep processing remaining files
                 click.echo(
                     f"An error occurred while processing file {file_path}: {e!s}"
                 )
@@ -312,6 +312,6 @@ def update_names_job(ctx: AppContext, input_file) -> None:
 
         except KeyError as e:
             click.echo(f"🛑 Missing expected column in CSV: {e}", err=True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - keep processing remaining rows
             click.echo(f"🛑 Failed to process publication {row}: {e}", err=True)
     click.echo("🎉 All done.")

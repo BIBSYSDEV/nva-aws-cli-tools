@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -400,7 +400,7 @@ class SqsService:
                         messages_buffer = []
                         receipt_handles_buffer = []
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - worker thread must survive any error
                 if stop_event.is_set():
                     # Save any remaining messages before exiting
                     if messages_buffer:
@@ -567,7 +567,7 @@ class SqsService:
                             queue_url, stats["remaining_receipts"]
                         )
                         stats["deleted"] += deleted
-                    except Exception as e:
+                    except (BotoCoreError, ClientError) as e:
                         logger.error(f"Error deleting final batch: {e}")
 
         finally:
@@ -903,7 +903,7 @@ class SqsService:
                             logger.warning(
                                 f"Invalid JSON in {file_path.name}:{line_num}"
                             )
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 - keep analyzing remaining lines
                             logger.error(
                                 f"Error processing {file_path.name}:{line_num}: {e}"
                             )
