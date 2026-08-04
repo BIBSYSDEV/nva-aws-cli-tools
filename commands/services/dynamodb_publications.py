@@ -1,12 +1,13 @@
-import boto3
+import base64
 import json
 import logging
 import os
-import base64
-import zlib
 import re
-from boto3.dynamodb.types import Binary
+import zlib
+
+import boto3
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.types import Binary
 
 logger = logging.getLogger(__name__)
 

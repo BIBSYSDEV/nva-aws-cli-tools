@@ -44,7 +44,6 @@ def channels(ctx: AppContext):
 
     Type is auto-detected where possible so you rarely need --kind.
     """
-    pass
 
 
 @channels.command()

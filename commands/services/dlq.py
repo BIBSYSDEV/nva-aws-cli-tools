@@ -1,6 +1,8 @@
 import logging
 from collections import defaultdict
 
+from botocore.exceptions import BotoCoreError, ClientError
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,7 +110,7 @@ def delete_messages_with_prefix(
                         QueueUrl=queue, ReceiptHandle=msg["ReceiptHandle"]
                     )
                     deleted_count += 1
-                except Exception as e:
+                except (BotoCoreError, ClientError) as e:
                     logger.error(f"Failed to delete message {msg['MessageId']}: {e}")
             else:
                 # Reset visibility for non-matching messages
@@ -118,7 +120,7 @@ def delete_messages_with_prefix(
                         ReceiptHandle=msg["ReceiptHandle"],
                         VisibilityTimeout=0,
                     )
-                except Exception as e:
+                except (BotoCoreError, ClientError) as e:
                     logger.warning(
                         f"Could not reset visibility for message {msg['MessageId']}: {e}"
                     )

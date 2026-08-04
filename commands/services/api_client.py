@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 
 import boto3
@@ -60,11 +60,13 @@ class ApiClient:
         response.raise_for_status()
         body = response.json()
         self._token = body["access_token"]
-        self._token_expires_at = datetime.now() + timedelta(seconds=body["expires_in"])
+        self._token_expires_at = datetime.now(UTC) + timedelta(
+            seconds=body["expires_in"]
+        )
 
     def _is_token_expired(self) -> bool:
         if self._token_expires_at is None:
             return True
-        return datetime.now() > self._token_expires_at - timedelta(
+        return datetime.now(UTC) > self._token_expires_at - timedelta(
             seconds=TOKEN_REFRESH_BUFFER_SECONDS
         )

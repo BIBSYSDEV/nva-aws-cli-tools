@@ -1,13 +1,15 @@
 import csv
-import click
 import logging
 import os
-from datetime import datetime
-from commands.utils import AppContext
+from datetime import UTC, datetime
+
+import click
+
 from commands.services.aws_utils import get_ssm_parameter
 from commands.services.handle_api import HandleApiService
 from commands.services.publication_api import extract_publication_identifier
 from commands.services.search_api import SearchApiService
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +92,7 @@ def _append_result(handle_value: str, target_url: str, status: str) -> None:
             {
                 "handle": handle_value,
                 "target_url": target_url,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "status": status,
             }
         )
@@ -120,6 +122,6 @@ def _process_handle(
         result = handle_service.set_handle(handle_value, nva_url)
         _append_result(handle_value, nva_url, "ok")
         click.echo(f"UPDATED {handle_value} → {nva_url} ({result})")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - record failure and keep processing remaining handles
         _append_result(handle_value, nva_url, "failed")
         click.echo(f"FAILED {handle_value}: {exc}")

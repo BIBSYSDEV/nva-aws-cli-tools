@@ -1,16 +1,18 @@
-import boto3
 import json
 import logging
-import requests
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
+from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+import boto3
+import requests
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_none,
-    retry_if_exception_type,
 )
-from typing import Dict, Any, Callable, Generator
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ SEARCH_AFTER_PARAMS = ("search_after", "searchAfter")
 
 @dataclass
 class SearchPageOutcome:
-    data: Dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
     should_reduce_page_size: bool = False
     status_code: int | None = None
     error_body: str | None = None
@@ -103,7 +105,7 @@ def _search_after_cursor(url: str) -> str | None:
     return None
 
 
-def _without_page_size_params(query_parameters: Dict[str, Any]) -> Dict[str, Any]:
+def _without_page_size_params(query_parameters: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value
         for key, value in query_parameters.items()
@@ -153,7 +155,7 @@ class SearchApiService:
         reraise=True,
     )
     def _make_search_request(
-        self, url: str, headers: Dict[str, str], params: Dict[str, Any]
+        self, url: str, headers: dict[str, str], params: dict[str, Any]
     ) -> requests.Response:
         logger.debug(f"URL: {url}")
         logger.debug(f"Params: {params}")
@@ -172,11 +174,11 @@ class SearchApiService:
 
     def resource_search(
         self,
-        query_parameters: Dict[str, Any],
+        query_parameters: dict[str, Any],
         page_size: int = 100,
         api_version: str = "2024-12-01",
         on_total_hits: Callable[[int], None] | None = None,
-    ) -> Generator[Dict[str, Any], None, None]:
+    ) -> Generator[dict[str, Any]]:
         """
         Search resources with automatic pagination using search-after.
 
@@ -238,11 +240,11 @@ class SearchApiService:
     def _fetch_page_with_backoff(
         self,
         url: str,
-        headers: Dict[str, str],
-        params: Dict[str, Any],
+        headers: dict[str, str],
+        params: dict[str, Any],
         page_size_control: AdaptivePageSize,
         previous_identifier: str | None,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         while True:
             outcome = self._fetch_search_page(url, headers, params)
             if outcome.succeeded:
@@ -271,8 +273,8 @@ class SearchApiService:
             url, params = self._apply_page_size(url, params, reduced)
 
     def _apply_page_size(
-        self, url: str, params: Dict[str, Any], page_size: int
-    ) -> tuple[str, Dict[str, Any]]:
+        self, url: str, params: dict[str, Any], page_size: int
+    ) -> tuple[str, dict[str, Any]]:
         carried_keys = [param for param in PAGE_SIZE_PARAMS if param in params]
         if not carried_keys:
             return _url_with_page_size(url, page_size), params
@@ -324,8 +326,8 @@ class SearchApiService:
     def _fetch_search_page(
         self,
         url: str,
-        headers: Dict[str, str],
-        params: Dict[str, Any],
+        headers: dict[str, str],
+        params: dict[str, Any],
     ) -> SearchPageOutcome:
         try:
             response = self._make_search_request(url, headers, params)

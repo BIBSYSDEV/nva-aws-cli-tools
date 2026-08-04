@@ -2,7 +2,7 @@ import base64
 import json
 import math
 import zlib
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -241,7 +241,7 @@ def test_parse_multiple_filters_empty_tuple():
 
 
 def test_dynamodb_encoder_decimal_integer():
-    data = {"count": Decimal("42")}
+    data = {"count": Decimal(42)}
     result = json.dumps(data, cls=DynamoDBEncoder)
     assert result == '{"count": 42}'
 
@@ -268,10 +268,10 @@ def test_dynamodb_encoder_set():
 
 
 def test_dynamodb_encoder_datetime():
-    dt = datetime(2024, 1, 15, 10, 30, 45)
+    dt = datetime(2024, 1, 15, 10, 30, 45, tzinfo=UTC)
     data = {"timestamp": dt}
     result = json.dumps(data, cls=DynamoDBEncoder)
-    assert result == '{"timestamp": "2024-01-15T10:30:45"}'
+    assert result == '{"timestamp": "2024-01-15T10:30:45+00:00"}'
 
 
 def test_dynamodb_encoder_date():

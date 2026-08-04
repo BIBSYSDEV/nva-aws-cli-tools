@@ -8,7 +8,7 @@ import responses
 from click.testing import CliRunner
 from moto import mock_aws
 
-from commands.handle import handle, DONE_CSV
+from commands.handle import DONE_CSV, handle
 from commands.services.publication_api import extract_publication_identifier
 from commands.services.search_api import SearchApiService
 

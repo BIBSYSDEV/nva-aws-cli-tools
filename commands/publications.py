@@ -1,19 +1,20 @@
-import click
 import csv
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from commands.utils import AppContext
-from commands.services.publication_api import PublicationApiService
+import click
+from boto3.dynamodb.conditions import Attr
+
 from commands.services.aws_utils import (
+    edit_and_diff,
     extract_publication_identifier,
     prettify,
-    edit_and_diff,
 )
 from commands.services.dynamodb_publications import DynamodbPublications
+from commands.services.publication_api import PublicationApiService
 from commands.services.resource_batch_job import ResourceBatchJobService
-from boto3.dynamodb.conditions import Attr
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +192,7 @@ def migrate_by_dynamodb(ctx: AppContext, input: str) -> None:
 
             except KeyError as e:
                 click.echo(f"Missing expected column in CSV: {e}", err=True)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep processing remaining rows
                 click.echo(f"Failed to process publication {row}: {e}", err=True)
 
     # Execute any remaining updates in the batch
@@ -320,7 +321,7 @@ def logs(ctx: AppContext, publication_identifier: str, output: str | None) -> No
     output_path = output if output else f"{publication_identifier}.json"
     export_result = {
         "identifier": publication_identifier,
-        "exportedAt": datetime.now(timezone.utc).isoformat(),
+        "exportedAt": datetime.now(UTC).isoformat(),
         "entryCount": len(log_entries),
         "logEntries": log_entries,
     }

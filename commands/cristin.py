@@ -1,19 +1,20 @@
-import click
-import sys
+import csv
 import json
 import os
-import csv
+import sys
 
-from commands.utils import AppContext
-from commands.services.cristin import CristinService
+import click
+
 from commands.services.api_client import ApiClient
+from commands.services.aws_utils import prettify
+from commands.services.cristin import CristinService
 from commands.services.users_api import (
     add_user,
     approve_terms,
     get_user_by_username,
     update_user,
 )
-from commands.services.aws_utils import prettify
+from commands.utils import AppContext
 
 
 @click.group()
@@ -159,9 +160,9 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
 
             except json.JSONDecodeError:
                 click.echo(f"Invalid JSON in file: {file_path}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep processing remaining files
                 click.echo(
-                    f"An error occurred while processing file {file_path}: {str(e)}"
+                    f"An error occurred while processing file {file_path}: {e!s}"
                 )
 
 
@@ -307,10 +308,10 @@ def update_names_job(ctx: AppContext, input_file) -> None:
             else:
                 error_msg = f"Unexpected name format for NIN {nin}: '{full_name}'"
                 click.echo(error_msg, err=True)
-                quit(1)
+                sys.exit(1)
 
         except KeyError as e:
             click.echo(f"🛑 Missing expected column in CSV: {e}", err=True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - keep processing remaining rows
             click.echo(f"🛑 Failed to process publication {row}: {e}", err=True)
     click.echo("🎉 All done.")

@@ -1,14 +1,15 @@
-import click
 import json
 import logging
 import uuid
+
+import click
 from deepdiff import DeepDiff
 
-from commands.utils import AppContext
-from commands.services.search_api import SearchApiService
-from commands.services.dynamodb_publications import DynamodbPublications
 from commands.services.aws_utils import prettify
+from commands.services.dynamodb_publications import DynamodbPublications
 from commands.services.resource import Resource
+from commands.services.search_api import SearchApiService
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 

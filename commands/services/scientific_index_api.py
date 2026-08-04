@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import requests
 
@@ -58,9 +58,9 @@ def _fetch_institutions_report(
 
 
 def _poll_for_xlsx(presigned_url: str, timeout_minutes: int) -> bytes:
-    deadline = datetime.now() + timedelta(minutes=timeout_minutes)
+    deadline = datetime.now(UTC) + timedelta(minutes=timeout_minutes)
     attempt = 0
-    while datetime.now() < deadline:
+    while datetime.now(UTC) < deadline:
         attempt += 1
         response = requests.get(presigned_url)
         if response.status_code == 200:

@@ -1,8 +1,9 @@
-import boto3
-import logging
-import requests
 import json
-from datetime import datetime, timedelta
+import logging
+from datetime import UTC, datetime, timedelta
+
+import boto3
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class PublicationApiService:
                 "BackendCognitoClientCredentials"
             )
         self.token = self._get_cognito_token()
-        self.token_expiry_time = datetime.now()  # Initialize with current time
+        self.token_expiry_time = datetime.now(UTC)  # Initialize with current time
 
     def _get_system_parameter(self, name):
         response = self.ssm.get_parameter(Name=name)
@@ -50,14 +51,14 @@ class PublicationApiService:
         }
         response = requests.post(url, headers=headers, data=data)
         response_json = response.json()
-        self.token_expiry_time = datetime.now() + timedelta(
+        self.token_expiry_time = datetime.now(UTC) + timedelta(
             seconds=response_json["expires_in"]
         )  # Set the expiry time
         return response_json["access_token"]
 
     def _is_token_expired(self):
         # If there are less than 30 seconds until the token expires, consider it expired
-        return datetime.now() > self.token_expiry_time - timedelta(seconds=30)
+        return datetime.now(UTC) > self.token_expiry_time - timedelta(seconds=30)
 
     def _get_token(self):
         if self._is_token_expired():

@@ -1,11 +1,13 @@
-import click
 import json
+
+import click
+from botocore.exceptions import BotoCoreError, ClientError
 from rich.console import Console
 from rich.prompt import Confirm
 from rich.table import Table
 
-from commands.utils import AppContext
 from commands.services.sqs import QueueListing, QueueMessageCounts, SqsService
+from commands.utils import AppContext
 
 console = Console()
 
@@ -14,7 +16,6 @@ console = Console()
 @click.pass_obj
 def sqs(ctx: AppContext) -> None:
     """Manage SQS queues and messages."""
-    pass
 
 
 @sqs.command()
@@ -132,7 +133,7 @@ def list(ctx: AppContext, filter: str | None, include_empty: bool) -> None:
         listing = sqs_service.list_queue_message_counts(
             name_filter=filter, include_empty=include_empty
         )
-    except Exception as e:
+    except (BotoCoreError, ClientError) as e:
         console.print(f"[red]Error listing queues: {e}[/red]")
         raise click.Abort()
 

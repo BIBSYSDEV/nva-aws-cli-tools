@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from collections import Counter
-from datetime import datetime
+from datetime import UTC, datetime
 from operator import itemgetter
 
 import click
@@ -166,7 +166,7 @@ def export_roles(
 
 def _default_export_filename(profile: str | None) -> str:
     profile_name = profile or "default"
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
     return f"users-{profile_name}-{timestamp}.xlsx"
 
 

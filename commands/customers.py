@@ -1,11 +1,11 @@
 import click
 
-from commands.utils import AppContext
-from commands.services.customers_api import (
-    list_missing_customers,
-    list_duplicate_customers,
-)
 from commands.services.aws_utils import prettify
+from commands.services.customers_api import (
+    list_duplicate_customers,
+    list_missing_customers,
+)
+from commands.utils import AppContext
 
 
 @click.group()

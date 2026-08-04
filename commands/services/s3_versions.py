@@ -1,9 +1,9 @@
 import gzip
 import json
+import logging
 import os
 import re
 import subprocess
-import logging
 from pathlib import Path
 from typing import Any
 
@@ -46,8 +46,7 @@ def sanitize_to_folder_name(path: str) -> str:
 
 def _tracked_filename_for_key(key: str) -> str:
     name = Path(key).name
-    if name.endswith(".gz"):
-        name = name[:-3]
+    name = name.removesuffix(".gz")
     if "." not in name:
         name = f"{name}.json"
     return name

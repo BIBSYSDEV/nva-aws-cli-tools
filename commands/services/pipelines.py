@@ -1,10 +1,11 @@
-import boto3
+import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from rich.text import Text
-from typing import Optional
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +14,9 @@ logger = logging.getLogger(__name__)
 class ExecutionDetails:
     execution_id: str
     status: str = "Unknown"
-    last_change: Optional[datetime] = None
-    commit_id: Optional[str] = None
-    commit_message: Optional[str] = None
+    last_change: datetime | None = None
+    commit_id: str | None = None
+    commit_message: str | None = None
 
     def get_status_text(self) -> Text:
         if self.status == "Succeeded":
@@ -31,7 +32,7 @@ class ExecutionDetails:
         if self.last_change is None:
             return "Unknown"
         else:
-            return self.last_change.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M")
+            return self.last_change.astimezone(UTC).strftime("%Y-%m-%d %H:%M")
 
 
 @dataclass
@@ -39,9 +40,9 @@ class PipelineDetails:
     pipeline_name: str
     last_run: ExecutionDetails
     last_deploy: ExecutionDetails
-    repository: Optional[str] = field(default="Unknown")
-    branch: Optional[str] = field(default="Unknown")
-    summary: Optional[str] = field(default="Unknown")
+    repository: str | None = field(default="Unknown")
+    branch: str | None = field(default="Unknown")
+    summary: str | None = field(default="Unknown")
 
     def __post_init__(self):
         if self.repository is None:
@@ -135,7 +136,7 @@ def get_source_details(stage_state: dict) -> tuple[str, str]:
 
 def get_details_from_pipeline_execution(
     pipeline_runs: dict,
-) -> Optional[ExecutionDetails]:
+) -> ExecutionDetails | None:
     """
     Extracts the execution details from a pipeline summary.
     """
@@ -159,7 +160,7 @@ def get_details_from_pipeline_execution(
 
 def get_single_pipeline_details(
     pipeline_name: str, codepipeline_client
-) -> Optional[PipelineDetails]:
+) -> PipelineDetails | None:
     # Get current source details
     pipeline_state = codepipeline_client.get_pipeline_state(name=pipeline_name)
     stages = {stage["stageName"]: stage for stage in pipeline_state["stageStates"]}
@@ -204,7 +205,7 @@ def get_pipeline_details_for_account(session: boto3.Session) -> list[PipelineDet
             pipeline_details = get_single_pipeline_details(pipeline_name, codepipeline)
             if pipeline_details:
                 results.append(pipeline_details)
-        except Exception as e:
+        except (BotoCoreError, ClientError) as e:
             logger.error(f"Error fetching details for pipeline {pipeline_name}: {e}")
             continue
     return results
