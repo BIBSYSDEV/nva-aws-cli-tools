@@ -113,7 +113,7 @@ def analyze(ctx: AppContext, folder_path: str) -> None:
         raise click.Abort()
 
 
-@sqs.command()
+@sqs.command(name="list")
 @click.option("--filter", type=str, help="Filter queues by name pattern")
 @click.option(
     "--include-empty",
@@ -121,7 +121,7 @@ def analyze(ctx: AppContext, folder_path: str) -> None:
     help="Include queues with no messages available or in flight",
 )
 @click.pass_obj
-def list(ctx: AppContext, filter: str | None, include_empty: bool) -> None:
+def list_queues(ctx: AppContext, filter: str | None, include_empty: bool) -> None:
     """List SQS queues with message counts.
 
     By default only queues with messages available or in flight are shown.

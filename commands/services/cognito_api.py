@@ -1,9 +1,12 @@
 import boto3
+from mypy_boto3_cognito_idp.type_defs import UserTypeTypeDef
 
 USER_POOL_ID_PARAMETER = "CognitoUserPoolId"
 
 
-def search_users(session: boto3.Session, search_term: str) -> list[dict] | None:
+def search_users(
+    session: boto3.Session, search_term: str
+) -> list[UserTypeTypeDef] | None:
     user_pool_id = _get_user_pool_id(session)
     users = _list_all_users(session, user_pool_id)
     return _filter_by_attribute_value(users, search_term)
@@ -15,9 +18,9 @@ def _get_user_pool_id(session: boto3.Session) -> str:
     return response["Parameter"]["Value"]
 
 
-def _list_all_users(session: boto3.Session, user_pool_id: str) -> list[dict]:
+def _list_all_users(session: boto3.Session, user_pool_id: str) -> list[UserTypeTypeDef]:
     cognito = session.client("cognito-idp")
-    users: list[dict] = []
+    users: list[UserTypeTypeDef] = []
     pagination_token: str | None = None
     while True:
         kwargs: dict = {"UserPoolId": user_pool_id}
@@ -31,8 +34,8 @@ def _list_all_users(session: boto3.Session, user_pool_id: str) -> list[dict]:
 
 
 def _filter_by_attribute_value(
-    users: list[dict], search_term: str
-) -> list[dict] | None:
+    users: list[UserTypeTypeDef], search_term: str
+) -> list[UserTypeTypeDef] | None:
     search_words = search_term.split()
     matches = [
         user

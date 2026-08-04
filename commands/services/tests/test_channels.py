@@ -31,6 +31,12 @@ def _ctx() -> AppContext:
     )
 
 
+def _request_json(call: responses.Call) -> dict:
+    request_body = call.request.body
+    assert isinstance(request_body, (str, bytes))
+    return json.loads(request_body)
+
+
 def _seed_aws() -> None:
     ssm = boto3.client("ssm", region_name="eu-west-1")
     ssm.put_parameter(Name="/NVA/ApiDomain", Value=API_DOMAIN, Type="String")
@@ -115,7 +121,7 @@ def test_search_with_kind_publisher_only_calls_publisher_endpoint():
     assert result.exit_code == 0, result.output
     get_calls = [c for c in responses.calls if c.request.method == "GET"]
     assert len(get_calls) == 1
-    assert "publisher" in get_calls[0].request.url
+    assert "publisher" in str(get_calls[0].request.url)
 
 
 @mock_aws
@@ -151,7 +157,7 @@ def test_get_propagates_500_from_serial_without_falling_back():
     assert result.exit_code != 0
     assert "500" in result.output
     publisher_calls = [
-        c for c in responses.calls if c.request.url.startswith(f"{PUBLISHER_URL}/")
+        c for c in responses.calls if str(c.request.url).startswith(f"{PUBLISHER_URL}/")
     ]
     assert publisher_calls == []
 
@@ -209,9 +215,9 @@ def test_create_with_isbn_creates_publisher():
 
     assert result.exit_code == 0, result.output
     post_calls = [c for c in responses.calls if c.request.method == "POST"]
-    publisher_posts = [c for c in post_calls if "publisher" in c.request.url]
+    publisher_posts = [c for c in post_calls if "publisher" in str(c.request.url)]
     assert len(publisher_posts) == 1
-    body = json.loads(publisher_posts[0].request.body)
+    body = _request_json(publisher_posts[0])
     assert body == {"name": "Acme", "isbnPrefix": "978-82-12"}
 
 
@@ -238,10 +244,10 @@ def test_create_with_print_issn_creates_serial_journal_by_default():
     serial_posts = [
         c
         for c in responses.calls
-        if c.request.method == "POST" and "serial" in c.request.url
+        if c.request.method == "POST" and "serial" in str(c.request.url)
     ]
     assert len(serial_posts) == 1
-    body = json.loads(serial_posts[0].request.body)
+    body = _request_json(serial_posts[0])
     assert body["type"] == "Journal"
 
 
@@ -268,7 +274,7 @@ def test_create_with_kind_series_uses_series_endpoint():
     series_posts = [
         c
         for c in responses.calls
-        if c.request.method == "POST" and c.request.url.endswith("/series")
+        if c.request.method == "POST" and str(c.request.url).endswith("/series")
     ]
     assert len(series_posts) == 1
 
@@ -296,10 +302,10 @@ def test_create_with_kind_journal_uses_journal_endpoint():
     journal_posts = [
         c
         for c in responses.calls
-        if c.request.method == "POST" and c.request.url.endswith("/journal")
+        if c.request.method == "POST" and str(c.request.url).endswith("/journal")
     ]
     assert len(journal_posts) == 1
-    body = json.loads(journal_posts[0].request.body)
+    body = _request_json(journal_posts[0])
     assert body == {"name": "Baz", "printIssn": "1234-5678"}
 
 
@@ -352,7 +358,7 @@ def test_update_auto_detects_kind_and_calls_serial_put():
     assert result.exit_code == 0, result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
-    body = json.loads(put_calls[0].request.body)
+    body = _request_json(put_calls[0])
     assert body == {"type": "UpdateSerialPublicationRequest", "name": "New name"}
 
 
@@ -381,7 +387,7 @@ def test_update_serial_sends_issn_fields_in_body():
     assert result.exit_code == 0, result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
-    body = json.loads(put_calls[0].request.body)
+    body = _request_json(put_calls[0])
     assert body == {
         "type": "UpdateSerialPublicationRequest",
         "printIssn": "1234-5678",
@@ -410,7 +416,7 @@ def test_update_publisher_uses_publisher_put_when_serial_returns_404():
     assert result.exit_code == 0, result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
-    body = json.loads(put_calls[0].request.body)
+    body = _request_json(put_calls[0])
     assert body == {"type": "UpdatePublisherRequest", "name": "Acme", "isbn": "978-1"}
 
 
@@ -473,7 +479,7 @@ def test_search_kind_journal_calls_journal_endpoint_only():
     assert result.exit_code == 0, result.output
     get_calls = [c for c in responses.calls if c.request.method == "GET"]
     assert len(get_calls) == 1
-    assert get_calls[0].request.url.startswith(JOURNAL_URL)
+    assert str(get_calls[0].request.url).startswith(JOURNAL_URL)
 
 
 @mock_aws
@@ -539,7 +545,7 @@ def test_search_passes_year_query_param():
     get_calls = [c for c in responses.calls if c.request.method == "GET"]
     assert len(get_calls) == 2
     for call in get_calls:
-        assert "year=2024" in call.request.url
+        assert "year=2024" in str(call.request.url)
 
 
 @mock_aws
@@ -561,7 +567,7 @@ def test_get_appends_year_path_segment():
     assert result.exit_code == 0, result.output
     get_calls = [c for c in responses.calls if c.request.method == "GET"]
     assert len(get_calls) == 1
-    assert get_calls[0].request.url.endswith(f"/{AN_IDENTIFIER}/2024")
+    assert str(get_calls[0].request.url).endswith(f"/{AN_IDENTIFIER}/2024")
 
 
 def test_identifier_from_id_handles_year_suffix():

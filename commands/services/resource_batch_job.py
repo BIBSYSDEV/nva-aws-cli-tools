@@ -3,13 +3,15 @@ import logging
 import os
 import re
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from threading import Lock
+from typing import Any
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
+from mypy_boto3_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ class ResourceBatchJobService:
     def __init__(self, session: boto3.Session):
         self.session = session
         self.sqs = self.session.client("sqs")
-        self._queue_url = None
+        self._queue_url: str | None = None
         self._find_batch_job_queue()
 
     def _find_batch_job_queue(self) -> None:
@@ -72,10 +74,10 @@ class ResourceBatchJobService:
 
     def _send_batch(
         self, messages: list[dict], queue_url: str
-    ) -> tuple[int, int, list[dict]]:
+    ) -> tuple[int, int, Sequence[Mapping[str, Any]]]:
         try:
             # Format messages for SQS batch send
-            sqs_messages = [
+            sqs_messages: list[SendMessageBatchRequestEntryTypeDef] = [
                 {"Id": str(i), "MessageBody": json.dumps(msg)}
                 for i, msg in enumerate(messages)
             ]
@@ -103,7 +105,8 @@ class ResourceBatchJobService:
         concurrency: int = 3,
     ) -> dict:
         # Check if queue was found during initialization
-        if not self._queue_url:
+        queue_url = self._queue_url
+        if not queue_url:
             return {
                 "success": False,
                 "error": "No DynamodbResourceBatchJobWorkQueue found",
@@ -145,7 +148,7 @@ class ResourceBatchJobService:
         def send_batch_wrapper(batch_data):
             """Wrapper to send a batch and handle results."""
             _, messages = batch_data  # batch_num not needed currently
-            successful, failed, failures = self._send_batch(messages, self._queue_url)
+            successful, failed, failures = self._send_batch(messages, queue_url)
 
             with lock:
                 nonlocal total_sent, failed_count
@@ -196,7 +199,7 @@ class ResourceBatchJobService:
             return False
 
         # Check format (only lowercase letters, numbers, and hyphens)
-        return re.match(r"^[a-z0-9-]+$", publication_id)
+        return re.match(r"^[a-z0-9-]+$", publication_id) is not None
 
     def _resolve_input_source(self, input_source: str) -> tuple[str, int, bool]:
         # Check if input_source is a file

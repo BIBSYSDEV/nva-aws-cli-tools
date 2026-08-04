@@ -21,18 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 class DynamoDBEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            return float(obj) if obj % 1 else int(obj)
-        if isinstance(obj, Binary):
-            return base64.b64encode(bytes(obj)).decode("utf-8")
-        if isinstance(obj, bytes):
-            return base64.b64encode(obj).decode("utf-8")
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        if isinstance(obj, set):
-            return list(obj)
-        return super().default(obj)
+    def default(self, o: Any) -> Any:
+        if isinstance(o, Decimal):
+            return float(o) if o % 1 else int(o)
+        if isinstance(o, Binary):
+            return base64.b64encode(bytes(o)).decode("utf-8")
+        if isinstance(o, bytes):
+            return base64.b64encode(o).decode("utf-8")
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        if isinstance(o, set):
+            return list(o)
+        return super().default(o)
 
 
 class GenericDynamodbExporter:

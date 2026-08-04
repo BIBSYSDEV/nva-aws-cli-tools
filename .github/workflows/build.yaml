@@ -40,3 +40,6 @@ jobs:
 
       - name: Formatting
         run: uv run ruff format --check .
+
+      - name: Typechecking
+        run: uv run ty check

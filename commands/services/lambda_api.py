@@ -2,6 +2,7 @@ import json
 import logging
 
 import boto3
+from mypy_boto3_lambda.type_defs import InvocationResponseTypeDef
 
 from commands.services.aws_utils import get_account_alias
 
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def invoke_function(
     session: boto3.Session, function_name: str, payload: str | None = None
-) -> dict:
+) -> InvocationResponseTypeDef:
     args: dict = {"FunctionName": function_name, "InvocationType": "Event"}
     if payload:
         args["Payload"] = payload

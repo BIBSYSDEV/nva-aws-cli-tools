@@ -45,6 +45,7 @@ def test_format_hit_line_id_only_missing_identifier_returns_none():
 def test_format_hit_line_compact_is_single_line_json():
     line = _format_hit_line({"identifier": "abc", "x": 1}, id_only=False, compact=True)
 
+    assert line is not None
     assert "\n" not in line
     assert json.loads(line) == {"identifier": "abc", "x": 1}
 
@@ -52,6 +53,7 @@ def test_format_hit_line_compact_is_single_line_json():
 def test_format_hit_line_pretty_is_indented():
     line = _format_hit_line({"identifier": "abc"}, id_only=False, compact=False)
 
+    assert line is not None
     assert "\n" in line
 
 
@@ -60,7 +62,9 @@ def test_jsonl_sink_rotates_into_batches(tmp_path):
 
     with _JsonlSink(base, batch_size=1000) as sink:
         for index in range(2500):
-            sink.write(_format_hit_line(_a_hit(f"id-{index}"), False, True))
+            line = _format_hit_line(_a_hit(f"id-{index}"), False, True)
+            assert line is not None
+            sink.write(line)
 
     files = sorted(
         os.path.basename(path) for path in glob.glob(str(tmp_path / "*.jsonl"))
@@ -160,7 +164,7 @@ def test_exclude_fields_sets_nodes_excluded_query_param():
         )
 
     assert result.exit_code == 0, result.output
-    query = urllib.parse.urlparse(responses.calls[0].request.url).query
+    query = urllib.parse.urlparse(str(responses.calls[0].request.url)).query
     params = dict(urllib.parse.parse_qsl(query))
     assert params["nodesExcluded"] == "contributorsPreview,tags,otherIdentifiers"
 

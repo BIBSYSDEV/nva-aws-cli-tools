@@ -2,7 +2,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Self
+from typing import ClassVar, Self, TextIO
 
 import click
 from rich.progress import (
@@ -365,8 +365,8 @@ class _JsonlSink:
     def __init__(self, output: str | None, batch_size: int) -> None:
         self._output = output
         self._batch_size = batch_size
-        self._file = None
-        self._paths = []
+        self._file: TextIO | None = None
+        self._paths: list[str] = []
         self._lines_in_batch = 0
 
     def __enter__(self) -> Self:
@@ -389,14 +389,15 @@ class _JsonlSink:
             print(line)
             return
 
-        if self._file is None or self._lines_in_batch >= self._batch_size:
-            self._open_next_file()
+        file = self._file
+        if file is None or self._lines_in_batch >= self._batch_size:
+            file = self._open_next_file()
 
-        self._file.write(line)
-        self._file.write("\n")
+        file.write(line)
+        file.write("\n")
         self._lines_in_batch += 1
 
-    def _open_next_file(self) -> None:
+    def _open_next_file(self) -> TextIO:
         self._close_current_file()
         path = self._batch_path()
         self._paths.append(path)
@@ -404,8 +405,11 @@ class _JsonlSink:
         # Handle stays open across write() calls, closed by _close_current_file.
         self._file = open(path, "w", encoding="utf-8")  # noqa: SIM115
         self._lines_in_batch = 0
+        return self._file
 
     def _batch_path(self) -> str:
+        if self._output is None:
+            raise ValueError("Cannot write batch files without an output path")
         next_index = len(self._paths) + 1
         path = Path(self._output)
         return str(path.with_name(f"{path.stem}_{next_index:05d}{path.suffix}"))

@@ -1,3 +1,4 @@
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import boto3
@@ -10,10 +11,13 @@ from cli import cli
 def _build_session_with_stubbed_codepipeline(fake_codepipeline) -> boto3.Session:
     session = boto3.Session()
     real_client = session.client
-    session.client = lambda name, *args, **kwargs: (
-        fake_codepipeline
-        if name == "codepipeline"
-        else real_client(name, *args, **kwargs)
+    session.client = cast(
+        Any,
+        lambda name, *args, **kwargs: (
+            fake_codepipeline
+            if name == "codepipeline"
+            else real_client(name, *args, **kwargs)
+        ),
     )
     return session
 

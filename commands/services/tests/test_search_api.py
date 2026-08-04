@@ -71,7 +71,7 @@ def test_sends_identifying_user_agent():
 
     list(_a_service().resource_search({"aggregation": "none"}))
 
-    assert "nva-aws-cli-tools" in responses.calls[0].request.headers["User-Agent"]
+    assert "nva-aws-cli-tools" in str(responses.calls[0].request.headers["User-Agent"])
 
 
 @mock_aws
@@ -109,7 +109,7 @@ def test_follows_next_search_after_link_across_pages():
 
     assert [hit["identifier"] for hit in hits] == ["a", "b", "c"]
     assert len(responses.calls) == 2
-    assert "searchAfter=next-cursor" in responses.calls[1].request.url
+    assert "searchAfter=next-cursor" in str(responses.calls[1].request.url)
 
 
 @mock_aws
@@ -133,7 +133,7 @@ def test_next_page_keeps_cursor_and_sets_current_page_size():
     params = _query_params(responses.calls[1])
     assert params["searchAfter"] == "next-cursor"
     assert params["results"] == "2"
-    assert "version=2099-01-01" in second_request.headers["Accept"]
+    assert "version=2099-01-01" in str(second_request.headers["Accept"])
 
 
 @mock_aws

@@ -34,7 +34,7 @@ def organization_migration(ctx: AppContext):
 @click.pass_obj
 def list_publications(
     ctx: AppContext, organization_identifier: str, filename: str
-) -> dict:
+) -> None:
     service = SearchApiService(ctx.session)
     params = {"unit": organization_identifier}
     contributors_response = fetch_all(service, params)
@@ -62,7 +62,7 @@ def update_publications(
     old_organization_identifier: str,
     new_organization_identifier: str,
     filename: str,
-) -> dict:
+) -> None:
     with open(filename, "r") as file:
         report = json.load(file)
 
@@ -131,5 +131,5 @@ def fetch_all(service, params) -> list:
     return list(identifiers)
 
 
-def format(contributors_response, owner_response) -> str:
+def format(contributors_response, owner_response) -> dict:
     return {"contributors": contributors_response, "owners": owner_response}

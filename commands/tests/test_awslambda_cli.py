@@ -1,6 +1,7 @@
 import io
 import json
 import zipfile
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import boto3
@@ -113,8 +114,11 @@ def test_concurrency_writes_functions_sorted_desc_by_reserved_concurrency(
 def _build_session_with_stubbed_lambda(fake_lambda) -> boto3.Session:
     session = boto3.Session()
     real_client = session.client
-    session.client = lambda name, *args, **kwargs: (
-        fake_lambda if name == "lambda" else real_client(name, *args, **kwargs)
+    session.client = cast(
+        Any,
+        lambda name, *args, **kwargs: (
+            fake_lambda if name == "lambda" else real_client(name, *args, **kwargs)
+        ),
     )
     return session
 
