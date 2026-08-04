@@ -1,7 +1,8 @@
-import boto3
-import requests
 import json
 from datetime import datetime, timedelta
+
+import boto3
+import requests
 
 """
 # example of usage

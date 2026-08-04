@@ -7,18 +7,18 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
 from rich.console import Console
 from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    TextColumn,
     BarColumn,
     MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
     TaskID,
+    TextColumn,
 )
 from rich.table import Table
 
@@ -75,7 +75,7 @@ class QueueMessageCounts:
 
 @dataclass(frozen=True)
 class QueueListing:
-    queues: List[QueueMessageCounts]
+    queues: list[QueueMessageCounts]
     hidden_empty_count: int
 
     @property
@@ -89,7 +89,7 @@ class SqsService:
         self.sqs_client = self.session.client("sqs")
         self.profile = session.profile_name or "default"
 
-    def find_queue_url(self, queue_name_partial: str) -> Optional[str]:
+    def find_queue_url(self, queue_name_partial: str) -> str | None:
         try:
             response = self.sqs_client.list_queues()
             queue_urls = response.get("QueueUrls", [])
@@ -138,7 +138,7 @@ class SqsService:
             raise e
 
     def list_queue_message_counts(
-        self, name_filter: Optional[str] = None, include_empty: bool = False
+        self, name_filter: str | None = None, include_empty: bool = False
     ) -> QueueListing:
         queue_urls = self._list_queue_urls(name_filter)
         counts = [self._get_queue_message_counts(url) for url in queue_urls]
@@ -152,9 +152,9 @@ class SqsService:
             queues=non_empty, hidden_empty_count=len(counts) - len(non_empty)
         )
 
-    def _list_queue_urls(self, name_filter: Optional[str] = None) -> List[str]:
+    def _list_queue_urls(self, name_filter: str | None = None) -> list[str]:
         paginator = self.sqs_client.get_paginator("list_queues")
-        queue_urls: List[str] = []
+        queue_urls: list[str] = []
         for page in paginator.paginate():
             queue_urls.extend(page.get("QueueUrls", []))
 
@@ -184,7 +184,7 @@ class SqsService:
             ),
         )
 
-    def get_queue_attributes(self, queue_url: str) -> Dict[str, Any]:
+    def get_queue_attributes(self, queue_url: str) -> dict[str, Any]:
         try:
             response = self.sqs_client.get_queue_attributes(
                 QueueUrl=queue_url, AttributeNames=["All"]
@@ -208,7 +208,7 @@ class SqsService:
 
     def receive_messages(
         self, queue_url: str, max_messages: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         try:
             response = self.sqs_client.receive_message(
                 QueueUrl=queue_url,
@@ -248,7 +248,7 @@ class SqsService:
     def delete_message(self, queue_url: str, receipt_handle: str) -> None:
         self.sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
 
-    def delete_message_batch(self, queue_url: str, receipt_handles: List[str]) -> int:
+    def delete_message_batch(self, queue_url: str, receipt_handles: list[str]) -> int:
         if not receipt_handles:
             return 0
 
@@ -285,7 +285,7 @@ class SqsService:
         max_messages_per_file: int,
         delete_after_write: bool,
         stop_event: threading.Event,
-        stats: Dict[str, Any],
+        stats: dict[str, Any],
     ) -> None:
         sqs_client = self.session.client("sqs")
 
@@ -412,7 +412,7 @@ class SqsService:
     def drain_queue(
         self,
         queue_url: str,
-        output_dir: Optional[str] = None,
+        output_dir: str | None = None,
         max_messages_per_file: int = 1000,
         delete_after_write: bool = True,
         num_threads: int = 5,
@@ -596,7 +596,7 @@ class SqsService:
         self,
         queue_url: str,
         queue_name: str,
-        output_dir: Optional[str],
+        output_dir: str | None,
         max_messages_per_file: int,
         delete_after_write: bool,
     ) -> bool:
@@ -743,7 +743,7 @@ class SqsService:
 
         return True
 
-    def analyze_drained_messages(self, folder_path: str) -> Dict[str, Any]:
+    def analyze_drained_messages(self, folder_path: str) -> dict[str, Any]:
         folder = Path(folder_path)
         if not folder.exists() or not folder.is_dir():
             logger.error(f"Directory not found: {folder_path}")
@@ -759,7 +759,7 @@ class SqsService:
         common_patterns = defaultdict(int)
         stack_traces = []
         exception_contexts = Counter()
-        identifier_counts: Dict[str, int] = defaultdict(int)
+        identifier_counts: dict[str, int] = defaultdict(int)
 
         jsonl_files = list(folder.glob("messages_*.jsonl"))
         if not jsonl_files:
@@ -1109,7 +1109,7 @@ class SqsService:
         }
 
     def _find_common_substrings(
-        self, patterns: Dict[str, int], min_length: int = 20
+        self, patterns: dict[str, int], min_length: int = 20
     ) -> None:
         pattern_texts = list(patterns.keys())
         if len(pattern_texts) < 2:
@@ -1224,7 +1224,7 @@ class SqsService:
         self,
         message: dict,
         id_to_message_id: dict,
-        counts: Dict[str, int],
+        counts: dict[str, int],
         queue_url: str,
     ) -> None:
         """Processes a single message for duplicate detection and deletion."""
@@ -1255,7 +1255,7 @@ class SqsService:
             id_to_message_id[identifier] = message_id
 
     def _update_progress(
-        self, progress: Progress, task: TaskID, counts: Dict[str, int]
+        self, progress: Progress, task: TaskID, counts: dict[str, int]
     ) -> None:
         """Updates the progress bar with current counts."""
         progress.update(
@@ -1266,7 +1266,7 @@ class SqsService:
             skipped=counts["skipped"],
         )
 
-    def _print_duplicates_summary(self, counts: Dict[str, int]) -> None:
+    def _print_duplicates_summary(self, counts: dict[str, int]) -> None:
         """Prints a summary table of the processing results."""
         logger.info("Duplicate removal complete")
 
@@ -1283,7 +1283,7 @@ class SqsService:
         console.print(table)
 
 
-def find_identifier(message: dict[str, Any]) -> Optional[tuple[str, str]]:
+def find_identifier(message: dict[str, Any]) -> tuple[str, str] | None:
     """
     Extract the first identifier found in message attributes.
 
@@ -1317,7 +1317,7 @@ def find_identifier(message: dict[str, Any]) -> Optional[tuple[str, str]]:
 
 
 def output_identifier_counts(
-    identifier_counts: Dict[str, int],
+    identifier_counts: dict[str, int],
     output_folder: Path,
     top_n: int = 25,
 ) -> None:
@@ -1338,8 +1338,7 @@ def output_identifier_counts(
     output_file = output_folder / "identifier_counts.csv"
     with open(output_file, "w") as f:
         f.write("identifier,count\n")
-        for identifier, count in sorted_counts:
-            f.write(f"{identifier},{count}\n")
+        f.writelines(f"{identifier},{count}\n" for identifier, count in sorted_counts)
 
     logger.info(f"Wrote {len(sorted_counts)} unique identifiers to {output_file}")
 

@@ -1,12 +1,14 @@
-import click
-import logging
 import json
-from commands.utils import AppContext
+import logging
+
+import click
+
 from commands.services.dlq import (
+    delete_messages_with_prefix,
     get_messages,
     summarize_messages,
-    delete_messages_with_prefix,
 )
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,6 @@ def dlq(
     ctx: AppContext,
 ):
     """Utility methods for working with SQS dead-letter queues (DLQ)."""
-    pass
 
 
 @dlq.command(

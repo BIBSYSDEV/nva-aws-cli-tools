@@ -9,7 +9,6 @@ from commands.utils import AppContext
 @click.group()
 def sws():
     """SWS (Search Web Service) operations"""
-    pass
 
 
 @sws.command(name="get-mappings")

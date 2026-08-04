@@ -1,10 +1,11 @@
+import base64
+import json
+import logging
 import sys
 from urllib.parse import quote_plus
+
 import boto3
-import logging
 import requests
-import json
-import base64
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class CristinService:
         )
         credentials = self._get_secret("CristinClientBasicAuth")
         self.auth = base64.b64encode(
-            f"{credentials['username']}:{credentials['password']}".encode("utf-8")
+            f"{credentials['username']}:{credentials['password']}".encode()
         ).decode("utf-8")
 
     def add_person(self, person):

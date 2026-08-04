@@ -3,9 +3,9 @@ import logging
 import os
 import re
 import tempfile
-from typing import Dict, List, Tuple, Optional, Callable
-from enum import Enum
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from enum import Enum
 from threading import Lock
 
 import boto3
@@ -43,14 +43,14 @@ class ResourceBatchJobService:
                 self._queue_url = matching_queues[0]
 
         except Exception as e:
-            logger.error(f"Error finding queue: {str(e)}")
+            logger.error(f"Error finding queue: {e!s}")
 
     def _create_batch_job_message(
         self,
         resource_id: str,
         job_type: BatchJobType,
-        parameters: Optional[Dict] = None,
-    ) -> Dict:
+        parameters: dict | None = None,
+    ) -> dict:
         if parameters is None:
             parameters = {}
 
@@ -64,14 +64,14 @@ class ResourceBatchJobService:
             "parameters": parameters,
         }
 
-    def _create_reindex_message(self, publication_id: str) -> Dict:
+    def _create_reindex_message(self, publication_id: str) -> dict:
         return self._create_batch_job_message(
             resource_id=publication_id, job_type=BatchJobType.REINDEX_RECORD
         )
 
     def _send_batch(
-        self, messages: List[Dict], queue_url: str
-    ) -> Tuple[int, int, List[Dict]]:
+        self, messages: list[dict], queue_url: str
+    ) -> tuple[int, int, list[dict]]:
         try:
             # Format messages for SQS batch send
             sqs_messages = [
@@ -89,7 +89,7 @@ class ResourceBatchJobService:
             return successful, len(failed), failed
 
         except Exception as e:
-            logger.error(f"Error sending batch: {str(e)}")
+            logger.error(f"Error sending batch: {e!s}")
             return 0, len(messages), [{"Message": str(e)}]
 
     def process_batch_job(
@@ -97,10 +97,10 @@ class ResourceBatchJobService:
         input_file: str,
         job_type: BatchJobType,
         batch_size: int = 10,
-        parameters: Optional[Dict] = None,
-        progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
+        parameters: dict | None = None,
+        progress_callback: Callable[[int, int, int, int], None] | None = None,
         concurrency: int = 3,
-    ) -> Dict:
+    ) -> dict:
         # Check if queue was found during initialization
         if not self._queue_url:
             return {
@@ -178,7 +178,7 @@ class ResourceBatchJobService:
                 try:
                     future.result()
                 except Exception as e:
-                    logger.error(f"Error processing batch: {str(e)}")
+                    logger.error(f"Error processing batch: {e!s}")
 
         return {
             "success": total_sent == total_ids,
@@ -200,7 +200,7 @@ class ResourceBatchJobService:
 
         return True
 
-    def _resolve_input_source(self, input_source: str) -> Tuple[str, int, bool]:
+    def _resolve_input_source(self, input_source: str) -> tuple[str, int, bool]:
         # Check if input_source is a file
         if os.path.isfile(input_source):
             # Count the IDs in the file
@@ -230,9 +230,9 @@ class ResourceBatchJobService:
         self,
         input_source: str,
         batch_size: int = 10,
-        progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
+        progress_callback: Callable[[int, int, int, int], None] | None = None,
         concurrency: int = 3,
-    ) -> Dict:
+    ) -> dict:
         """
         Process a reindex job from a file or single ID.
 

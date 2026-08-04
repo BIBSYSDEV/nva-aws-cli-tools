@@ -1,9 +1,10 @@
-import boto3
 import argparse
+import json
 import logging
 import zlib
-import json
 from datetime import datetime, timedelta
+
+import boto3
 import pytz
 
 logger = logging.getLogger(__name__)

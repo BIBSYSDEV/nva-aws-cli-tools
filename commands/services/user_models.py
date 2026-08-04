@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any
 
 
 @dataclass
@@ -7,11 +7,11 @@ class Role:
     name: str
     access_rights: list[str] = field(default_factory=list)
     type: str = "ROLE"
-    primary_key_hash_key: Optional[str] = None
-    primary_key_range_key: Optional[str] = None
+    primary_key_hash_key: str | None = None
+    primary_key_range_key: str | None = None
 
     @classmethod
-    def from_dynamodb(cls, item: dict[str, Any]) -> "Role":
+    def from_dynamodb(cls, item: dict[str, Any]) -> Role:
         access_rights = item.get("accessRights", [])
         if isinstance(access_rights, set):
             access_rights = list(access_rights)
@@ -27,11 +27,11 @@ class Role:
 @dataclass
 class ViewingScope:
     included_units: list[str] = field(default_factory=list)
-    excluded_units: Optional[list[str]] = None
+    excluded_units: list[str] | None = None
     type: str = "ViewingScope"
 
     @classmethod
-    def from_dynamodb(cls, item: dict[str, Any]) -> "ViewingScope":
+    def from_dynamodb(cls, item: dict[str, Any]) -> ViewingScope:
         included_units = item.get("includedUnits", [])
         if isinstance(included_units, set):
             included_units = list(included_units)
@@ -50,24 +50,24 @@ class ViewingScope:
 @dataclass
 class User:
     username: str
-    cristin_id: Optional[str] = None
-    given_name: Optional[str] = None
-    family_name: Optional[str] = None
-    affiliation: Optional[str] = None
-    institution: Optional[str] = None
-    institution_cristin_id: Optional[str] = None
+    cristin_id: str | None = None
+    given_name: str | None = None
+    family_name: str | None = None
+    affiliation: str | None = None
+    institution: str | None = None
+    institution_cristin_id: str | None = None
     roles: list[Role] = field(default_factory=list)
-    viewing_scope: Optional[ViewingScope] = None
+    viewing_scope: ViewingScope | None = None
     type: str = "USER"
-    primary_key_hash_key: Optional[str] = None
-    primary_key_range_key: Optional[str] = None
-    secondary_index1_hash_key: Optional[str] = None
-    secondary_index1_range_key: Optional[str] = None
-    secondary_index2_hash_key: Optional[str] = None
-    secondary_index2_range_key: Optional[str] = None
+    primary_key_hash_key: str | None = None
+    primary_key_range_key: str | None = None
+    secondary_index1_hash_key: str | None = None
+    secondary_index1_range_key: str | None = None
+    secondary_index2_hash_key: str | None = None
+    secondary_index2_range_key: str | None = None
 
     @classmethod
-    def from_dynamodb(cls, item: dict[str, Any]) -> "User":
+    def from_dynamodb(cls, item: dict[str, Any]) -> User:
         roles = [Role.from_dynamodb(role_item) for role_item in item.get("roles", [])]
 
         viewing_scope_data = item.get("viewingScope")
@@ -180,17 +180,17 @@ class User:
 class Customer:
     identifier: str
     name: str
-    cristin_id: Optional[str] = None
-    display_name: Optional[str] = None
-    short_name: Optional[str] = None
-    archiveName: Optional[str] = None
-    cname: Optional[str] = None
-    feideOrganizationDomain: Optional[str] = None
-    customer_of: Optional[str] = None
-    nvi_institution: Optional[bool] = None
+    cristin_id: str | None = None
+    display_name: str | None = None
+    short_name: str | None = None
+    archiveName: str | None = None
+    cname: str | None = None
+    feideOrganizationDomain: str | None = None
+    customer_of: str | None = None
+    nvi_institution: bool | None = None
 
     @classmethod
-    def from_dynamodb(cls, item: dict[str, Any]) -> "Customer":
+    def from_dynamodb(cls, item: dict[str, Any]) -> Customer:
         return cls(
             identifier=item.get("identifier", ""),
             name=item.get("name", "Unknown"),

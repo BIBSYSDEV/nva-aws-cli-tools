@@ -1,7 +1,7 @@
 import gzip
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -87,9 +87,9 @@ def test_fetch_versions_returns_sorted_versions():
     paginator = MagicMock()
     s3_client.get_paginator.return_value = paginator
 
-    v1 = make_version("v1", datetime(2024, 1, 1, tzinfo=timezone.utc))
-    v2 = make_version("v2", datetime(2024, 1, 3, tzinfo=timezone.utc))
-    v3 = make_version("v3", datetime(2024, 1, 2, tzinfo=timezone.utc))
+    v1 = make_version("v1", datetime(2024, 1, 1, tzinfo=UTC))
+    v2 = make_version("v2", datetime(2024, 1, 3, tzinfo=UTC))
+    v3 = make_version("v3", datetime(2024, 1, 2, tzinfo=UTC))
 
     paginator.paginate.return_value = [{"Versions": [v2, v3, v1]}]
 
@@ -104,10 +104,10 @@ def test_fetch_versions_filters_by_exact_key():
     s3_client.get_paginator.return_value = paginator
 
     target = make_version(
-        "v1", datetime(2024, 1, 1, tzinfo=timezone.utc), key="resources/obj.gz"
+        "v1", datetime(2024, 1, 1, tzinfo=UTC), key="resources/obj.gz"
     )
     other = make_version(
-        "v2", datetime(2024, 1, 2, tzinfo=timezone.utc), key="resources/obj-other.gz"
+        "v2", datetime(2024, 1, 2, tzinfo=UTC), key="resources/obj-other.gz"
     )
 
     paginator.paginate.return_value = [{"Versions": [target, other]}]
@@ -126,7 +126,7 @@ def test_download_versions_creates_files(tmp_path: Path):
     content = json.dumps({"id": "abc"}).encode()
     version = make_version(
         "abc123",
-        datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc),
+        datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
         key="resources/obj.json",
     )
     paginator.paginate.return_value = [{"Versions": [version]}]
@@ -150,7 +150,7 @@ def test_download_versions_decompresses_gz(tmp_path: Path):
 
     original = {"id": "compressed"}
     compressed = gzip.compress(json.dumps(original).encode())
-    version = make_version("v1", datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc))
+    version = make_version("v1", datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC))
     paginator.paginate.return_value = [{"Versions": [version]}]
     s3_client.get_object.return_value = {
         "Body": MagicMock(read=MagicMock(return_value=compressed))
@@ -180,7 +180,7 @@ def test_download_versions_skips_existing_files(tmp_path: Path):
     paginator = MagicMock()
     s3_client.get_paginator.return_value = paginator
 
-    version = make_version("v1", datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc))
+    version = make_version("v1", datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC))
     paginator.paginate.return_value = [{"Versions": [version]}]
 
     folder_name = "resources_obj_gz"

@@ -1,11 +1,12 @@
 # aws_utils.py
-import boto3
 import json
-import click
-import subprocess
 import os
-from deepdiff import DeepDiff
 import re
+import subprocess
+
+import boto3
+import click
+from deepdiff import DeepDiff
 
 
 def build_session(profile: str | None = None) -> boto3.Session:

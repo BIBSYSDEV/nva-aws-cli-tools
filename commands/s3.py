@@ -1,12 +1,13 @@
-import click
 import logging
 
-from commands.utils import AppContext
+import click
+
 from commands.services.s3_versions import (
-    download_versions,
     build_git_history,
+    download_versions,
     find_bucket,
 )
+from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 

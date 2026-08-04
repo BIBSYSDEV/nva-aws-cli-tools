@@ -3,15 +3,14 @@ from datetime import datetime
 import click
 from boto3.dynamodb.conditions import Attr, ConditionBase
 
-from commands.utils import AppContext
 from commands.services.dynamodb_exporter import GenericDynamodbExporter
+from commands.utils import AppContext
 
 
 @click.group()
 @click.pass_obj
 def dynamodb(ctx: AppContext):
     """Commands for managing DynamoDB tables."""
-    pass
 
 
 @dynamodb.command(help="Export a DynamoDB table to JSONL files")

@@ -1,19 +1,20 @@
-import click
-import sys
+import csv
 import json
 import os
-import csv
+import sys
 
-from commands.utils import AppContext
-from commands.services.cristin import CristinService
+import click
+
 from commands.services.api_client import ApiClient
+from commands.services.aws_utils import prettify
+from commands.services.cristin import CristinService
 from commands.services.users_api import (
     add_user,
     approve_terms,
     get_user_by_username,
     update_user,
 )
-from commands.services.aws_utils import prettify
+from commands.utils import AppContext
 
 
 @click.group()
@@ -161,7 +162,7 @@ def import_persons(ctx: AppContext, folder_path: str) -> None:
                 click.echo(f"Invalid JSON in file: {file_path}")
             except Exception as e:
                 click.echo(
-                    f"An error occurred while processing file {file_path}: {str(e)}"
+                    f"An error occurred while processing file {file_path}: {e!s}"
                 )
 
 

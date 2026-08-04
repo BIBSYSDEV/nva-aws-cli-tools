@@ -1,10 +1,9 @@
-import click
 import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
+import click
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -76,7 +75,7 @@ class SearchParams:
         return query_params
 
     @classmethod
-    def from_kwargs(cls, **kwargs) -> "SearchParams":
+    def from_kwargs(cls, **kwargs) -> SearchParams:
         field_names = {f for f in cls.PARAM_MAPPING.keys()}
         filtered = {k: v for k, v in kwargs.items() if k in field_names}
         return cls(**filtered)
@@ -86,7 +85,6 @@ class SearchParams:
 @click.pass_obj
 def search(ctx: AppContext):
     """Search NVA resources."""
-    pass
 
 
 @search.command()
@@ -218,8 +216,8 @@ def resources(
     id_only: bool,
     output: str | None,
     batch_size: int,
-    query: Tuple[str, ...],
-    exclude_fields: Tuple[str, ...],
+    query: tuple[str, ...],
+    exclude_fields: tuple[str, ...],
     api_version: str,
     **kwargs,
 ) -> None:
@@ -321,7 +319,7 @@ def resources(
         raise click.Abort()
 
 
-def _split_csv(values: Tuple[str, ...]) -> list[str]:
+def _split_csv(values: tuple[str, ...]) -> list[str]:
     items = []
     for value in values:
         items.extend(part.strip() for part in value.split(",") if part.strip())
@@ -370,7 +368,7 @@ class _JsonlSink:
         self._paths = []
         self._lines_in_batch = 0
 
-    def __enter__(self) -> "_JsonlSink":
+    def __enter__(self) -> _JsonlSink:
         return self
 
     def __exit__(self, *exc_info) -> bool:

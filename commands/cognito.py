@@ -1,8 +1,8 @@
 import click
 
-from commands.utils import AppContext
-from commands.services.cognito_api import search_users
 from commands.services.aws_utils import prettify
+from commands.services.cognito_api import search_users
+from commands.utils import AppContext
 
 
 @click.group()

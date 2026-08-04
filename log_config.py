@@ -1,9 +1,10 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+from pythonjsonlogger.json import JsonFormatter
 from rich.console import Console
 from rich.logging import RichHandler
-from pythonjsonlogger.json import JsonFormatter
 
 log_console = Console(stderr=True)
 

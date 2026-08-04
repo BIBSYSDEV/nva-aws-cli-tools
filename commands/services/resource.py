@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 class Resource:
     def __init__(self, data: dict):
         self.data = data
-        pass
 
     def identifier(self) -> str:
         return self.data.get("identifier", None)

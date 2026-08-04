@@ -241,7 +241,7 @@ def test_parse_multiple_filters_empty_tuple():
 
 
 def test_dynamodb_encoder_decimal_integer():
-    data = {"count": Decimal("42")}
+    data = {"count": Decimal(42)}
     result = json.dumps(data, cls=DynamoDBEncoder)
     assert result == '{"count": 42}'
 

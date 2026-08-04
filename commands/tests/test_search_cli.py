@@ -8,7 +8,7 @@ import responses
 from click.testing import CliRunner
 from moto import mock_aws
 
-from commands.search import search, _JsonlSink, _format_hit_line, _split_csv
+from commands.search import _format_hit_line, _JsonlSink, _split_csv, search
 from commands.utils import AppContext
 
 API_DOMAIN = "api.example.org"

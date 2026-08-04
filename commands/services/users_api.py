@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import quote_plus
 
 import boto3
@@ -83,7 +83,7 @@ def update_user(client: ApiClient, user: dict) -> dict:
 
 def approve_terms(session: boto3.Session, client: ApiClient, person_id: str) -> dict:
     terms_uri = _current_terms_uri(client)
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f000Z")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f000Z")
     item = {
         "id": f"https://{client.api_domain}/cristin/person/{person_id}",
         "type": "TermsConditions",
