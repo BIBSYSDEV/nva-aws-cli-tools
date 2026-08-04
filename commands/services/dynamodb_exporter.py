@@ -231,26 +231,28 @@ class GenericDynamodbExporter:
             math.ceil(limit / total_segments) if limit is not None else None
         )
 
-        with tqdm(desc="Scanning table (parallel)", unit="items") as progress_bar:
-            with ThreadPoolExecutor(max_workers=total_segments) as executor:
-                futures = {
-                    executor.submit(
-                        self._scan_segment,
-                        segment,
-                        total_segments,
-                        condition,
-                        callback,
-                        per_segment_limit,
-                        progress_bar,
-                        progress_lock,
-                    ): segment
-                    for segment in range(total_segments)
-                }
+        with (
+            tqdm(desc="Scanning table (parallel)", unit="items") as progress_bar,
+            ThreadPoolExecutor(max_workers=total_segments) as executor,
+        ):
+            futures = {
+                executor.submit(
+                    self._scan_segment,
+                    segment,
+                    total_segments,
+                    condition,
+                    callback,
+                    per_segment_limit,
+                    progress_bar,
+                    progress_lock,
+                ): segment
+                for segment in range(total_segments)
+            }
 
-                for future in as_completed(futures):
-                    items_processed, items_scanned = future.result()
-                    total_items_processed += items_processed
-                    total_items_scanned += items_scanned
+            for future in as_completed(futures):
+                items_processed, items_scanned = future.result()
+                total_items_processed += items_processed
+                total_items_scanned += items_scanned
 
         logger.info(
             f"Completed parallel scan. Processed {total_items_processed} items "
