@@ -2,6 +2,7 @@ import json
 
 import boto3
 import pytest
+import requests
 import responses
 from moto import mock_aws
 
@@ -157,5 +158,5 @@ def test_report_raises_on_server_error_from_presigned_url():
     _add_report_redirect(ALL_INSTITUTIONS_URL)
     responses.add(responses.GET, PRESIGNED_URL, status=500)
 
-    with pytest.raises(Exception):
+    with pytest.raises(requests.HTTPError, match="500"):
         get_all_institutions_report(_client(), A_YEAR)
