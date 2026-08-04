@@ -936,8 +936,8 @@ class SqsService:
                         if "." in pattern_value
                         else pattern_value
                     )
-                    if base_name not in all_exceptions and (
-                        base_name.endswith("Exception") or base_name.endswith("Error")
+                    if base_name not in all_exceptions and base_name.endswith(
+                        ("Exception", "Error")
                     ):
                         all_exceptions[base_name] = count
         if all_exceptions:
