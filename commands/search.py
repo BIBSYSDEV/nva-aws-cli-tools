@@ -2,7 +2,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Self
+from typing import ClassVar, Self
 
 import click
 from rich.progress import (
@@ -37,7 +37,7 @@ class SearchParams:
     order: str | None = None
     sort: str = "relevance,identifier"
 
-    PARAM_MAPPING = {
+    PARAM_MAPPING: ClassVar[dict[str, str]] = {
         "aggregation": "aggregation",
         "year_to": "publicationYearBefore",
         "year_from": "publicationYearSince",
