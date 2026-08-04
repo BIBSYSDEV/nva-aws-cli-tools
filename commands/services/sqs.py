@@ -135,7 +135,7 @@ class SqsService:
 
         except ClientError as e:
             logger.error(f"Error listing queues: {e}")
-            raise e
+            raise
 
     def list_queue_message_counts(
         self, name_filter: str | None = None, include_empty: bool = False
@@ -192,7 +192,7 @@ class SqsService:
             return response.get("Attributes", {})
         except ClientError as e:
             logger.error(f"Error getting queue attributes: {e}")
-            raise e
+            raise
 
     def start_redrive(self, source_queue_url: str, destination_queue_url: str) -> str:
         source_arn = self.get_queue_attributes(source_queue_url).get("QueueArn")
@@ -857,10 +857,10 @@ class SqsService:
                                         }
                                     )
                             if "Attributes" in msg:
-                                for key in msg["Attributes"].keys():
+                                for key in msg["Attributes"]:
                                     attribute_keys[key] += 1
                             if "MessageAttributes" in msg:
-                                for key in msg["MessageAttributes"].keys():
+                                for key in msg["MessageAttributes"]:
                                     message_attribute_keys[key] += 1
                             if parsed_body is not None:
                                 if isinstance(parsed_body, dict):

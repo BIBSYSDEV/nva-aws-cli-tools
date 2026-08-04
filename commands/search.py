@@ -2,6 +2,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Self
 
 import click
 from rich.progress import (
@@ -76,7 +77,7 @@ class SearchParams:
 
     @classmethod
     def from_kwargs(cls, **kwargs) -> SearchParams:
-        field_names = {f for f in cls.PARAM_MAPPING.keys()}
+        field_names = {f for f in cls.PARAM_MAPPING}
         filtered = {k: v for k, v in kwargs.items() if k in field_names}
         return cls(**filtered)
 
@@ -368,7 +369,7 @@ class _JsonlSink:
         self._paths = []
         self._lines_in_batch = 0
 
-    def __enter__(self) -> _JsonlSink:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc_info) -> bool:

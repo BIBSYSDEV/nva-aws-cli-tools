@@ -308,7 +308,7 @@ def update_names_job(ctx: AppContext, input_file) -> None:
             else:
                 error_msg = f"Unexpected name format for NIN {nin}: '{full_name}'"
                 click.echo(error_msg, err=True)
-                quit(1)
+                sys.exit(1)
 
         except KeyError as e:
             click.echo(f"🛑 Missing expected column in CSV: {e}", err=True)

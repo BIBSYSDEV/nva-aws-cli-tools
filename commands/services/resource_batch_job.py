@@ -195,10 +195,7 @@ class ResourceBatchJobService:
             return False
 
         # Check format (only lowercase letters, numbers, and hyphens)
-        if not re.match(r"^[a-z0-9-]+$", publication_id):
-            return False
-
-        return True
+        return re.match(r"^[a-z0-9-]+$", publication_id)
 
     def _resolve_input_source(self, input_source: str) -> tuple[str, int, bool]:
         # Check if input_source is a file
