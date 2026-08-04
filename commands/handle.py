@@ -1,7 +1,7 @@
 import csv
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 import click
 
@@ -92,7 +92,7 @@ def _append_result(handle_value: str, target_url: str, status: str) -> None:
             {
                 "handle": handle_value,
                 "target_url": target_url,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "status": status,
             }
         )

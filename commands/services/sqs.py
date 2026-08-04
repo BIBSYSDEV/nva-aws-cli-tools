@@ -5,7 +5,7 @@ import signal
 import threading
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -439,7 +439,7 @@ class SqsService:
             approx_messages = int(queue_attrs.get("ApproximateNumberOfMessages", 0))
             logger.info(f"Queue has approximately {approx_messages} messages")
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         if output_dir:
             base_dir = Path(output_dir)
         else:
@@ -576,7 +576,7 @@ class SqsService:
                     "messages_deleted_count": stats["deleted"],
                     "num_threads": num_threads,
                     "timestamp_start": timestamp,
-                    "timestamp_end": datetime.now().strftime("%Y%m%d_%H%M%S"),
+                    "timestamp_end": datetime.now(UTC).strftime("%Y%m%d_%H%M%S"),
                 },
                 indent=2,
             )
@@ -605,7 +605,7 @@ class SqsService:
             approx_messages = int(queue_attrs.get("ApproximateNumberOfMessages", 0))
             logger.info(f"Queue has approximately {approx_messages} messages")
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         if output_dir:
             base_dir = Path(output_dir)
         else:
@@ -731,7 +731,7 @@ class SqsService:
                     "files_created": file_count,
                     "messages_deleted": delete_after_write,
                     "timestamp_start": timestamp,
-                    "timestamp_end": datetime.now().strftime("%Y%m%d_%H%M%S"),
+                    "timestamp_end": datetime.now(UTC).strftime("%Y%m%d_%H%M%S"),
                 },
                 f,
                 indent=2,

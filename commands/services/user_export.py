@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import boto3
 import polars as pl
@@ -26,7 +26,7 @@ def export_users_to_excel(
     )
 
     if not output_filename:
-        timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
         output_filename = f"users-{timestamp}.xlsx"
 
     _create_excel_file(filtered_users, customer_lookup, output_filename)

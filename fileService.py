@@ -2,15 +2,13 @@ import argparse
 import json
 import logging
 import zlib
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import boto3
-import pytz
 
 logger = logging.getLogger(__name__)
 
-UTC = pytz.UTC
-OneWeekAgo = UTC.localize(datetime.now() - timedelta(weeks=1))
+OneWeekAgo = datetime.now(UTC) - timedelta(weeks=1)
 
 MetadataKey = "nva-publication-identifier"
 

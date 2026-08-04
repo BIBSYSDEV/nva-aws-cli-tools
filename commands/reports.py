@@ -1,7 +1,7 @@
 import io
 import logging
 import warnings
-from datetime import datetime
+from datetime import UTC, datetime
 
 import click
 import polars as pl
@@ -19,7 +19,10 @@ def reports(ctx: AppContext):
 
 @reports.command(name="author-shares")
 @click.option(
-    "--year", default=lambda: datetime.now().year, show_default="current year", type=int
+    "--year",
+    default=lambda: datetime.now(UTC).year,
+    show_default="current year",
+    type=int,
 )
 @click.option(
     "--institution",
@@ -36,7 +39,7 @@ def author_shares(
     ctx: AppContext, year: int, institution: str | None, output: str | None
 ):
     client = ApiClient(session=ctx.session)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     institution_suffix = f"_{institution}" if institution else ""
     filename = (
         output

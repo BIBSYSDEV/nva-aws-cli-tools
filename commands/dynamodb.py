@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import click
 from boto3.dynamodb.conditions import Attr, ConditionBase
@@ -51,7 +51,7 @@ def export(
     segments: int,
 ) -> None:
     if output_dir is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         output_dir = f"dynamodb_export_{ctx.profile}_{table}_{timestamp}"
 
     condition = None
