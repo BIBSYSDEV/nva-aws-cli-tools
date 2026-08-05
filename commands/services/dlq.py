@@ -1,15 +1,16 @@
 import logging
 from collections import defaultdict
+from typing import Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 
 logger = logging.getLogger(__name__)
 
 
-def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, any]]:
+def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, Any]]:
     """Read messages from queue."""
     logger.info("Reading messages from the queue...")
-    all_messages: list[dict[str, any]] = []
+    all_messages: list[dict[str, Any]] = []
     seen_message_ids: set[str] = set()
 
     while len(all_messages) < max_count:
@@ -41,8 +42,12 @@ def get_messages(sqs_client, queue: str, max_count: int) -> list[dict[str, any]]
 
 def summarize_messages(messages: list[dict]) -> tuple[dict, dict]:
     """Summarize messages, grouped by sender and by body. Return JSON-serializable dicts."""
-    by_sender = defaultdict(lambda: {"count": 0, "candidates": set()})
-    by_body = defaultdict(lambda: {"count": 0, "candidates": set()})
+    by_sender: defaultdict[str, dict[str, Any]] = defaultdict(
+        lambda: {"count": 0, "candidates": set()}
+    )
+    by_body: defaultdict[str, dict[str, Any]] = defaultdict(
+        lambda: {"count": 0, "candidates": set()}
+    )
 
     for msg in messages:
         sender_id = msg.get("Attributes", {}).get("SenderId", "Unknown")

@@ -94,9 +94,12 @@ def test_add_user_posts_to_users_roles_endpoint():
     post_call = next(
         call
         for call in responses.calls
-        if call.request.method == "POST" and "users-roles/users" in call.request.url
+        if call.request.method == "POST"
+        and "users-roles/users" in str(call.request.url)
     )
-    assert json.loads(post_call.request.body) == payload
+    request_body = post_call.request.body
+    assert isinstance(request_body, (str, bytes))
+    assert json.loads(request_body) == payload
 
 
 @mock_aws

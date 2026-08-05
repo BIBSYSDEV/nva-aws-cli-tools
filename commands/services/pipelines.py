@@ -117,7 +117,7 @@ def get_git_details(summary: dict) -> tuple[str, str]:
     return "Unknown", "Unknown"
 
 
-def get_source_details(stage_state: dict) -> tuple[str, str]:
+def get_source_details(stage_state: dict) -> tuple[str | None, str | None]:
     """
     Extracts the source information (branch/repo) from the source stage.
     """
@@ -136,13 +136,13 @@ def get_source_details(stage_state: dict) -> tuple[str, str]:
 
 def get_details_from_pipeline_execution(
     pipeline_runs: dict,
-) -> ExecutionDetails | None:
+) -> ExecutionDetails:
     """
     Extracts the execution details from a pipeline summary.
     """
     executions = pipeline_runs.get("pipelineExecutionSummaries", [])
     if not len(executions) > 0:
-        return None
+        return ExecutionDetails(execution_id="Unknown")
 
     pipeline_summary = executions[0]
     execution_id = pipeline_summary.get("pipelineExecutionId")

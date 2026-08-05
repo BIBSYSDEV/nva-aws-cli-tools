@@ -161,7 +161,9 @@ def test_redirect_to_nva_updates_handle(tmp_path):
     assert "UPDATED" in result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
-    assert A_IDENTIFIER in put_calls[0].request.body.decode()
+    request_body = put_calls[0].request.body
+    assert isinstance(request_body, bytes)
+    assert A_IDENTIFIER in request_body.decode()
     assert len(csv_rows) == 1
     assert csv_rows[0]["handle"] == A_HANDLE
     assert csv_rows[0]["status"] == "ok"

@@ -8,7 +8,7 @@ class Resource:
     def __init__(self, data: dict):
         self.data = data
 
-    def identifier(self) -> str:
+    def identifier(self) -> str | None:
         return self.data.get("identifier", None)
 
     def migrate_contributor_affiliations(

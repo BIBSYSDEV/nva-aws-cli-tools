@@ -4,6 +4,7 @@ import re
 import signal
 import threading
 from collections import Counter, defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,6 +12,11 @@ from typing import Any
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
+from mypy_boto3_sqs.literals import QueueAttributeNameType
+from mypy_boto3_sqs.type_defs import (
+    DeleteMessageBatchRequestEntryTypeDef,
+    MessageTypeDef,
+)
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -193,7 +199,7 @@ class SqsService:
             ),
         )
 
-    def get_queue_attributes(self, queue_url: str) -> dict[str, Any]:
+    def get_queue_attributes(self, queue_url: str) -> dict[QueueAttributeNameType, str]:
         try:
             response = self.sqs_client.get_queue_attributes(
                 QueueUrl=queue_url, AttributeNames=["All"]
@@ -204,10 +210,8 @@ class SqsService:
             raise
 
     def start_redrive(self, source_queue_url: str, destination_queue_url: str) -> str:
-        source_arn = self.get_queue_attributes(source_queue_url).get("QueueArn")
-        destination_arn = self.get_queue_attributes(destination_queue_url).get(
-            "QueueArn"
-        )
+        source_arn = self.get_queue_attributes(source_queue_url)["QueueArn"]
+        destination_arn = self.get_queue_attributes(destination_queue_url)["QueueArn"]
 
         response = self.sqs_client.start_message_move_task(
             SourceArn=source_arn,
@@ -264,7 +268,7 @@ class SqsService:
         deleted_count = 0
         for i in range(0, len(receipt_handles), 10):
             batch = receipt_handles[i : i + 10]
-            entries = [
+            entries: list[DeleteMessageBatchRequestEntryTypeDef] = [
                 {"Id": str(j), "ReceiptHandle": handle}
                 for j, handle in enumerate(batch)
             ]
@@ -473,7 +477,7 @@ class SqsService:
             )
         )
 
-        stats = {
+        stats: dict[str, Any] = {
             "received": 0,
             "written": 0,
             "deleted": 0,
@@ -766,7 +770,7 @@ class SqsService:
         attribute_keys = Counter()
         message_attribute_keys = Counter()
         common_patterns = defaultdict(int)
-        stack_traces = []
+        stack_traces: list[dict[str, Any]] = []
         exception_contexts = Counter()
         identifier_counts: dict[str, int] = defaultdict(int)
 
@@ -1220,7 +1224,7 @@ class SqsService:
 
     def _process_message(
         self,
-        message: dict,
+        message: MessageTypeDef,
         id_to_message_id: dict,
         counts: dict[str, int],
         queue_url: str,
@@ -1281,7 +1285,7 @@ class SqsService:
         console.print(table)
 
 
-def find_identifier(message: dict[str, Any]) -> tuple[str, str] | None:
+def find_identifier(message: Mapping[str, Any]) -> tuple[str | None, str | None]:
     """
     Extract the first identifier found in message attributes.
 
@@ -1293,7 +1297,7 @@ def find_identifier(message: dict[str, Any]) -> tuple[str, str] | None:
 
     Returns:
         A tuple of (field_name, identifier_value) if an identifier is found,
-        or None if no identifier fields are present
+        or (None, None) if no identifier fields are present
     """
     # Define possible identifier field names in priority order
     identifier_fields = [

@@ -76,6 +76,6 @@ def test_get_mappings_targets_prod_endpoints_when_env_is_prod():
     )
 
     assert result.exit_code == 0, result.exception
-    called_urls = [call.request.url for call in responses.calls]
+    called_urls = [str(call.request.url) for call in responses.calls]
     assert any(TOKEN_ENDPOINT_PROD in url for url in called_urls)
     assert any(API_ENDPOINT_PROD in url for url in called_urls)

@@ -26,9 +26,11 @@ addopts = "--cov=commands --cov=cli --cov-report=term-missing --cov-fail-under=7
 
 [dependency-groups]
 dev = [
+    "boto3-stubs[codepipeline,cognito-idp,dynamodb,iam,lambda,s3,secretsmanager,sqs,ssm,sts]>=1.43.63",
     "moto[awslambda-simple,cognitoidp,ssm]>=5.2.2",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "responses>=0.26.1",
     "ruff>=0.16.1",
+    "ty>=0.0.66",
 ]

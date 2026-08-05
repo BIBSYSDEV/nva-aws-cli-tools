@@ -16,17 +16,11 @@ def test_migrate_contributor_affiliations():
     resource.migrate_contributor_affiliations("10.1.0.0", "10.2.0.0")
 
     assert (
-        resource.data.get("entityDescription")
-        .get("contributors")[0]
-        .get("affiliations")[0]
-        .get("id")
+        resource.data["entityDescription"]["contributors"][0]["affiliations"][0]["id"]
         == "https://somehost/10.2.0.0"
     )
     assert (
-        resource.data.get("entityDescription")
-        .get("contributors")[1]
-        .get("affiliations")[0]
-        .get("id")
+        resource.data["entityDescription"]["contributors"][1]["affiliations"][0]["id"]
         == "https://somehost/10.2.0.0"
     )
 
@@ -39,6 +33,6 @@ def test_migrate_owner_affiliation():
     resource.migrate_owner_affiliation("10.1.0.0", "10.2.0.0")
 
     assert (
-        resource.data.get("resourceOwner").get("ownerAffiliation")
+        resource.data["resourceOwner"]["ownerAffiliation"]
         == "https://somehost/10.2.0.0"
     )
