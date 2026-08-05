@@ -35,7 +35,7 @@ uv run cli.py help
 uv run pytest
 
 # Run linter checks
-uv run ruff check
+uv run ruff check && uv run ruff format && uv run ty check
 
 # Reformat code
 uv run ruff format
@@ -43,7 +43,7 @@ uv run ruff format
 
 #### Pre-commit hooks
 
-The repo has a `.pre-commit-config.yaml` that runs `ruff format` and `ruff check --fix` on staged Python files before each commit, using the ruff version pinned in `pyproject.toml`. After cloning, install the hooks once:
+The repo has a `.pre-commit-config.yaml` that runs linting checks before each commit, using the ruff version pinned in `pyproject.toml`. After cloning, install the hooks once:
 
 ```bash
 uvx pre-commit install
