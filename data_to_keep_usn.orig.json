@@ -1,0 +1,2800 @@
+{
+    "8b0a96e3-756c-4bf6-a1d8-5bb7777d8e3d": {
+        "result_id": "019e265e06bb-19eec08c-eea7-4ac1-821b-e2886a0810d5",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Helsevurdering, klinisk undersøkelse og fundamentals of care_Panopto.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "9fe69222-b77a-4d58-a42d-aeb0b327e6dc",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "615.7 MB",
+                "dlr_content_size_bytes": "645596456",
+                "dlr_content_time_created": "2024-04-12T17:21:20.542Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "kirstendr@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/3126341",
+        "doi": null
+    },
+    "f4a43776-849b-4c2e-8e8a-fc010eed8428": {
+        "result_id": "019e265e0ad3-0297e266-b427-4912-a63f-fb821cdfbf67",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Fundamentals of care_Panopto (1).mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "dc7911cb-79be-4a23-8773-dea6d987b833",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "315.9 MB",
+                "dlr_content_size_bytes": "331293299",
+                "dlr_content_time_created": "2024-04-12T17:00:08.859Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "kirstendr@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/3126340",
+        "doi": null
+    },
+    "28d0b925-65c2-444b-86e0-38621075da9d": {
+        "result_id": "019e265e0c98-ad3ab22c-8a91-4805-a1e5-e1a0d8a3db83",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=e73a5963-dbc6-427d-becd-af4100ce07ec",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "e70e0bb7-8d54-4bc1-8fd9-74a9d74f6d85",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-12-15T14:31:57.013Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "sgeh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3038097",
+        "doi": null
+    },
+    "d17db8fa-9a80-423e-a8c9-78a81d818aec": {
+        "result_id": "019e265e0df3-e2906751-65e0-496b-b38b-d311427dd409",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=7475617c-8048-4796-a23a-af4100ce07e5",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "716e1b26-d95e-4cf4-9122-83a0fedbd466",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-12-15T14:27:24.982Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "sgeh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3038094",
+        "doi": null
+    },
+    "42e1efdd-baff-408b-a2b0-8010be0688aa": {
+        "result_id": "019e265e0fa6-42754032-54ef-4d9c-b9e8-507ebd1cbbc8",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=9b7d6284-ee94-4718-a8fd-af41008035b1",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "8acc29a9-5357-495e-a8de-b6eb356cafdc",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-12-15T14:15:47.734Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "sgeh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3038092",
+        "doi": null
+    },
+    "ea12ffc1-f936-4c84-b796-37410d5daf86": {
+        "result_id": "019e265e10ee-39b42b81-0910-493b-bda2-dd492c73c6f1",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=7d0f0527-7a39-4a7b-b873-af1d00a8ad1c",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "94dc1b3a-776f-4fea-bb41-ba22514814eb",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-11-30T10:06:54.859Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3034972",
+        "doi": null
+    },
+    "9fdd118c-f151-4a2b-88cd-855f7ff026bf": {
+        "result_id": "019e265e1219-d3a6761e-ea2c-45df-b53d-bd7c799c1980",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=358d707e-5c63-44ed-a79a-af1d00a8ae4d",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "38fdadf3-700f-49cd-a3fb-bceee3249752",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-11-30T09:59:19.470Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3034964",
+        "doi": null
+    },
+    "645a62b6-e029-44ae-b5c8-d57950b2891d": {
+        "result_id": "019e265e13ee-c5b6e8a1-4676-4e32-a4e8-215f14f4b2c8",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=86b625d4-f74f-414e-85c9-af1d00a8ad7d",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "53a939ee-cfa9-42c9-874e-6b5da910b5ca",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-11-16T09:39:20.449Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3032071",
+        "doi": null
+    },
+    "c098ac36-2049-4008-8faf-15145875dc57": {
+        "result_id": "019e265e15a0-0a269e7f-8990-48c2-81cf-f05e0e9fc542",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=ea0ed7c7-04bb-4f5d-bdca-af1d00a1f860",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "e48ccd67-df9b-437b-8dac-ce40077bdd34",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-30T09:49:23.386Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3022824",
+        "doi": null
+    },
+    "8bbee5a2-d8e5-42d5-922e-77697ce9e857": {
+        "result_id": "019e265e1804-e8ddd474-0fce-42ba-8143-e3822c9c3139",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=d882d8e1-199b-488c-904b-af1d00a1e53f",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "c34c0173-ea37-4264-b49f-a5fb03a46627",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-30T09:45:18.814Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3022821",
+        "doi": null
+    },
+    "456beb94-2bcf-4191-81cb-517dae896bb5": {
+        "result_id": "019e265e19b3-985081c8-c29a-45e4-abd8-85ff01138d26",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=0b8eb3a5-2036-4ecc-9495-af1d00a13311",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "f12bf084-4b04-4611-bc01-35019d3846a5",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-30T09:38:34.612Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3022818",
+        "doi": null
+    },
+    "c4f8bc73-fd55-44df-99b2-2d2503831918": {
+        "result_id": "019e265e1ac4-f649f79f-1d70-4cb7-859c-a741b77ad3f7",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=fc96acf9-998f-4663-b131-af1d0090081d",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "ab482400-7b68-4d42-9e27-0125c5e6d3a4",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-30T09:34:30.181Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3022812",
+        "doi": null
+    },
+    "b132d59b-2565-4d1e-9cca-208dd14eb69a": {
+        "result_id": "019e265e1bd7-413684a3-fbe9-415c-8ba1-2a0200383fc5",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=3652b342-120a-45bf-a085-af1d008ff15b",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "fe9e82f4-3d61-43d8-9921-13f7b9f6912d",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-30T09:29:03.934Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3022808",
+        "doi": null
+    },
+    "22982849-11ca-44ec-bc27-611154d13ed6": {
+        "result_id": "019e265e1cf6-d1ce01bb-fb4e-457f-8a9f-0d5b116641b0",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=66271e1a-cbb7-4376-8774-aef300d6fd6e",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "e3779b97-3568-479e-b746-78b24e79e11b",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-08T05:20:36.516Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016440",
+        "doi": null
+    },
+    "bcfd4312-8981-446f-8d1d-8e8c3791f7bc": {
+        "result_id": "019e265e1e11-d78d4879-e6c3-4122-8f7b-201bc9419cc3",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=4e3e69fd-d257-4cc6-ac55-aefb00d86244",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "4699aeb1-7dd5-4385-9eac-67cc6d5c892a",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T14:15:07.286Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016370",
+        "doi": null
+    },
+    "9b06d350-1b7d-4201-b58d-a178fbbc353c": {
+        "result_id": "019e265e1f6e-140ea528-ee07-4753-991c-3acbe7137b80",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=8f2fc00f-4728-4e48-86b3-aefb00d80c9a",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "0abb073e-c16f-4de9-8f77-811828bd9800",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T14:12:54.417Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016369",
+        "doi": null
+    },
+    "0b02b53b-e3f7-4c15-bf9b-97c411449fe4": {
+        "result_id": "019e265e208e-70643bd2-9315-4bcc-a0d3-144e1bc3d6a3",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=fbc8d69f-1809-4db8-ac15-aefb00d7a776",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "a9a4acb3-b68a-4d6a-ae7a-9d116d869433",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T14:11:02.414Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016368",
+        "doi": null
+    },
+    "2db72e9c-ee6f-4e4f-b117-6fd02f4b351d": {
+        "result_id": "019e265e21a4-23b0e1c7-e0c1-4bdf-83e2-74b1f7d433f3",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=f694b800-5f35-4a51-b33e-aefb00d7a7a2",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "9079b31e-3478-4e5b-a206-23f331a24bdb",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T14:08:17.317Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016367",
+        "doi": null
+    },
+    "aeb05a82-5eda-47d2-8f8f-ca5cc5ef462a": {
+        "result_id": "019e265e231f-04837242-60d6-4eba-91a2-a6a2f349680d",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=ce64b9d8-56dd-4cd7-b264-aefb00d7a830",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "0f20b97a-7802-4dde-a81b-3b3c6251b0fc",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T14:05:27.482Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016366",
+        "doi": null
+    },
+    "85774ca3-6fb8-442e-bda3-724fc44ab1aa": {
+        "result_id": "019e265e24e2-1c477aae-aeab-4418-881d-e268a74237b3",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=48a70fb3-f6a2-47bc-9b75-aefb00d7a7d8",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "a9ecab37-c2c5-40e2-acdf-47f31e15e04e",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T13:57:54.458Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016365",
+        "doi": null
+    },
+    "84b17056-a783-4013-8a2c-4c31e5be2a4e": {
+        "result_id": "019e265e2635-62ea0af2-d1f7-477e-8e99-4a7f92f0dfdc",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "1cc19397-e3f2-4ef5-8959-91d781acc249",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "513 B",
+                "dlr_content_size_bytes": "513",
+                "dlr_content_time_created": "2022-09-07T10:10:08.235Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/93d1e788",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "22c80df2-21ea-40c9-be7c-f2dea4e2bc61",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2022-09-07T10:10:07.168Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/93d1e788",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "64d821de-5b88-4cfe-a99a-9b71ce06b62f",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T10:10:06.284Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/1001777/medium_1661344892-artwork.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016254",
+        "doi": null
+    },
+    "8fe90476-1b09-404c-90a5-5e8e59688655": {
+        "result_id": "019e265e27b5-e08bdfed-590b-4d1e-a261-c435e45a5d4a",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "1c91ab61-31ce-4ff0-b42e-3593b94d62a0",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "464 B",
+                "dlr_content_size_bytes": "464",
+                "dlr_content_time_created": "2022-09-07T10:08:26.115Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/24076587",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "65024083-a68f-462e-87f3-dfddb8d90fd6",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T10:08:24.081Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/1001778/medium_1661345006-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/24076587",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "fa0d3383-c26b-4239-8695-ad053d70b6b1",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2022-09-07T10:08:24.970Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016253",
+        "doi": null
+    },
+    "11189f83-503c-4c85-b685-c73638fca01c": {
+        "result_id": "019e265e28ea-3fea3189-5991-41d1-96bc-7affe7fd55ff",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/f6a6ca64",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "8e0229cd-6bb9-48c4-8135-0a83d22d1f43",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2022-09-07T10:06:34.613Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "9b3a320d-f51c-4aad-9b91-38a61738314d",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "485 B",
+                "dlr_content_size_bytes": "485",
+                "dlr_content_time_created": "2022-09-07T10:06:35.785Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/f6a6ca64",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "d15fc5c3-6346-42ab-b4e5-090ac3dbedf9",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T10:06:33.737Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/1001779/medium_1661345086-artwork.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016252",
+        "doi": null
+    },
+    "c40ada2b-3ad0-4726-a113-3364b48efaca": {
+        "result_id": "019e265e2a26-d709b911-16d6-475e-83b2-c4d0fbe18db0",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/a953a6c8",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "8a101836-7652-4c58-a3b1-0febf7a9b70a",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T10:02:24.952Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/1001782/medium_1661345276-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/a953a6c8",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "9f60f5aa-4453-4ab5-b11f-20e3a26546c9",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2022-09-07T10:02:25.944Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "cf7f1c97-66e3-4180-8016-4650a38ccb1e",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "450 B",
+                "dlr_content_size_bytes": "450",
+                "dlr_content_time_created": "2022-09-07T10:02:27.076Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016251",
+        "doi": null
+    },
+    "2de40c2e-52f3-47f9-ac67-0a5082798181": {
+        "result_id": "019e265e2b3c-2fc415e6-670b-42d1-ab97-59cee5a60bf4",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=f7b114b9-c0eb-45f2-aebf-aef00078ee00",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "2a4cf7d9-5c55-4cde-b2ba-8647443e3114",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T09:49:49.118Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016248",
+        "doi": null
+    },
+    "50977fb1-b987-4f5d-b323-20fc78c3ccf5": {
+        "result_id": "019e265e2c61-7987256f-d7de-43fa-8e87-1808648c1269",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=5b1dd1d6-f6c3-43bf-afb3-aef0007db90e",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "437757ad-7b60-48ee-8fe3-9e324ae40521",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T09:44:27.900Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016247",
+        "doi": null
+    },
+    "501302d7-c71d-4d3a-a6a7-b72ef5d30da0": {
+        "result_id": "019e265e2dc8-f9ee4210-5411-4c1c-a879-790d11d8e6cf",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=91508464-4f50-4820-b58f-aefb00f34701",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "fc7d9fb4-e31c-41e5-8949-5f1722012996",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-09-07T09:31:06.420Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/3016244",
+        "doi": null
+    },
+    "9f4c71b0-7c73-45f1-9899-ec8c42abe4b8": {
+        "result_id": "019e265e2f08-bab9a0eb-5c16-4799-a8d8-48921a0a2108",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "DigSam-podkast om digital sikkerhet - transkribert.pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "04ae3056-c6d0-439e-aa53-90f7997696fd",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "132.6 KB",
+                "dlr_content_size_bytes": "135809",
+                "dlr_content_time_created": "2022-04-01T08:30:08.357Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/d10882b8",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "53e08077-1ca7-4031-8127-2c1d72849752",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2022-03-31T12:38:37.121Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "DigSam-podkast om digital sikkerhet - transkribert.txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "57b10bd2-e9fd-4f93-a36c-081a60143236",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "20.8 KB",
+                "dlr_content_size_bytes": "21334",
+                "dlr_content_time_created": "2022-04-01T08:30:11.048Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/d10882b8",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "58828399-176a-4664-8953-95cc11d7699a",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-03-31T12:38:36.307Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/845901/medium_1648730172-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "be49dd61-1d58-4450-9287-d8be38dbadb6",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "358 B",
+                "dlr_content_size_bytes": "358",
+                "dlr_content_time_created": "2022-03-31T12:38:37.967Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2989133",
+        "doi": null
+    },
+    "4cc4fb1c-b783-4564-b629-a8c92f60af56": {
+        "result_id": "019e265e3146-9ec8c274-dcfc-4f23-8d9e-918b85dd04e1",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Lena Heyn.jpg",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "4cffaf81-1413-498b-a564-272af80fac1d",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/jpeg",
+                "dlr_content_original": "true",
+                "dlr_content_size": "100.1 KB",
+                "dlr_content_size_bytes": "102507",
+                "dlr_content_time_created": "2022-02-28T14:52:47.277Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Heyn Kommunikasjon ferdigheter.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "9ec4368a-1a1b-4ba6-9292-0ed61dcb67b1",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "25.7 MB",
+                "dlr_content_size_bytes": "26997650",
+                "dlr_content_time_created": "2022-02-28T14:50:00.981Z",
+                "dlr_content_title": "Kommunikasjon ferdigheter.mp4",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2981837",
+        "doi": null
+    },
+    "eb99e884-6a2d-45bd-8d96-b9115a95fdfc": {
+        "result_id": "019e265e32ec-c27d3a0a-03e6-4837-8359-fdfc1c7588f4",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://screencast-o-matic.com/watch/c3nDIdVboFT",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "279f0b65-2dda-4b81-9520-014950e0c714",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2022-02-28T14:33:32.987Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://d1ka0itfguscri.cloudfront.net/wnS3/2022/02/16/13/49/c3nDIdVboFT/preview.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "b4fadd8f-9ee8-49c4-a7c1-e7ad40588aee",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "594 B",
+                "dlr_content_size_bytes": "594",
+                "dlr_content_time_created": "2022-02-28T14:33:35.243Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2981814",
+        "doi": null
+    },
+    "fc2f0818-2dab-4f97-b9db-c4a3ac7505d3": {
+        "result_id": "019e265e341e-14aa6576-7305-4b37-8781-86447d7a1e4a",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "LOVU-banken_v1.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "665ab0ce-5bb5-4464-b8af-d157f8c643e9",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "507.1 MB",
+                "dlr_content_size_bytes": "531754474",
+                "dlr_content_time_created": "2022-02-09T12:16:29.589Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "11_Innovasjon_Tekst.jpg",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "6f6397b5-9c96-44b6-ae8a-a0178080617a",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/jpeg",
+                "dlr_content_original": "true",
+                "dlr_content_size": "450.9 KB",
+                "dlr_content_size_bytes": "461703",
+                "dlr_content_time_created": "2022-02-09T12:18:49.477Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2977992",
+        "doi": null
+    },
+    "1692b636-f648-4e77-be73-9d6dc319739d": {
+        "result_id": "019e265e353a-4f6a33fa-f53b-4c5f-a72e-28bbf42610b4",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etisk teori (Tom Eide 2020).pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "17d592bb-a5aa-4b23-998b-09a9ccacfffe",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "13.4 MB",
+                "dlr_content_size_bytes": "14036670",
+                "dlr_content_time_created": "2022-01-18T10:51:40.809Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Tom Eide.png",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "4fe3a144-8022-429b-b87f-71c5fee2302a",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/png",
+                "dlr_content_original": "true",
+                "dlr_content_size": "157.8 KB",
+                "dlr_content_size_bytes": "161589",
+                "dlr_content_time_created": "2022-02-07T11:52:22.569Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etisk teori (Tom Eide 2020).txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "832d4f7c-7dde-4279-a802-efee80614337",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "17.3 KB",
+                "dlr_content_size_bytes": "17682",
+                "dlr_content_time_created": "2022-01-18T10:51:45.113Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etisk teori (Tom Eide) FV.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "e0bed6a8-b240-4fd8-8a87-15f7d876fa1d",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "45.4 MB",
+                "dlr_content_size_bytes": "47654340",
+                "dlr_content_time_created": "2022-01-18T10:49:06.913Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/2837887",
+        "doi": null
+    },
+    "409bac7b-a03e-4a50-89c6-aef9757aee1f": {
+        "result_id": "019e265e36db-cc47d436-92e7-4e81-929e-3ed9104425e3",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk og velferdsteknologi (Tom Eide) FV.pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "18e2cc85-8521-4af5-abab-0c8629c50506",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "2.2 MB",
+                "dlr_content_size_bytes": "2267543",
+                "dlr_content_time_created": "2022-01-18T10:47:19.918Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk og velferdsteknologi (Tom Eide) FV.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "53ea6f9b-7d46-4546-b208-7b3478a7ebf8",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "71.7 MB",
+                "dlr_content_size_bytes": "75208242",
+                "dlr_content_time_created": "2022-01-18T10:45:14.164Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk og velferdsteknologi (Tom Eide) FV.txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "6561223c-9f71-46ac-a765-93e985fd5192",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "2.2 KB",
+                "dlr_content_size_bytes": "2206",
+                "dlr_content_time_created": "2022-01-18T10:47:22.866Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Tom Eide.png",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "9444fce0-ca23-4fca-9d80-0a28fd9d1ebe",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/png",
+                "dlr_content_original": "true",
+                "dlr_content_size": "157.8 KB",
+                "dlr_content_size_bytes": "161589",
+                "dlr_content_time_created": "2022-02-07T11:54:26.602Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/2837884",
+        "doi": null
+    },
+    "a69d14fb-a427-4f1d-9d1f-b1507020eb15": {
+        "result_id": "019e265e3887-082c633e-407f-44ac-9949-86186639e65d",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Tom Eide.png",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "382c0e3d-7f9f-40b9-8a5e-e9d1c371b8c2",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/png",
+                "dlr_content_original": "true",
+                "dlr_content_size": "157.8 KB",
+                "dlr_content_size_bytes": "161589",
+                "dlr_content_time_created": "2022-02-07T11:55:16.655Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk og forandringsveiledning (Tom Eide 2020).pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "5308fc52-52e6-460d-b33b-5c370ef963a1",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "2.3 MB",
+                "dlr_content_size_bytes": "2435846",
+                "dlr_content_time_created": "2022-02-07T11:46:24.987Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk og endringsveiledning (Tom Eide) FV.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "74129466-9e3f-4e1d-b993-670c80316d0c",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "36.6 MB",
+                "dlr_content_size_bytes": "38428425",
+                "dlr_content_time_created": "2022-01-18T10:40:54.579Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk og forandringsveiledning (Tom Eide 2020).txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "91807d14-f119-465d-ab29-6d5f551c8f10",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "7.9 KB",
+                "dlr_content_size_bytes": "8132",
+                "dlr_content_time_created": "2022-02-07T11:46:27.816Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/2837882",
+        "doi": null
+    },
+    "bd4a6190-2bf9-43ba-acde-ebd4762a129c": {
+        "result_id": "019e265e3a2d-503bf5b2-dcc6-4514-8163-130c283ed53a",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etisk dilemma (Tom Eide 2020) FV.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "114c781e-d3f6-4376-957d-51f494ed7f32",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "33.8 MB",
+                "dlr_content_size_bytes": "35427746",
+                "dlr_content_time_created": "2022-01-18T10:36:41.562Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Tom Eide.png",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "2533ef0c-f08e-4c30-9780-7634c07b1586",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/png",
+                "dlr_content_original": "true",
+                "dlr_content_size": "157.8 KB",
+                "dlr_content_size_bytes": "161589",
+                "dlr_content_time_created": "2022-02-07T11:56:06.975Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etisk dilemma (Tom Eide 2020).txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "3f2e05d6-f555-4ed5-b2e6-12f15c8ca13d",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "4.8 KB",
+                "dlr_content_size_bytes": "4923",
+                "dlr_content_time_created": "2022-02-07T11:49:50.292Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etisk dilemma (Tom Eide 2020).pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "782fae33-fe96-481e-bdb7-90a29b44971a",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "2.5 MB",
+                "dlr_content_size_bytes": "2636375",
+                "dlr_content_time_created": "2022-02-07T11:49:47.419Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/2837876",
+        "doi": null
+    },
+    "52041315-4007-4e68-ae41-c41144afcd6a": {
+        "result_id": "019e265e3bc3-d573535d-5b01-4df6-bcbb-65287bd05ea7",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etiske refleksjonsmodeller (Tom Eide 2020).txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "3654c661-db63-4087-9c68-507b8428633e",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "9.4 KB",
+                "dlr_content_size_bytes": "9630",
+                "dlr_content_time_created": "2022-02-07T11:43:09.583Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etiske refleksjonsmodeller (Tom Eide 2020) FV.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "46339682-2f07-4a77-8b2e-bd9818ea0e1f",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "36.9 MB",
+                "dlr_content_size_bytes": "38671997",
+                "dlr_content_time_created": "2022-01-18T10:31:12.443Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etiske refleksjonsmodeller (Tom Eide 2020).pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "5c39b24a-b039-4274-99c5-247554d75185",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "2.5 MB",
+                "dlr_content_size_bytes": "2669092",
+                "dlr_content_time_created": "2022-02-07T11:43:06.762Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Tom Eide.png",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "9cbfced8-a4c2-4e91-8c8e-109aae04c82d",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/png",
+                "dlr_content_original": "true",
+                "dlr_content_size": "157.8 KB",
+                "dlr_content_size_bytes": "161589",
+                "dlr_content_time_created": "2022-02-07T11:56:46.402Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": null,
+        "doi": null
+    },
+    "75ef3d4c-8d2c-4ce5-a2ed-b5288cf35730": {
+        "result_id": "019e265e3cd7-39cca2e4-0630-4ea5-b619-9d3ce3b87bf4",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk - introduksjon til læringsutbyttet og videoene (Tom Eide) 2202.txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "1f323471-2ea6-4dc2-a4f7-925f37271adf",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "2.1 KB",
+                "dlr_content_size_bytes": "2187",
+                "dlr_content_time_created": "2022-02-09T09:14:35.031Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk - introduksjon til læringsutbyttet og videoene (Tom Eide) 2202.pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "327a5b1a-512c-418c-a2a1-37f2a2611eac",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "3.5 MB",
+                "dlr_content_size_bytes": "3625121",
+                "dlr_content_time_created": "2022-02-09T09:14:32.170Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Etikk - introduksjon til LUB 1 (Tom Eide).mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "6be932f9-680a-4d32-abf5-9bab7fab9641",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "12.9 MB",
+                "dlr_content_size_bytes": "13513837",
+                "dlr_content_time_created": "2022-01-18T10:23:21.524Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Tom Eide.png",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "image",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "d3e4f2fb-9e32-4ab7-9092-9a8a0b22eaa0",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "image/png",
+                "dlr_content_original": "true",
+                "dlr_content_size": "157.8 KB",
+                "dlr_content_size_bytes": "161589",
+                "dlr_content_time_created": "2022-02-07T11:58:50.754Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2837868",
+        "doi": null
+    },
+    "37c0b16a-b8ca-4270-be6d-4d4ae7662c30": {
+        "result_id": "019e265e3e0c-3934bfb1-3aac-434c-9bdb-22191c84ac33",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/e533f378",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "24423ad0-f48f-43d5-a539-e4082ac16e45",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-13T14:38:24.972Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/750574/medium_1639406273-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/e533f378",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "5f64bc5e-b51e-4837-aab8-c726882e757a",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-13T14:38:26.021Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "66f3eb0f-9a66-446d-89a6-bc8b9ea0d24a",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "881 B",
+                "dlr_content_size_bytes": "881",
+                "dlr_content_time_created": "2021-12-13T14:38:26.884Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2834037",
+        "doi": null
+    },
+    "8179fba0-78e6-4a85-8cb0-25b135eabab3": {
+        "result_id": "019e265e3f02-ac6aec38-f677-4346-97f3-c553018c654a",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/5cf30003",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "2b31b2ad-4ff2-4dcf-a98f-31f866a69d47",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-08T14:16:02.296Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/746663/medium_1638971084-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/5cf30003",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "2edeec31-2df8-47a7-a78f-61ce55f9f414",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-08T14:16:03.263Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "672c7096-ef88-49f5-8b4b-89ec61a117d9",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "608 B",
+                "dlr_content_size_bytes": "608",
+                "dlr_content_time_created": "2021-12-08T14:16:04.047Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2833406",
+        "doi": null
+    },
+    "7068180e-9d13-498f-8ed1-c20ac3e6cb8f": {
+        "result_id": "019e265e4083-a8784acb-419e-47ca-a03d-8f0d9d097ac4",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/e2cacd6d",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "49e87cc7-d45a-4399-a39e-2abb640f09de",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-08T14:14:08.810Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/e2cacd6d",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "63eb50ff-982b-4963-921b-0edf334580ed",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-08T14:14:07.954Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/746651/medium_1638970147-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "ad1c7a8c-f042-4877-826e-8f33243ab2e7",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "828 B",
+                "dlr_content_size_bytes": "828",
+                "dlr_content_time_created": "2021-12-08T14:14:09.598Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2833404",
+        "doi": null
+    },
+    "fa16cbc6-0d6a-4778-a392-ffddd9eb2565": {
+        "result_id": "019e265e421f-a4b7a35d-ef99-4576-ba13-edc1c79690fa",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/6807174f",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "1a552b01-8fb3-4a37-a384-bffbe4949a01",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-08T14:12:28.979Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/734864/medium_1637927291-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "59d30190-b694-4f5c-bf49-1fb01ef187f7",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "602 B",
+                "dlr_content_size_bytes": "602",
+                "dlr_content_time_created": "2021-12-08T14:12:30.678Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/6807174f",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "5e3066c0-f1fa-460f-bc88-e03254acfb7d",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-08T14:12:29.873Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2833401",
+        "doi": null
+    },
+    "d15be8dd-349c-4050-bc39-3ee5a6855fc0": {
+        "result_id": "019e265e434f-fa3265dc-ed17-47e7-b5a3-d0052c68ee2a",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/b470e993",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "1a8ac97d-1887-4ca1-87a1-2ddc0fa5e411",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-08T14:10:44.185Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/734857/medium_1637926638-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/b470e993",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "2c314b54-ee99-477c-9436-eadd836b61f5",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-08T14:10:45.047Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "ff88e0fb-ea58-4be9-ad2c-8a93b29ca00c",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "543 B",
+                "dlr_content_size_bytes": "543",
+                "dlr_content_time_created": "2021-12-08T14:10:45.871Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2833399",
+        "doi": null
+    },
+    "aca3165d-29e4-446c-ac8b-68d359aa5555": {
+        "result_id": "019e265e447f-03c8aa9d-e79f-41fa-83f1-c779a840a195",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/503db217",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "89c0b6ab-9faa-4c3b-9cc2-f1216261bcfa",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-08T14:08:36.343Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/732241/medium_1637674556-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/503db217",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "a7cfb291-f7ff-4b92-be83-17fb4a5d5b9c",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-08T14:08:37.281Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "bf71aedc-010b-4dd1-b5d7-d83489ce6dc6",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "552 B",
+                "dlr_content_size_bytes": "552",
+                "dlr_content_time_created": "2021-12-08T14:08:38.113Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2833398",
+        "doi": null
+    },
+    "c7dd1f1a-9ed4-498b-80c6-cf9c6cbb5e32": {
+        "result_id": "019e265e4b18-98988dba-27d8-48f6-9339-06fe86524713",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "10301d56-6fca-4656-950a-2d6b035d21e8",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "503 B",
+                "dlr_content_size_bytes": "503",
+                "dlr_content_time_created": "2021-12-08T14:05:11.676Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/81da549c",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "b13ffbc1-8d0e-48d8-959c-f6801e26b0af",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-12-08T14:05:10.809Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/81da549c",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "c1a31b3c-73a4-4e14-b18c-1df2fbb2beb9",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-12-08T14:05:09.729Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/732172/medium_1637666901-artwork.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2833396",
+        "doi": null
+    },
+    "5ed0123a-8567-49c2-9a75-cd34fb0eeab7": {
+        "result_id": "019e265e4eee-60a9d7b1-1a01-4a6a-baf8-7812daabc41a",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://youtu.be/mrBVdmwwKHw",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "46317878-d000-49de-9a8d-7e208b11a51f",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-youtube",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:49:07.059Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://i.ytimg.com/vi/mrBVdmwwKHw/hqdefault.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827223",
+        "doi": null
+    },
+    "a0c22df7-9b13-4c81-a72d-3b0d9190d549": {
+        "result_id": "019e265e5073-36aaa63f-d19f-4cff-85e2-06eb1b733564",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/e90a52ab",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "131787ce-49ea-4741-9b5a-86f65c0d2089",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:46:51.667Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/623957/medium_1629277082-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "5c0130b3-80a8-4c0d-8675-5cb514fe6b57",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "544 B",
+                "dlr_content_size_bytes": "544",
+                "dlr_content_time_created": "2021-11-02T09:46:56.474Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/e90a52ab",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "d5080fcc-17f4-4641-a0b5-077dd6d08e34",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-11-25T14:21:20.839Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827219",
+        "doi": null
+    },
+    "dce1902f-9cee-4e7e-be67-ffddbbee69c6": {
+        "result_id": "019e265e51e5-abc2eefe-5d91-4fb4-84cd-5dec768a1ee4",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/8e371a4c",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "5b4d16be-5174-48f7-b4b3-dd699295d327",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:45:13.513Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/618188/medium_1628769827-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/8e371a4c",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "a8f5a90a-d71a-457f-93f9-564c701442c2",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-11-25T14:22:20.299Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "f75bfe48-5fff-4e2b-a4d1-2afe6ea75b2e",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "578 B",
+                "dlr_content_size_bytes": "578",
+                "dlr_content_time_created": "2021-11-02T09:45:15.041Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827217",
+        "doi": null
+    },
+    "ac178e10-dfdb-4cd0-99f9-e327dd03faf9": {
+        "result_id": "019e265e543c-e9cbc9ab-122f-47d8-9071-cc6871bfc86e",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "00be5e57-c981-4eae-a3dc-d065d7db49b1",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "652 B",
+                "dlr_content_size_bytes": "652",
+                "dlr_content_time_created": "2021-11-02T09:43:15.580Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/409ccac7",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "609ae299-e11e-495b-b718-a006fbb3d519",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-11-25T14:23:38.110Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/409ccac7",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "f9bd96c2-c001-463d-9092-fa3b9fbae00e",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:43:14.022Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/585287/medium_1625312015-artwork.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827215",
+        "doi": null
+    },
+    "045f7b18-cae9-438c-a096-d28cf42c47fc": {
+        "result_id": "019e265e55ef-bb4aa188-875a-4bb4-9ddc-98f8b5e51b21",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/f8e4af14",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "79ee5b7a-3e63-4e66-b6bf-79dde680073a",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-11-25T14:24:35.182Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/f8e4af14",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "99b02f79-64f4-423c-b874-77722a39f5f9",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:40:59.568Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/585281/medium_1625310223-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "cc4d910b-a029-412b-8bd9-4e194e53e36c",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "598 B",
+                "dlr_content_size_bytes": "598",
+                "dlr_content_time_created": "2021-11-02T09:41:00.611Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827213",
+        "doi": null
+    },
+    "6e16fbb3-205c-4cf2-a4a1-b4cf6c1900d8": {
+        "result_id": "019e265e580f-da5f1e99-eb30-4908-8fcb-bf3d309876d0",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/e6545cf2",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "29460948-a2a1-4be7-b43f-c56bbee51f6a",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:37:22.839Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/537999/medium_1620551068-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/e6545cf2",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "8c8c8eb9-050d-48fe-8fa9-25052b0440dc",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-11-25T14:25:18.539Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "e16cadf0-4c05-4e4e-8a03-b6da6ed06065",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "490 B",
+                "dlr_content_size_bytes": "490",
+                "dlr_content_time_created": "2021-11-02T09:37:24.586Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827209",
+        "doi": null
+    },
+    "dc99cb40-92b0-4134-b037-007b265ddab4": {
+        "result_id": "019e265e5a70-b902e3a1-4d4a-479e-bd72-45df0ee66253",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/e/4ae607a0",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "abcc098c-3828-48a8-a164-b8ecb4a03f7b",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "audio-service/x-transistor",
+                "dlr_content_original": "false",
+                "dlr_content_time_created": "2021-11-25T14:26:42.895Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/4ae607a0",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "cf775933-b61d-494c-b7da-a9fc78d067dd",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-11-02T09:18:32.886Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/episode/410998/medium_1606737269-artwork.jpg"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "e1c8c732-cc66-433d-8392-6bfd1806f754",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "676 B",
+                "dlr_content_size_bytes": "676",
+                "dlr_content_time_created": "2021-11-02T09:18:34.471Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "svi@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2827196",
+        "doi": null
+    },
+    "abf5470f-2c9f-4e62-a156-85553c740082": {
+        "result_id": "019e265e5bdf-ba9349bd-a114-4779-9783-e0aa4899e607",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "intro til lub8.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "c04d5126-9f1a-4a25-85cf-b963aaf3b00e",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "8.5 MB",
+                "dlr_content_size_bytes": "8946816",
+                "dlr_content_time_created": "2021-10-26T13:38:55.045Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2825781",
+        "doi": null
+    },
+    "8f9b71c7-30bd-4601-96ca-8527c18b0c12": {
+        "result_id": "019e265e5dd5-6ced397c-f581-45c5-90cc-cb7a336f7339",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=01ca1feb-3e1d-4330-8665-adb400ad1e22",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "8a010ebd-e6f3-475d-ba5a-ac0e76b99020",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-10-25T21:08:27.540Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2825475",
+        "doi": null
+    },
+    "e8c30bbe-015c-4203-9132-a960e660dfa6": {
+        "result_id": "019e265e5fab-e62e8344-55f0-4796-a706-16deefa147ab",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=1c1b2a85-6745-46ae-b3af-adb300dfb754",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "35935fe4-3c19-4a68-8203-3d419053245c",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-10-25T21:01:26.987Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2825474",
+        "doi": null
+    },
+    "81f28f4b-8e0b-4dee-a6f9-5094090c17b5": {
+        "result_id": "019e265e6163-b4cecb24-503b-40fe-83d2-deeb54760025",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=504dd046-22fa-4f43-81c8-adac00db14e5",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "59c5cea1-85f6-4464-82d6-613305d193aa",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-panopto",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-10-24T21:13:15.748Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2825163",
+        "doi": null
+    },
+    "b15711a0-e55c-411e-b5c4-9919e4b703c3": {
+        "result_id": "019e265e62f8-8a663602-001e-41c6-8ede-b05596d8b10b",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "DigSam-podkast om digital sikkerhet - transkribert.pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "e0385590-25a8-4127-ad7d-0f122d093e1c",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "132.6 KB",
+                "dlr_content_size_bytes": "135809",
+                "dlr_content_time_created": "2022-02-01T19:56:02.009Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "DigSamPod_mixdown_less.mp3",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "audio",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "e4e189db-cae7-4ad7-9df3-06ca4691a7e1",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "audio/mpeg",
+                "dlr_content_original": "true",
+                "dlr_content_size": "34.8 MB",
+                "dlr_content_size_bytes": "36533984",
+                "dlr_content_time_created": "2021-10-08T11:15:41.511Z",
+                "dlr_content_title": "DigSam-podcast om digital sikkerhet",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "handle": "https://hdl.handle.net/11250/2788718",
+        "doi": null
+    },
+    "dc376924-0388-4ac8-a124-c32e05845876": {
+        "result_id": "019e265e654b-b9413a95-4973-4ea2-8e36-8ae8dc6f0b39",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://mediasite.usn.no/Mediasite/Play/271c6533964347fb9170358aa70503141d",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "a1c581c4-bbc0-45dd-9d26-ae104b8536c9",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-mediasite",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-09-20T10:45:42.999Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/2779160",
+        "doi": null
+    },
+    "be6671d0-d022-41e4-a5ec-a1d126722e8e": {
+        "result_id": "019e265e6793-f84c9a7a-5f5a-44c1-87b1-faeccae395ca",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "f32c5a05-4f5a-4e57-9bd3-88b0e5a5fcd8",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "524 B",
+                "dlr_content_size_bytes": "524",
+                "dlr_content_time_created": "2021-09-20T10:20:38.616Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://share.transistor.fm/s/62cc5568",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "fb6b2b6b-3157-4406-8acd-ec66ce9faa8c",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-09-20T10:20:37.348Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://images.transistor.fm/file/transistor/images/show/8202/medium_1583159287-artwork.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "handle": "https://hdl.handle.net/11250/2779148",
+        "doi": null
+    },
+    "843d301f-c361-4437-842c-891700d0c79e": {
+        "result_id": "019e265e697c-1fd98d18-9464-40a9-a5e4-bddc73ca9123",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://youtu.be/8zbf0QWmgtw",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "b2d92668-ff14-4e18-8b4c-2ee0daad8b3c",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-youtube",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-08-31T21:08:30.638Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://i.ytimg.com/vi/8zbf0QWmgtw/hqdefault.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2772045",
+        "doi": null
+    },
+    "a1a9ea8b-7d5e-45e6-9fe9-b58da0f5080f": {
+        "result_id": "019e265e6c6c-bea37f20-a9bf-46b8-9fb0-171b9db09759",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://www.youtube.com/watch?v=-17f-32oAiE",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "8a682303-6f8d-487e-8bbb-b4626270699e",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-youtube",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-08-31T21:01:50.650Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://i.ytimg.com/vi/-17f-32oAiE/hqdefault.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2772043",
+        "doi": null
+    },
+    "0a1d69c2-aacf-4ba9-be18-8f14615f45fb": {
+        "result_id": "019e265e6dfd-549afa02-0a17-4256-a288-1b573dc0da1f",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=8aaf4abc-02e7-4831-a938-aea000ad2761",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "d1f1cded-48bd-450f-9416-8a95fa387a4d",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-mediasite",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-08-19T22:55:23.764Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "bjarnen@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2770396",
+        "doi": null
+    },
+    "2403ea3f-5562-436d-925f-0a958e4c74db": {
+        "result_id": "019e265e7054-a55ba4c5-7163-42d4-b498-30f8dc9f2a8c",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "2a30db4d-3bcb-4690-a6b1-1b1177cb49a6",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "501 B",
+                "dlr_content_size_bytes": "501",
+                "dlr_content_time_created": "2021-08-19T22:48:13.190Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "bjarnen@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=a0ba3ee2-5b53-4ff5-84d8-aea000ac53b1",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "b7ec7537-e651-440e-9e1e-cf7f7079f991",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-08-19T22:48:12.457Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "bjarnen@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://ntnu.cloud.panopto.eu/Panopto/Services/FrameGrabber.svc/FrameRedirect?objectId=ce37752f-9c7f-4e66-85b2-ad2e00b43e7d&mode=Delivery&random=0.96056765455779&usePng=False"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2770395",
+        "doi": null
+    },
+    "3925fac6-7f63-4a5c-976f-7ad9fd09325f": {
+        "result_id": "019e265e7266-c1472c19-9f88-4316-ae99-4671376757cd",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=f3490188-390f-48b0-9d91-aea0007e75ee",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "36b289a1-3719-43f5-91ea-d4e7d192b3e3",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-08-18T08:28:22.789Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://ntnu.cloud.panopto.eu/Panopto/Services/FrameGrabber.svc/FrameRedirect?objectId=5f6be125-b700-4ea5-a0b8-ad8100d0bfa4&mode=Delivery&random=0.166729579757307&usePng=False"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "7c9a1ce8-7e1d-4080-9179-9f094ab38a28",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "473 B",
+                "dlr_content_size_bytes": "473",
+                "dlr_content_time_created": "2021-08-18T08:28:23.528Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Akademisk-skriving-et-helhetlig-underviningsopplegg.txt",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "8167a2ae-ad34-4265-907f-bc96d860ce17",
+                "dlr_content_indexable": "true",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "text/plain",
+                "dlr_content_original": "false",
+                "dlr_content_size": "13.9 KB",
+                "dlr_content_size_bytes": "14262",
+                "dlr_content_time_created": "2022-04-27T07:56:58.075Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "Akademisk-skriving-et-helhetlig-underviningsopplegg.pdf",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_identifier": "c0497872-1cb0-4147-a253-762d513256b3",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/pdf",
+                "dlr_content_original": "true",
+                "dlr_content_size": "260.5 KB",
+                "dlr_content_size_bytes": "266738",
+                "dlr_content_time_created": "2022-04-27T07:56:55.488Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "psolh@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2770044",
+        "doi": null
+    },
+    "786ef775-a856-459f-8c88-e3f511923e91": {
+        "result_id": "019e265e73dc-afd96a4f-2e97-4fbd-9603-98f8630d36a5",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "2.4C Nikolai D Borge.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "e8147815-6c64-428c-8aea-95990ff41908",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "51.0 MB",
+                "dlr_content_size_bytes": "53521485",
+                "dlr_content_time_created": "2021-06-23T11:08:26.899Z",
+                "dlr_content_title": " Nikolai D Borge.mp4",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rma@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2760849",
+        "doi": null
+    },
+    "1a47a1f0-ab0c-49de-990d-f103c4665f69": {
+        "result_id": "019e265e7613-192db6a4-9726-42fa-8929-3e4dea8217a1",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "2.2C Niclas Ege.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "dab1c9a7-86a1-4cf2-beed-df5a3184bd87",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "96.7 MB",
+                "dlr_content_size_bytes": "101360687",
+                "dlr_content_time_created": "2021-06-23T11:04:51.018Z",
+                "dlr_content_title": "Niclas Ege.mp4",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rma@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2760845",
+        "doi": null
+    },
+    "5fbd5bc0-74b9-4346-b56c-625780c3e082": {
+        "result_id": "019e265e77a5-db0fd6bd-2f94-4afe-b2f5-a690e84df3bd",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "2.4C Bjørn E Evensen.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "fcfa75e2-45c3-4c98-a692-3756039772f3",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "76.9 MB",
+                "dlr_content_size_bytes": "80623617",
+                "dlr_content_time_created": "2021-06-23T11:00:24.764Z",
+                "dlr_content_title": " Bjørn E Evensen.mp4",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rma@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2760844",
+        "doi": null
+    },
+    "e803677c-9881-4500-a0e4-f1518e510507": {
+        "result_id": "019e265e7932-87c74aba-a347-45ff-857c-80b118cd9af3",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "2.2C Bernd Kuhnle.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "4a2c464c-fe20-408d-bb4c-0974df3f28f0",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "138.0 MB",
+                "dlr_content_size_bytes": "144693379",
+                "dlr_content_time_created": "2021-06-23T10:56:30.845Z",
+                "dlr_content_title": "Bernd Kuhnle.mp4",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rma@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2760842",
+        "doi": null
+    },
+    "c71e9d10-53f2-4555-a4cc-71bc992b484b": {
+        "result_id": "019e265e7aed-c82639b3-4a7f-4ca6-b34f-a1dbd059dcfe",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "2.4C Gerrit Muller.mp4",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "23c7f998-dc8d-4201-aeec-1b020f131dc4",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video/mp4",
+                "dlr_content_original": "true",
+                "dlr_content_size": "64.2 MB",
+                "dlr_content_size_bytes": "67366237",
+                "dlr_content_time_created": "2021-06-21T07:30:44.192Z",
+                "dlr_content_title": "KSEE 2021_Gerrit Muller",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "rma@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "handle": "https://hdl.handle.net/11250/2760820",
+        "doi": null
+    },
+    "ed45a8a6-8476-4f93-9269-a7ef9f8e8b60": {
+        "result_id": "019e265e7c0e-8a0d0ae7-297d-4d47-bcac-c63c9e68c1de",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://youtu.be/ACZN-iUxKj8",
+                "dlr_content_content_type": "video",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "919178d5-7cc4-4ecd-a833-c49b9e803dad",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "video-service/x-youtube",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-06-03T09:29:32.615Z",
+                "dlr_content_type": "link",
+                "dlr_content_type_link_header_http_x_frame_options": "sameorigin",
+                "dlr_submitter_email": "rital@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://i.ytimg.com/vi/ACZN-iUxKj8/hqdefault.jpg"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2757528",
+        "doi": null
+    },
+    "cfb6c779-f11d-41c9-9998-8ba99067dd6a": {
+        "result_id": "019e265e7d33-33f6c191-e92f-42f9-bcfc-a80c485b337f",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "https://usn.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=13b9c663-d271-4b5e-a7b9-aea0007e75ec",
+                "dlr_content_content_type": "text",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "1419f5e1-53e8-4058-93c0-065dec5aba1f",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "text/html",
+                "dlr_content_original": "true",
+                "dlr_content_time_created": "2021-06-03T08:07:11.545Z",
+                "dlr_content_type": "link",
+                "dlr_submitter_email": "bjarnen@usn.no",
+                "dlr_thumbnail_default": "true",
+                "dlr_thumbnail_url": "https://ntnu.cloud.panopto.eu/Panopto/Services/FrameGrabber.svc/FrameRedirect?objectId=ceb13273-7bb2-4bf3-bb1b-ad350058ca95&mode=Delivery&random=0.661497685434994&usePng=False"
+            },
+            {
+                "dlr_app": "learning",
+                "dlr_content": "metadata_external.json",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "false",
+                "dlr_content_generated": "true",
+                "dlr_content_identifier": "f793931d-f03c-4217-8528-2c7ba9273baa",
+                "dlr_content_master": "false",
+                "dlr_content_mime_type": "application/json",
+                "dlr_content_original": "false",
+                "dlr_content_size": "818 B",
+                "dlr_content_size_bytes": "818",
+                "dlr_content_time_created": "2021-06-03T08:07:12.341Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "bjarnen@usn.no",
+                "dlr_thumbnail_default": "false"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2757488",
+        "doi": null
+    },
+    "ccfb48fa-5f6a-4d91-a7ef-cdde8c243251": {
+        "result_id": "019e265e7ea1-405402dc-6073-4f50-b18d-663448ace2bc",
+        "content": [
+            {
+                "dlr_app": "learning",
+                "dlr_content": "e35a1eb6b4e74c4b86802c2a253be82a.zip",
+                "dlr_content_checksum_MD5": "null",
+                "dlr_content_content_type": "application",
+                "dlr_content_default": "true",
+                "dlr_content_identifier": "13fa9daf-f29b-4c63-abce-948a9941ebfe",
+                "dlr_content_master": "true",
+                "dlr_content_mime_type": "application/zip",
+                "dlr_content_original": "true",
+                "dlr_content_size": "18.4 KB",
+                "dlr_content_size_bytes": "18800",
+                "dlr_content_time_created": "2021-06-03T09:05:36.350Z",
+                "dlr_content_type": "file",
+                "dlr_submitter_email": "bjarnen@usn.no",
+                "dlr_thumbnail_default": "true"
+            }
+        ],
+        "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "handle": "https://hdl.handle.net/11250/2757511",
+        "doi": null
+    }
+}
