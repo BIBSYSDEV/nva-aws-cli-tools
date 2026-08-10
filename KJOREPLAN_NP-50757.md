@@ -11,7 +11,7 @@
 git checkout NP-50757-dlr-file-upload
 uv run pytest commands/services/tests/test_file_upload_api.py
 uv run ruff check
-uv run cli.py files --help    # skal liste 7 subkommandoer
+uv run cli.py files --help    # skal liste 9 subkommandoer
 mkdir -p state handles
 ```
 
@@ -114,30 +114,6 @@ Resume ved feil: kjør samme kommando på nytt — state-fila hopper over `ok`-r
 
 ---
 
-## 2.5 Knytt eksterne URL-er som AdditionalIdentifier
-
-DLR-metadata-migreringen la *ikke* inn `link`-content på publikasjonene — vi
-må gjøre det selv. `link`-items lages som `AdditionalIdentifier` (generic) med
-`sourceName="dlr@<inst>"` (derives default fra `--institution`, kan overstyres
-med `--source-name`). `sharing_link` ignoreres (kun peker til samme fil).
-
-```bash
-# Tørrkjør (ingen API-kall, viser hvilke URL-er som vil legges til)
-uv run cli.py files add-links-manifest $MANIFEST \
-    --key-file $KEY --institution $DOMAINS --dry-run
-
-# Ekte (GET → merge → PUT som UpdatePublicationRequest; idempotent)
-uv run cli.py files add-links-manifest $MANIFEST \
-    --key-file $KEY --institution $DOMAINS
-```
-
-Output: `added=N skipped_existing=M sourceName=dlr@<inst>` —
-`skipped_existing` teller (sourceName, value)-par som allerede var på
-publikasjonen (trygt å re-kjøre). Servicen verifiserer at NVA persisterer
-identifierne i PUT-responsen — hvis ikke kastes feil per ressurs.
-
----
-
 ## 3. Publiser draftene
 
 Først etter at *alle* filer for institusjonen er oppe (slik at pending filer blir
@@ -154,6 +130,38 @@ uv run cli.py files publish-manifest $MANIFEST \
 ```
 
 Idempotent (409 = allerede publisert = OK), trygt å re-kjøre.
+
+---
+
+## 3.3 Knytt eksterne URL-er som AssociatedLink (etter publisering)
+
+DLR-metadata-migreringen la *ikke* inn `link`-content på publikasjonene — vi
+må gjøre det selv. `link`-items lages som `AssociatedLink` (relation `sameAs`)
+på `associatedArtifacts`. `sharing_link` ignoreres (kun peker til samme fil).
+
+Kjøres *etter* publisering (steg 3) med vilje: da round-tripper vi ferdig
+godkjente `OpenFile`-er, ikke pending filer, når hele `associatedArtifacts`
+sendes tilbake i PUT-en. Oppdateringen endrer ikke publiseringsstatus.
+
+> Server-bugen som tidligere droppet `associatedArtifacts` silently på PUT er
+> fikset (nva-publication-api PR #2540 — symmetrisk set-likhet i
+> `Resource.hasEffectiveChanges`).
+
+```bash
+# Tørrkjør (ingen API-kall, viser hvilke URL-er som vil legges til)
+uv run cli.py files add-links-manifest $MANIFEST \
+    --key-file $KEY --institution $DOMAINS --dry-run
+
+# Ekte (GET → merge inn i associatedArtifacts → PUT som UpdatePublicationRequest; idempotent)
+uv run cli.py files add-links-manifest $MANIFEST \
+    --key-file $KEY --institution $DOMAINS
+```
+
+Output: `added=N skipped_existing=M relation=sameAs` — `skipped_existing`
+teller URL-er som allerede lå som AssociatedLink på publikasjonen (trygt å
+re-kjøre). Servicen round-tripper hele `associatedArtifacts` (inkl. opplastede
+filer) og verifiserer at NVA persisterer lenkene i PUT-responsen — hvis ikke
+kastes feil per ressurs.
 
 ---
 

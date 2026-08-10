@@ -283,23 +283,26 @@ def test_create_publication_posts_minimal_body_with_dlr_header(
     assert create_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
 
 
-SOURCE_NAME = "dlr@test"
+EXISTING_FILE_ARTIFACT = {
+    "type": "OpenFile",
+    "identifier": "11111111-1111-1111-1111-111111111111",
+    "name": "existing-upload.pdf",
+}
 
 
 @responses.activate
-def test_add_additional_identifiers_skips_dupes_and_puts_new_ones(
+def test_add_associated_links_skips_dupes_and_puts_new_ones(
     tmp_path: Path,
 ) -> None:
     _add_token_response()
+    existing_link = {
+        "type": "AssociatedLink",
+        "id": "https://existing.example/already",
+        "relation": "sameAs",
+    }
     existing = {
         "type": "Publication",
-        "additionalIdentifiers": [
-            {
-                "type": "AdditionalIdentifier",
-                "sourceName": SOURCE_NAME,
-                "value": "https://existing.example/already",
-            },
-        ],
+        "associatedArtifacts": [EXISTING_FILE_ARTIFACT, existing_link],
     }
     responses.add(
         responses.GET,
@@ -311,25 +314,24 @@ def test_add_additional_identifiers_skips_dupes_and_puts_new_ones(
         f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
         json={
             "identifier": PUBLICATION_IDENTIFIER,
-            "additionalIdentifiers": existing["additionalIdentifiers"]
+            "associatedArtifacts": existing["associatedArtifacts"]
             + [
                 {
-                    "type": "AdditionalIdentifier",
-                    "sourceName": SOURCE_NAME,
-                    "value": "https://new.example/panopto",
+                    "type": "AssociatedLink",
+                    "id": "https://new.example/panopto",
+                    "relation": "sameAs",
                 }
             ],
         },
     )
     service = _build_service(tmp_path)
 
-    added, skipped = service.add_additional_identifiers(
+    added, skipped = service.add_associated_links(
         PUBLICATION_IDENTIFIER,
         [
             "https://existing.example/already",
             "https://new.example/panopto",
         ],
-        SOURCE_NAME,
     )
 
     assert added == 1
@@ -338,20 +340,17 @@ def test_add_additional_identifiers_skips_dupes_and_puts_new_ones(
     body = json.loads(put_call.request.body)
     assert body["type"] == "Publication"
     assert body["identifier"] == PUBLICATION_IDENTIFIER
-    identifiers = body["additionalIdentifiers"]
-    assert len(identifiers) == 2
-    new_identifier = next(
-        identifier
-        for identifier in identifiers
-        if identifier.get("value") == "https://new.example/panopto"
-    )
-    assert new_identifier["sourceName"] == SOURCE_NAME
-    assert new_identifier["type"] == "AdditionalIdentifier"
+    artifacts = body["associatedArtifacts"]
+    assert EXISTING_FILE_ARTIFACT in artifacts
+    links = [a for a in artifacts if a.get("type") == "AssociatedLink"]
+    assert len(links) == 2
+    new_link = next(a for a in links if a["id"] == "https://new.example/panopto")
+    assert new_link["relation"] == "sameAs"
     assert put_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
 
 
 @responses.activate
-def test_add_additional_identifiers_round_trips_metadata_fields(
+def test_add_associated_links_round_trips_files_and_metadata(
     tmp_path: Path,
 ) -> None:
     _add_token_response()
@@ -367,7 +366,7 @@ def test_add_additional_identifiers_round_trips_metadata_fields(
             "projects": [project],
             "fundings": [funding],
             "rightsHolder": "Some Holder",
-            "additionalIdentifiers": [],
+            "associatedArtifacts": [EXISTING_FILE_ARTIFACT],
         },
     )
     responses.add(
@@ -375,20 +374,19 @@ def test_add_additional_identifiers_round_trips_metadata_fields(
         f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
         json={
             "identifier": PUBLICATION_IDENTIFIER,
-            "additionalIdentifiers": [
+            "associatedArtifacts": [
+                EXISTING_FILE_ARTIFACT,
                 {
-                    "type": "AdditionalIdentifier",
-                    "sourceName": SOURCE_NAME,
-                    "value": "https://new.example/x",
-                }
+                    "type": "AssociatedLink",
+                    "id": "https://new.example/x",
+                    "relation": "sameAs",
+                },
             ],
         },
     )
     service = _build_service(tmp_path)
 
-    service.add_additional_identifiers(
-        PUBLICATION_IDENTIFIER, ["https://new.example/x"], SOURCE_NAME
-    )
+    service.add_associated_links(PUBLICATION_IDENTIFIER, ["https://new.example/x"])
 
     put_call = next(c for c in responses.calls if c.request.method == "PUT")
     body = json.loads(put_call.request.body)
@@ -396,54 +394,54 @@ def test_add_additional_identifiers_round_trips_metadata_fields(
     assert body["projects"] == [project]
     assert body["fundings"] == [funding]
     assert body["rightsHolder"] == "Some Holder"
+    assert EXISTING_FILE_ARTIFACT in body["associatedArtifacts"]
 
 
 @responses.activate
-def test_add_additional_identifiers_raises_when_response_omits_new_value(
+def test_add_associated_links_raises_when_response_omits_new_value(
     tmp_path: Path,
 ) -> None:
     _add_token_response()
     responses.add(
         responses.GET,
         f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
-        json={"type": "Publication", "additionalIdentifiers": []},
+        json={"type": "Publication", "associatedArtifacts": []},
     )
     responses.add(
         responses.PUT,
         f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
-        json={"identifier": PUBLICATION_IDENTIFIER, "additionalIdentifiers": []},
+        json={"identifier": PUBLICATION_IDENTIFIER, "associatedArtifacts": []},
     )
     service = _build_service(tmp_path)
 
     with pytest.raises(RuntimeError, match="silently dropped"):
-        service.add_additional_identifiers(
-            PUBLICATION_IDENTIFIER, ["https://lost.example/url"], SOURCE_NAME
+        service.add_associated_links(
+            PUBLICATION_IDENTIFIER, ["https://lost.example/url"]
         )
 
 
 @responses.activate
-def test_add_additional_identifiers_no_put_when_all_dupes(tmp_path: Path) -> None:
+def test_add_associated_links_no_put_when_all_dupes(tmp_path: Path) -> None:
     _add_token_response()
     responses.add(
         responses.GET,
         f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
         json={
             "type": "Publication",
-            "additionalIdentifiers": [
+            "associatedArtifacts": [
                 {
-                    "type": "AdditionalIdentifier",
-                    "sourceName": SOURCE_NAME,
-                    "value": "https://known.example/x",
+                    "type": "AssociatedLink",
+                    "id": "https://known.example/x",
+                    "relation": "sameAs",
                 }
             ],
         },
     )
     service = _build_service(tmp_path)
 
-    added, skipped = service.add_additional_identifiers(
+    added, skipped = service.add_associated_links(
         PUBLICATION_IDENTIFIER,
         ["https://known.example/x"],
-        SOURCE_NAME,
     )
 
     assert added == 0

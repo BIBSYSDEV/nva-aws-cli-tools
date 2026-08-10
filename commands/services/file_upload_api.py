@@ -33,7 +33,8 @@ PUBLISHER_VERSION_ACCEPTED = "AcceptedVersion"
 
 EXTERNAL_COMPLETE_TYPE = "ExternalCompleteUpload"
 
-ADDITIONAL_IDENTIFIER_TYPE = "AdditionalIdentifier"
+ASSOCIATED_LINK_TYPE = "AssociatedLink"
+RELATION_SAME_AS = "sameAs"
 UPDATE_PUBLICATION_TYPE = "Publication"
 ROUND_TRIP_FIELDS = (
     "entityDescription",
@@ -383,63 +384,64 @@ class FileUploadApiService:
         _raise_for_status_with_body(response)
         return response.json()
 
-    def add_additional_identifiers(
+    def add_associated_links(
         self,
         publication_identifier: str,
-        values: list[str],
-        source_name: str,
+        urls: list[str],
+        relation: str = RELATION_SAME_AS,
     ) -> tuple[int, int]:
-        """GET the publication, append AdditionalIdentifier entries for missing
-        values, PUT it back as an UpdatePublicationRequest.
+        """GET the publication, append AssociatedLink artifacts for URLs not
+        already linked, PUT it back as an UpdatePublicationRequest.
 
-        Returns (added_count, skipped_count). Skipped = (sourceName, value)
-        already present. Idempotent: re-running is a no-op.
+        Returns (added_count, skipped_count). Skipped = URL already linked as an
+        AssociatedLink. Idempotent: re-running is a no-op.
 
-        Round-trips entityDescription, projects, subjects, fundings, rightsHolder
-        from the GET response because UpdatePublicationRequest replaces every
-        field it accepts; omitting any of these would wipe existing data.
+        Round-trips the full associatedArtifacts list (including uploaded files)
+        plus entityDescription, projects, subjects, fundings, rightsHolder,
+        because UpdatePublicationRequest overwrites every field it accepts;
+        omitting associatedArtifacts would delete the uploaded files.
         """
         publication = self.get_publication(publication_identifier)
-        identifiers = list(publication.get("additionalIdentifiers") or [])
-        existing_pairs = {
-            (identifier.get("sourceName"), identifier.get("value"))
-            for identifier in identifiers
+        artifacts = list(publication.get("associatedArtifacts") or [])
+        existing_link_ids = {
+            artifact.get("id")
+            for artifact in artifacts
+            if artifact.get("type") == ASSOCIATED_LINK_TYPE
         }
-        new_identifiers = [
+        new_links = [
             {
-                "type": ADDITIONAL_IDENTIFIER_TYPE,
-                "sourceName": source_name,
-                "value": value,
+                "type": ASSOCIATED_LINK_TYPE,
+                "id": url,
+                "relation": relation,
             }
-            for value in values
-            if value and (source_name, value) not in existing_pairs
+            for url in urls
+            if url and url not in existing_link_ids
         ]
-        if not new_identifiers:
-            return (0, len(values))
+        if not new_links:
+            return (0, len(urls))
         body = {
             "type": UPDATE_PUBLICATION_TYPE,
             "identifier": publication_identifier,
-            "additionalIdentifiers": identifiers + new_identifiers,
+            "associatedArtifacts": artifacts + new_links,
         }
         for field_name in ROUND_TRIP_FIELDS:
             if field_name in publication:
                 body[field_name] = publication[field_name]
         updated = self.update_publication(publication_identifier, body)
-        persisted_pairs = {
-            (identifier.get("sourceName"), identifier.get("value"))
-            for identifier in (updated.get("additionalIdentifiers") or [])
+        persisted_link_ids = {
+            artifact.get("id")
+            for artifact in (updated.get("associatedArtifacts") or [])
+            if artifact.get("type") == ASSOCIATED_LINK_TYPE
         }
-        intended_pairs = {
-            (source_name, identifier["value"]) for identifier in new_identifiers
-        }
-        missing = intended_pairs - persisted_pairs
+        intended_ids = {link["id"] for link in new_links}
+        missing = intended_ids - persisted_link_ids
         if missing:
             raise RuntimeError(
-                f"PUT returned 200 but the following AdditionalIdentifier values "
+                f"PUT returned 200 but the following AssociatedLink URLs "
                 f"are not in the response (NVA silently dropped them): "
                 f"{sorted(missing)}"
             )
-        return (len(new_identifiers), len(values) - len(new_identifiers))
+        return (len(new_links), len(urls) - len(new_links))
 
     def publish(self, publication_identifier: str) -> None:
         """Publish a draft directly (no ticket). Idempotent: 409/already-published is ok.

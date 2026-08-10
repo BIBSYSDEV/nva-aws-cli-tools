@@ -292,22 +292,28 @@ def test_add_links_manifest_skips_dupes_per_resource(
             }
         )
     )
+    existing_file = {
+        "type": "OpenFile",
+        "identifier": "22222222-2222-2222-2222-222222222222",
+        "name": "existing-upload.pdf",
+    }
     responses.add(
         responses.GET,
         f"https://{API_DOMAIN}/publication/{RESULT_ID_VID}",
-        json={"type": "Publication", "additionalIdentifiers": []},
+        json={"type": "Publication", "associatedArtifacts": [existing_file]},
     )
     responses.add(
         responses.PUT,
         f"https://{API_DOMAIN}/publication/{RESULT_ID_VID}",
         json={
             "identifier": RESULT_ID_VID,
-            "additionalIdentifiers": [
+            "associatedArtifacts": [
+                existing_file,
                 {
-                    "type": "AdditionalIdentifier",
-                    "sourceName": "dlr@vid",
-                    "value": "https://example.org/video1",
-                }
+                    "type": "AssociatedLink",
+                    "id": "https://example.org/video1",
+                    "relation": "sameAs",
+                },
             ],
         },
     )
@@ -328,23 +334,23 @@ def test_add_links_manifest_skips_dupes_per_resource(
     )
 
     assert result.exit_code == 0, result.output
-    assert "sourceName=dlr@vid" in result.output
+    assert "relation=sameAs" in result.output
     assert "added=1" in result.output
     put_calls = [c for c in responses.calls if c.request.method == "PUT"]
     assert len(put_calls) == 1
     body = json.loads(put_calls[0].request.body)
-    identifiers = [
-        identifier
-        for identifier in body["additionalIdentifiers"]
-        if identifier.get("type") == "AdditionalIdentifier"
+    # the uploaded file must be round-tripped, not wiped
+    assert existing_file in body["associatedArtifacts"]
+    links = [
+        artifact
+        for artifact in body["associatedArtifacts"]
+        if artifact.get("type") == "AssociatedLink"
     ]
-    assert len(identifiers) == 1
-    assert identifiers[0]["value"] == "https://example.org/video1"
-    assert identifiers[0]["sourceName"] == "dlr@vid"
+    assert len(links) == 1
+    assert links[0]["id"] == "https://example.org/video1"
+    assert links[0]["relation"] == "sameAs"
     # sharing_link is ignored
-    assert all(
-        "ignored" not in (identifier.get("value") or "") for identifier in identifiers
-    )
+    assert all("ignored" not in (link.get("id") or "") for link in links)
 
 
 def test_extract_handles_strips_prefix_and_filters_by_institution(

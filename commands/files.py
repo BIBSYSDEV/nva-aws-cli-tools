@@ -15,6 +15,7 @@ from rich.console import Console
 from commands.services.file_upload_api import (
     FILE_TYPE_OPEN,
     PUBLISHER_VERSION_ACCEPTED,
+    RELATION_SAME_AS,
     SYSTEM_DLR,
     ExternalClientToken,
     FileUploadApiService,
@@ -305,14 +306,6 @@ def publish_manifest(
     required=True,
     help="Comma-separated email domains (e.g. 'ntnu.no,hist.no')",
 )
-@click.option(
-    "--source-name",
-    default=None,
-    help=(
-        "sourceName on each AdditionalIdentifier. Default: 'dlr@<inst>' where "
-        "<inst> is the first institution domain with the TLD stripped."
-    ),
-)
 @click.option("--dry-run", is_flag=True, default=False)
 @click.pass_obj
 def add_links_manifest(
@@ -320,24 +313,23 @@ def add_links_manifest(
     manifest: str,
     key_file: str,
     institution: str,
-    source_name: str | None,
     dry_run: bool,
 ) -> None:
-    """Attach AdditionalIdentifier entries for `dlr_content_type: "link"` content.
+    """Attach AssociatedLink artifacts for `dlr_content_type: "link"` content.
 
-    Per resource: GET the publication, merge new identifiers into
-    additionalIdentifiers, PUT back as UpdatePublicationRequest. Idempotent —
-    re-running with same URLs is a no-op. `sharing_link` items are skipped.
+    Per resource: GET the publication, append the URLs as AssociatedLink
+    (relation sameAs) to associatedArtifacts, PUT back as
+    UpdatePublicationRequest. Idempotent — re-running with same URLs is a no-op.
+    `sharing_link` items are skipped.
     """
     domains = _split_domains(institution)
-    resolved_source_name = source_name or _default_source_name(domains)
     items = _load_manifest_for_domains(manifest, domains)
     plans = _plan_link_updates(items)
     console = Console()
     console.print(
         f"Resources: {len(items)}  Resources with links: {len(plans)}  "
         f"Total link URLs: {sum(len(urls) for _, urls in plans)}  "
-        f"sourceName={resolved_source_name}"
+        f"relation={RELATION_SAME_AS}"
     )
 
     if dry_run:
@@ -351,23 +343,13 @@ def add_links_manifest(
     total_skipped = 0
     for result_id, urls in plans:
         try:
-            added, skipped = service.add_additional_identifiers(
-                result_id, urls, resolved_source_name
-            )
+            added, skipped = service.add_associated_links(result_id, urls)
             total_added += added
             total_skipped += skipped
             console.print(f"OK   {result_id}  added={added}  skipped={skipped}")
         except Exception as exc:
             console.print(f"FAIL {result_id}: {exc}")
     console.print(f"Done. added={total_added} skipped_existing={total_skipped}")
-
-
-def _default_source_name(domains: list[str]) -> str:
-    if not domains:
-        return "dlr"
-    first = domains[0]
-    short = first.split(".", 1)[0]
-    return f"dlr@{short}"
 
 
 def _plan_link_updates(
