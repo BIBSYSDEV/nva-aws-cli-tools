@@ -12,6 +12,7 @@ from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.types import Binary
 from rich.console import Console
 
+from commands.services.dynamodb_exporter import DynamoDBEncoder
 from commands.services.file_upload_api import (
     FILE_TYPE_OPEN,
     PUBLISHER_VERSION_ACCEPTED,
@@ -500,6 +501,70 @@ def check_source(
     console.print(f"Sources: {_format_sources(grand_total)}")
 
 
+@files.command("backup")
+@click.argument("manifests", nargs=-1, required=True, type=click.Path(exists=True))
+@click.option(
+    "--output",
+    required=True,
+    type=click.Path(),
+    help="JSONL file to write the backup to (one row per line)",
+)
+@click.option(
+    "--institution",
+    default=None,
+    help="Comma-separated email domains. Default: all resources in manifest.",
+)
+@click.pass_obj
+def backup(
+    ctx: AppContext,
+    manifests: tuple[str, ...],
+    output: str,
+    institution: str | None,
+) -> None:
+    """Read-only: back up the Resource row and all LogEntry rows per result_id.
+
+    One Query per result_id via the ResourcesByIdentifier GSI (Resource row)
+    plus one partition Query (LogEntry rows) — never scans. Writes JSONL so the
+    original prod state can be restored if needed. Run before any prod write
+    (upload/publish/add-links/fix-log-source) to capture the draft state.
+    """
+    result_ids = _collect_filtered_result_ids(manifests, institution)
+    console = Console()
+    console.print(f"Result-ids to back up: {len(result_ids)}")
+
+    table = _resolve_resources_table(ctx)
+    output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    console.print(f"Table: {table.name}  output: {output_path}")
+
+    resources_backed_up = 0
+    resources_missing = 0
+    log_entries_backed_up = 0
+    with output_path.open("w") as backup_file:
+        for result_id in sorted(result_ids):
+            resource_item = _fetch_resource_item(table, result_id)
+            if resource_item is None:
+                resources_missing += 1
+            else:
+                _write_backup_row(backup_file, result_id, "resource", resource_item)
+                resources_backed_up += 1
+            log_rows = _query_log_entries(table, result_id)
+            for row in log_rows:
+                _write_backup_row(backup_file, result_id, "log_entry", row)
+            log_entries_backed_up += len(log_rows)
+            resource_state = "yes" if resource_item is not None else "MISSING"
+            console.print(
+                f"{result_id}  resource={resource_state}  log_entries={len(log_rows)}"
+            )
+
+    console.print("---")
+    console.print(
+        f"Resources backed up: {resources_backed_up}  missing: {resources_missing}"
+    )
+    console.print(f"LogEntries backed up: {log_entries_backed_up}")
+    console.print(f"Written to {output_path}")
+
+
 @files.command("fix-log-source")
 @click.argument("manifests", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option(
@@ -786,13 +851,12 @@ def _log_entry_identifier(sort_key: str) -> str:
     return match.group(1) if match else sort_key
 
 
-def _fetch_resource_owner(table: Any, result_id: str) -> str | None:
-    """Query the Resource row via the ResourcesByIdentifier GSI and pull
-    resourceOwner.owner out of the zlib data blob.
+def _fetch_resource_item(table: Any, result_id: str) -> dict | None:
+    """Query the full Resource row via the ResourcesByIdentifier GSI.
 
     Cannot use GetItem on PK0=SK0=Resource:<id> because the Resource row's
     actual PK0 has an `@<topLevelOrg>` suffix; the GSI hides that detail.
-    Returns None if the row is missing or the owner field can't be extracted.
+    Returns None if the row is missing.
     """
     key_value = f"{RESOURCE_PK_PREFIX}{result_id}"
     response = table.query(
@@ -801,9 +865,22 @@ def _fetch_resource_owner(table: Any, result_id: str) -> str | None:
         Limit=1,
     )
     items = response.get("Items", [])
-    if not items:
+    return items[0] if items else None
+
+
+def _write_backup_row(backup_file: Any, result_id: str, kind: str, item: dict) -> None:
+    record = {"result_id": result_id, "kind": kind, "item": item}
+    backup_file.write(json.dumps(record, cls=DynamoDBEncoder) + "\n")
+
+
+def _fetch_resource_owner(table: Any, result_id: str) -> str | None:
+    """Pull resourceOwner.owner out of the Resource row's zlib data blob.
+
+    Returns None if the row is missing or the owner field can't be extracted.
+    """
+    item = _fetch_resource_item(table, result_id)
+    if item is None:
         return None
-    item = items[0]
     data = _inflate_resource_data(item.get("data"))
     if not isinstance(data, dict):
         return None

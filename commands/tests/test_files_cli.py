@@ -1,3 +1,4 @@
+import base64
 import json
 import zlib
 from pathlib import Path
@@ -600,6 +601,75 @@ def test_check_source_marks_owner_mismatch_without_writing(
     assert f"owner={DEFAULT_OWNER}" in result.output
     assert "OWNER-MISMATCH" in result.output
     assert "Resources with owner mismatch:" in result.output
+
+
+@mock_aws
+def test_backup_writes_resource_and_log_entries(tmp_path: Path) -> None:
+    _seed_resources_table(
+        [
+            _resource_row(RESULT_ID_NTNU),
+            _log_entry_row(RESULT_ID_NTNU, "log-1", "OTHER"),
+            _log_entry_row(RESULT_ID_NTNU, "log-2", "DLR"),
+        ]
+    )
+    manifest = _manifest_file(tmp_path)
+    output = tmp_path / "backup" / "ntnu.jsonl"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "backup",
+            str(manifest),
+            "--institution",
+            "ntnu.no",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Resources backed up: 1" in result.output
+    assert "LogEntries backed up: 2" in result.output
+    records = [
+        json.loads(line) for line in output.read_text().splitlines() if line.strip()
+    ]
+    kinds = [record["kind"] for record in records]
+    assert kinds.count("resource") == 1
+    assert kinds.count("log_entry") == 2
+
+    resource_record = next(record for record in records if record["kind"] == "resource")
+    assert resource_record["item"]["SK0"] == f"Resource:{RESULT_ID_NTNU}"
+    # the zlib data blob survives as base64 in JSON and still inflates
+    blob = base64.b64decode(resource_record["item"]["data"])
+    inflated = json.loads(zlib.decompress(blob, -zlib.MAX_WBITS))
+    assert inflated["resourceOwner"]["owner"] == DEFAULT_OWNER
+
+
+@mock_aws
+def test_backup_reports_missing_resource_row(tmp_path: Path) -> None:
+    _seed_resources_table([_log_entry_row(RESULT_ID_NTNU, "log-1", "OTHER")])
+    manifest = _manifest_file(tmp_path)
+    output = tmp_path / "backup" / "ntnu.jsonl"
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "backup",
+            str(manifest),
+            "--institution",
+            "ntnu.no",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Resources backed up: 0  missing: 1" in result.output
+    assert "LogEntries backed up: 1" in result.output
 
 
 def _log_entry_row(result_id: str, log_id: str, source: str) -> dict:

@@ -11,7 +11,7 @@
 git checkout NP-50757-dlr-file-upload
 uv run pytest commands/services/tests/test_file_upload_api.py
 uv run ruff check
-uv run cli.py files --help    # skal liste 9 subkommandoer
+uv run cli.py files --help    # skal liste 10 subkommandoer
 mkdir -p state handles
 ```
 
@@ -22,6 +22,30 @@ mkdir -p state handles
 - [ ] Bekreft `cristinOrgUri` i hver nøkkel matcher institusjonens topp-org
       (jf. `TrustedThirdPartyGrantStrategy` — feil match = 403)
 - [ ] AWS-profil for prod satt: `export AWS_PROFILE=<prod-profil>`
+
+---
+
+## 0.5 Backup av original prod-tilstand (før noe skrives)
+
+Ta et komplett snapshot av Resource-raden (zlib `data`-blob) + alle LogEntry-rader
+for hver `result_id` *før* smoke-test og batch, slik at tilstanden kan
+gjenopprettes. Query-basert (én query per ressurs via `ResourcesByIdentifier`-GSI
++ én partisjons-query for LogEntry), aldri en tabell-scan.
+
+```bash
+mkdir -p backup
+uv run cli.py files backup \
+    ~/Downloads/data_to_keep.json ~/Downloads/data_to_keep_usn.json \
+    --output backup/prod-before.jsonl
+```
+
+Per ressurs: `resource=yes  log_entries=N`. Til slutt:
+`Resources backed up: ~147  missing: 0` + totalt LogEntry-antall.
+⚠️ `missing` SKAL være 0 — er den > 0 har en `result_id` ingen Resource-rad
+(sannsynligvis feil id i manifestet). Hver JSONL-linje er
+`{result_id, kind: resource|log_entry, item: <rå DynamoDB-rad>}`; Resource-radens
+`data`-blob ligger base64-kodet (zlib) og kan inflates ved behov. Kan avgrenses
+per institusjon med `--institution <domene>`.
 
 ---
 
