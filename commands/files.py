@@ -17,6 +17,9 @@ from commands.services.file_upload_api import (
     FILE_TYPE_OPEN,
     PUBLISHER_VERSION_ACCEPTED,
     RELATION_SAME_AS,
+    STATUS_DRAFT,
+    STATUS_PUBLISHED,
+    STATUS_UNPUBLISHED,
     SYSTEM_DLR,
     ExternalClientToken,
     FileUploadApiService,
@@ -187,28 +190,59 @@ def publish_one(
 @files.command("delete-publication")
 @click.argument("publication_identifier")
 @click.option("--key-file", required=True, type=click.Path(exists=True))
+@click.option(
+    "--comment",
+    default="Removed as part of DLR import cleanup",
+    show_default=True,
+    help="Reason, used when unpublishing a PUBLISHED resource",
+)
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt")
 @click.pass_obj
 def delete_publication(
     ctx: AppContext,
     publication_identifier: str,
     key_file: str,
+    comment: str,
     yes: bool,
 ) -> None:
-    """Delete a DRAFT publication and its FileEntry rows.
+    """Delete a publication, choosing the right path for its status.
 
-    Only works while the resource is DRAFT — NVA rejects a published resource
-    (unpublish it first). Note: this removes the DynamoDB rows (the post
-    disappears from NVA), but the underlying S3 objects are NOT cleaned up.
+    DRAFT       -> hard delete (S3 objects are NOT cleaned up).
+    PUBLISHED   -> unpublish + terminate (terminate removes the files).
+    UNPUBLISHED -> terminate (removes the files).
+
+    Status is fetched first, so a re-run after a partial failure resumes safely.
     """
+    service = _build_service(ctx, key_file)
+    status = service.get_publication(publication_identifier).get("status")
+    plan = _deletion_plan(status)
+    if plan is None:
+        raise click.ClickException(
+            f"{publication_identifier} has status {status!r}; cannot delete"
+        )
     if not yes:
         click.confirm(
-            f"Delete publication {publication_identifier}? (must be DRAFT)",
-            abort=True,
+            f"{publication_identifier} is {status} — {plan}. Continue?", abort=True
         )
-    service = _build_service(ctx, key_file)
-    service.delete_publication(publication_identifier)
-    Console().print(f"OK   deleted {publication_identifier}")
+    console = Console()
+    if status == STATUS_DRAFT:
+        service.delete_publication(publication_identifier)
+    else:
+        if status == STATUS_PUBLISHED:
+            service.unpublish_publication(publication_identifier, comment)
+            console.print(f"unpublished {publication_identifier}")
+        service.terminate_publication(publication_identifier)
+    console.print(f"OK   deleted {publication_identifier}")
+
+
+def _deletion_plan(status: str | None) -> str | None:
+    if status == STATUS_DRAFT:
+        return "hard-delete (S3 objects are NOT cleaned up)"
+    if status == STATUS_PUBLISHED:
+        return "unpublish + terminate (removes files)"
+    if status == STATUS_UNPUBLISHED:
+        return "terminate (removes files)"
+    return None
 
 
 @files.command("upload-manifest")

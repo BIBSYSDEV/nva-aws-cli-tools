@@ -307,15 +307,24 @@ def test_publish_one_posts_to_publish_endpoint_with_dlr_header(
     assert publish_calls[0].request.headers.get("System") == "DLR"
 
 
-@mock_aws
-@responses.activate
-def test_delete_publication_deletes_with_yes_flag(tmp_path: Path) -> None:
-    _seed_ssm()
+def _add_token_and_status(status: str) -> None:
     responses.add(
         responses.POST,
         TOKEN_URL,
         json={"access_token": "token", "expires_in": 3600},
     )
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
+        json={"identifier": RESULT_ID_NTNU, "status": status},
+    )
+
+
+@mock_aws
+@responses.activate
+def test_delete_publication_draft_hard_deletes(tmp_path: Path) -> None:
+    _seed_ssm()
+    _add_token_and_status("DRAFT")
     responses.add(
         responses.DELETE,
         f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
@@ -345,13 +354,47 @@ def test_delete_publication_deletes_with_yes_flag(tmp_path: Path) -> None:
 
 @mock_aws
 @responses.activate
+def test_delete_publication_published_unpublishes_then_terminates(
+    tmp_path: Path,
+) -> None:
+    _seed_ssm()
+    _add_token_and_status("PUBLISHED")
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
+        status=202,
+    )
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "delete-publication",
+            RESULT_ID_NTNU,
+            "--key-file",
+            str(key),
+            "--yes",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    put_bodies = [
+        json.loads(c.request.body) for c in responses.calls if c.request.method == "PUT"
+    ]
+    types = [body["type"] for body in put_bodies]
+    assert types == ["UnpublishPublicationRequest", "DeletePublicationRequest"]
+    assert put_bodies[0]["comment"]  # a reason was sent
+    # no hard DELETE for a published resource
+    assert [c for c in responses.calls if c.request.method == "DELETE"] == []
+
+
+@mock_aws
+@responses.activate
 def test_delete_publication_aborts_without_confirmation(tmp_path: Path) -> None:
     _seed_ssm()
-    responses.add(
-        responses.POST,
-        TOKEN_URL,
-        json={"access_token": "token", "expires_in": 3600},
-    )
+    _add_token_and_status("DRAFT")
     key = _key_file(tmp_path)
 
     result = CliRunner().invoke(
@@ -368,8 +411,8 @@ def test_delete_publication_aborts_without_confirmation(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0
-    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
-    assert delete_calls == []
+    assert [c for c in responses.calls if c.request.method == "DELETE"] == []
+    assert [c for c in responses.calls if c.request.method == "PUT"] == []
 
 
 @mock_aws

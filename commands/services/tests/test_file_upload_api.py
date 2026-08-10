@@ -549,6 +549,43 @@ def test_delete_publication_raises_when_not_draft(tmp_path: Path) -> None:
         service.delete_publication(PUBLICATION_IDENTIFIER)
 
 
+@responses.activate
+def test_unpublish_publication_sends_unpublish_request(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        status=202,
+    )
+    service = _build_service(tmp_path)
+
+    service.unpublish_publication(PUBLICATION_IDENTIFIER, "cleanup")
+
+    put_call = next(c for c in responses.calls if c.request.method == "PUT")
+    body = json.loads(put_call.request.body)
+    assert body["type"] == "UnpublishPublicationRequest"
+    assert body["comment"] == "cleanup"
+    assert put_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
+
+
+@responses.activate
+def test_terminate_publication_sends_delete_request(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        status=202,
+    )
+    service = _build_service(tmp_path)
+
+    service.terminate_publication(PUBLICATION_IDENTIFIER)
+
+    put_call = next(c for c in responses.calls if c.request.method == "PUT")
+    body = json.loads(put_call.request.body)
+    assert body["type"] == "DeletePublicationRequest"
+    assert put_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
+
+
 def test_local_file_source_reads_parts(tmp_path: Path) -> None:
     file_path = tmp_path / "data.bin"
     payload = b"ABCDEFGHIJ"

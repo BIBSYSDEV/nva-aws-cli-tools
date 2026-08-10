@@ -41,6 +41,12 @@ EXTERNAL_COMPLETE_TYPE = "ExternalCompleteUpload"
 ASSOCIATED_LINK_TYPE = "AssociatedLink"
 RELATION_SAME_AS = "sameAs"
 UPDATE_PUBLICATION_TYPE = "Publication"
+UNPUBLISH_REQUEST_TYPE = "UnpublishPublicationRequest"
+TERMINATE_REQUEST_TYPE = "DeletePublicationRequest"
+
+STATUS_DRAFT = "DRAFT"
+STATUS_PUBLISHED = "PUBLISHED"
+STATUS_UNPUBLISHED = "UNPUBLISHED"
 ROUND_TRIP_FIELDS = (
     "entityDescription",
     "projects",
@@ -492,6 +498,34 @@ class FileUploadApiService:
         response = requests.delete(url, headers=self._headers(), timeout=API_TIMEOUT)
         _raise_for_status_with_body(response)
         logger.info("Deleted %s (%d)", publication_identifier, response.status_code)
+
+    def unpublish_publication(self, publication_identifier: str, comment: str) -> None:
+        """Unpublish a PUBLISHED resource (PUBLISHED -> UNPUBLISHED) via PUT.
+
+        Sent as an UnpublishPublicationRequest; NVA requires a reason (comment).
+        """
+        self._put_publication_request(
+            publication_identifier,
+            {"type": UNPUBLISH_REQUEST_TYPE, "comment": comment},
+        )
+        logger.info("Unpublished %s", publication_identifier)
+
+    def terminate_publication(self, publication_identifier: str) -> None:
+        """Terminate an UNPUBLISHED resource via PUT: marks it deleted AND removes
+        associated files (unlike deleting a draft, which leaves S3 objects behind).
+        """
+        self._put_publication_request(
+            publication_identifier,
+            {"type": TERMINATE_REQUEST_TYPE},
+        )
+        logger.info("Terminated %s", publication_identifier)
+
+    def _put_publication_request(self, publication_identifier: str, body: dict) -> None:
+        url = f"https://{self.api_domain}/publication/{publication_identifier}"
+        response = requests.put(
+            url, headers=self._headers(), json=body, timeout=API_TIMEOUT
+        )
+        _raise_for_status_with_body(response)
 
     def _post(self, publication_identifier: str, action: str, body: dict) -> dict:
         url = (
