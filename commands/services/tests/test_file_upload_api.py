@@ -451,6 +451,28 @@ def test_add_associated_links_no_put_when_all_dupes(tmp_path: Path) -> None:
 
 
 @responses.activate
+def test_existing_file_signatures_returns_name_size_pairs(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={
+            "type": "Publication",
+            "associatedArtifacts": [
+                {"type": "OpenFile", "name": "a.pdf", "size": 100},
+                {"type": "PendingOpenFile", "name": "b.mp4", "size": 200},
+                {"type": "AssociatedLink", "id": "https://x", "relation": "sameAs"},
+            ],
+        },
+    )
+    service = _build_service(tmp_path)
+
+    signatures = service.existing_file_signatures(PUBLICATION_IDENTIFIER)
+
+    assert signatures == {("a.pdf", 100), ("b.mp4", 200)}
+
+
+@responses.activate
 def test_publish_sends_system_dlr_and_empty_body(tmp_path: Path) -> None:
     _add_token_response()
     responses.add(
@@ -494,6 +516,37 @@ def test_publish_raises_on_403(tmp_path: Path) -> None:
 
     with pytest.raises(Exception):  # noqa: B017
         service.publish(PUBLICATION_IDENTIFIER)
+
+
+@responses.activate
+def test_delete_publication_sends_delete_with_dlr_header(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.DELETE,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        status=202,
+    )
+    service = _build_service(tmp_path)
+
+    service.delete_publication(PUBLICATION_IDENTIFIER)
+
+    delete_call = next(c for c in responses.calls if c.request.method == "DELETE")
+    assert delete_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
+
+
+@responses.activate
+def test_delete_publication_raises_when_not_draft(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.DELETE,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        status=400,
+        json={"message": "Only unpublished publication can be deleted"},
+    )
+    service = _build_service(tmp_path)
+
+    with pytest.raises(Exception):  # noqa: B017
+        service.delete_publication(PUBLICATION_IDENTIFIER)
 
 
 def test_local_file_source_reads_parts(tmp_path: Path) -> None:

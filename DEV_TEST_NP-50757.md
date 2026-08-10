@@ -19,6 +19,9 @@
 ### 0. Sett variabler én gang for hele rutinen
 
 ```bash
+# uv run cli.py users create-external -c bb3d0c0c-5065-4623-9b98-5810983c2478 --shortname sikt -i dlr-import -s https://api.nva.unit.no/scopes/third-party/publication-read,https://api.nva.unit.no/scopes/third-party/publication-upsert,https://api.nva.unit.no/scopes/third-party/file-upload
+
+
 export AWS_PROFILE=<dev>
 export KEY=~/keys/<dev-key.json>
 
@@ -160,9 +163,26 @@ uv run cli.py files check-source dev-test/manifest.json
 ### 7. Verifiser owner-gate
 
 Lag et "fremmed" mini-manifest med en result_id som ikke eies av din
-DLR-integrasjon (f.eks. en eksisterende test-publikasjon laget via UI).
+DLR-integrasjon (f.eks. en eksisterende test-publikasjon laget via UI). Åpne en
+vilkårlig ikke-DLR-publikasjon i dev-UI og kopier `identifier` fra URL-en:
 
 ```bash
+export FOREIGN_ID=0198cbfb6cbc-c4a9d3f5-b1c7-47d1-8780-15243bc1ced9
+
+cat > dev-test/foreign-manifest.json <<JSON
+{
+  "foreign-1": {
+    "result_id": "$FOREIGN_ID",
+    "handle": null,
+    "content": [{
+      "dlr_content_identifier": "n/a",
+      "dlr_content_type": "file",
+      "dlr_submitter_email": "foreign@example.org"
+    }]
+  }
+}
+JSON
+
 uv run cli.py files check-source dev-test/foreign-manifest.json
 # Skal vise [OWNER-MISMATCH]
 
@@ -172,6 +192,12 @@ uv run cli.py files fix-log-source dev-test/foreign-manifest.json --no-dry-run
 ```
 
 ### 7.5 Verifiser add-links-manifest
+
+Draften fra steg 2-4 er nå publisert og har én godkjent fil (lastet opp i
+steg 3). Vi legger til en lenke *etter* publisering — samme rekkefølge som prod
+(KJØREPLAN steg 3.3) — og verifiserer både at lenken kommer på, og at den
+godkjente fila round-trippes (ikke wipes) når hele `associatedArtifacts` sendes
+tilbake i PUT-en.
 
 Lag et lite manifest med både `link` og `sharing_link`:
 
@@ -199,7 +225,7 @@ JSON
 # Tørrkjør — skal liste 1 URL, ignorere sharing_link
 uv run cli.py files add-links-manifest dev-test/links-manifest.json \
     --key-file $KEY --institution example.org --dry-run
-# Forventet: "sourceName=dlr@example" i header-linja
+# Forventet: "relation=sameAs" i header-linja
 
 # Ekte
 uv run cli.py files add-links-manifest dev-test/links-manifest.json \
@@ -212,8 +238,10 @@ uv run cli.py files add-links-manifest dev-test/links-manifest.json \
 # Forventet: added=0 skipped_existing=1
 ```
 
-Bekreft i dev-UI / via `curl` at lenken vises som `AdditionalIdentifier` med
-`sourceName=dlr@example` under `additionalIdentifiers` på publikasjonen.
+Bekreft i dev-UI / via `curl` at lenken vises som `AssociatedLink` med
+`relation=sameAs` under `associatedArtifacts` på publikasjonen. Sjekk samtidig
+at eventuelle allerede opplastede filer fortsatt ligger på `associatedArtifacts`
+(de skal round-trippes, ikke wipes).
 
 ### 8. (Valgfritt) Handles
 
@@ -234,7 +262,8 @@ uv run cli.py files extract-handles dev-test/manifest.json
 | fix-log-source dry-run + apply gir `OTHER=0` etterpå | |
 | Owner-gate skipper fremmed result_id | |
 | `--force` på fix-log-source bypasser owner-gate (test isolert) | |
-| add-links-manifest legger til AdditionalIdentifier + er idempotent ved re-kjøring | |
+| add-links-manifest legger til AssociatedLink (relation sameAs) + er idempotent ved re-kjøring | |
+| add-links-manifest round-tripper eksisterende filer (associatedArtifacts wipes ikke) | |
 
 ## Opprydding
 

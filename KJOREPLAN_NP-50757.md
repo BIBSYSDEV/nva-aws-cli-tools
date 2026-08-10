@@ -62,11 +62,18 @@ export AWS_PROFILE=<prod>
 uv run cli.py files upload-manifest ~/Downloads/data_to_keep.json \
     --key-file ~/keys/uib.json --institution uib.no --dry-run
 
-# 1b. Plukk én linje fra output → kjør upload-one
+# 1b. Plukk én linje fra dry-run (viser result_id ← dlr_content_identifier (filnavn)).
+#     Hent mimetype + size fra samme content-item i manifestet.
+#     ⚠️ --filename MÅ være manifestets dlr_content og --size dets
+#     dlr_content_size_bytes — ellers får NVA UUID-en som filnavn, OG
+#     idempotenssjekken i steg 2 matcher ikke (name,size) → duplikat.
 uv run cli.py files upload-one \
     --key-file ~/keys/uib.json \
-    --publication <result_id-fra-dry-run> \
-    --s3-key <dlr_content_identifier-fra-dry-run> \
+    --publication <result_id> \
+    --s3-key <dlr_content_identifier> \
+    --filename "<dlr_content>" \
+    --mimetype "<dlr_content_mime_type>" \
+    --size <dlr_content_size_bytes> \
     --license "https://creativecommons.org/licenses/by/4.0/"
 
 # 1c. Publiser samme ressurs
@@ -135,6 +142,13 @@ uv run cli.py files upload-manifest $MANIFEST \
   Skal vise `OTHER`-rader kun for *gamle* entries (rettes i steg 4).
 
 Resume ved feil: kjør samme kommando på nytt — state-fila hopper over `ok`-rader.
+
+> **Idempotent mot NVA:** før hver opplasting hentes publikasjonen, og en fil
+> der `(name, size)` allerede finnes i `associatedArtifacts` hoppes over
+> (`SKIP ... (already on publication)`). Det betyr at fila fra smoke-testen
+> (steg 1) automatisk hoppes over her — ingen manuell state-seeding nødvendig —
+> og at en avbrutt kjøring trygt kan gjenopptas selv om state-fila mistes.
+> `--state` er en rask cache i tillegg (skip uten GET).
 
 ---
 
@@ -275,5 +289,5 @@ Conditional update (`source = OTHER`) hindrer dobbeltskriving.
 | 401 | Token utløpt — bare restart, `ExternalClientToken` re-fetcher. |
 | LogEntry source = OTHER etter NY opplasting | `System: DLR`-header gikk ikke fram. Stopp og inspiser `_headers()` i `file_upload_api.py`. |
 | 5MiB-feil fra S3 PUT | Del-størrelse < 5 MiB på ikke-siste del. Bug i `_upload_parts`. |
-| Duplikat-fil på en ressurs | Kjørt uten state-fil. Manuell rydding via admin-UI. |
+| Duplikat-fil på en ressurs | Skal ikke skje — upload-manifest hopper over filer som alt finnes på publikasjonen (`name`+`size`). Oppstår kun hvis en fil har endret navn/størrelse. Manuell rydding via admin-UI. |
 | `--institution` matcher 0 ressurser | Domenet matcher ikke `dlr_submitter_email`. Sjekk manifest. |

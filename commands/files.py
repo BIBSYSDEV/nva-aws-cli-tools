@@ -184,6 +184,33 @@ def publish_one(
     Console().print(f"OK   published {publication_identifier}")
 
 
+@files.command("delete-publication")
+@click.argument("publication_identifier")
+@click.option("--key-file", required=True, type=click.Path(exists=True))
+@click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt")
+@click.pass_obj
+def delete_publication(
+    ctx: AppContext,
+    publication_identifier: str,
+    key_file: str,
+    yes: bool,
+) -> None:
+    """Delete a DRAFT publication and its FileEntry rows.
+
+    Only works while the resource is DRAFT — NVA rejects a published resource
+    (unpublish it first). Note: this removes the DynamoDB rows (the post
+    disappears from NVA), but the underlying S3 objects are NOT cleaned up.
+    """
+    if not yes:
+        click.confirm(
+            f"Delete publication {publication_identifier}? (must be DRAFT)",
+            abort=True,
+        )
+    service = _build_service(ctx, key_file)
+    service.delete_publication(publication_identifier)
+    Console().print(f"OK   deleted {publication_identifier}")
+
+
 @files.command("upload-manifest")
 @click.argument("manifest", type=click.Path(exists=True))
 @click.option("--key-file", required=True, type=click.Path(exists=True))
@@ -217,7 +244,12 @@ def upload_manifest(
     publisher_version: str,
     dry_run: bool,
 ) -> None:
-    """Upload all DLR files for one institution from a data_to_keep manifest."""
+    """Upload all DLR files for one institution from a data_to_keep manifest.
+
+    Idempotent against NVA: before uploading, the publication is fetched and any
+    file whose (name, size) already exists in associatedArtifacts is skipped.
+    The --state file is an additional fast-resume cache (skips without a GET).
+    """
     domains = _split_domains(institution)
     items = _load_manifest_for_domains(manifest, domains)
     planned = _plan_uploads(items)
@@ -238,12 +270,23 @@ def upload_manifest(
     done = _load_state(state_path)
     service = _build_service(ctx, key_file)
     s3_client = ctx.session.client("s3")
+    signatures_by_resource: dict[str, set[tuple[str, int]]] = {}
 
     for result_id, content, resource in planned:
         s3_key = content["dlr_content_identifier"]
         marker = (result_id, s3_key)
         if marker in done:
-            console.print(f"SKIP {result_id} ← {s3_key} (already done)")
+            console.print(f"SKIP {result_id} ← {s3_key} (state)")
+            continue
+        if result_id not in signatures_by_resource:
+            signatures_by_resource[result_id] = service.existing_file_signatures(
+                result_id
+            )
+        filename = content.get("dlr_content")
+        size = _int_or_none(content.get("dlr_content_size_bytes"))
+        if _file_already_uploaded(signatures_by_resource[result_id], filename, size):
+            _append_state(state_path, result_id, s3_key, "ok")
+            console.print(f"SKIP {result_id} ← {s3_key} (already on publication)")
             continue
         try:
             _upload_one_content(
@@ -255,6 +298,8 @@ def upload_manifest(
                 resource,
                 publisher_version,
             )
+            if filename is not None and size is not None:
+                signatures_by_resource[result_id].add((filename, size))
             _append_state(state_path, result_id, s3_key, "ok")
             console.print(f"OK   {result_id} ← {s3_key}")
         except Exception as exc:
@@ -708,6 +753,16 @@ def _is_uploadable_content(content: dict) -> bool:
     if content.get("dlr_content_type") != CONTENT_TYPE_FILE:
         return False
     return content.get("dlr_content_generated") != GENERATED_TRUE
+
+
+def _file_already_uploaded(
+    signatures: set[tuple[str, int]], filename: str | None, size: int | None
+) -> bool:
+    if filename is None:
+        return False
+    if size is not None:
+        return (filename, size) in signatures
+    return any(name == filename for name, _size in signatures)
 
 
 def _upload_one_content(

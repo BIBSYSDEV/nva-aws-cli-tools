@@ -139,6 +139,53 @@ def test_upload_manifest_dry_run_filters_by_domain_and_skips_non_files(
 
 @mock_aws
 @responses.activate
+def test_upload_manifest_skips_file_already_on_publication(tmp_path: Path) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
+        json={
+            "type": "Publication",
+            "associatedArtifacts": [
+                {"type": "OpenFile", "name": "main.mp4", "size": 100},
+            ],
+        },
+    )
+    manifest = _manifest_file(tmp_path)
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "upload-manifest",
+            str(manifest),
+            "--key-file",
+            str(key),
+            "--institution",
+            "ntnu.no",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    # collapse Rich's line-wrapping before matching
+    normalized = " ".join(result.output.split())
+    assert "already on publication" in normalized
+    # the file already exists on NVA, so no multipart upload is started
+    upload_calls = [
+        call for call in responses.calls if "file-upload" in call.request.url
+    ]
+    assert upload_calls == []
+
+
+@mock_aws
+@responses.activate
 def test_create_test_publication_prints_identifier_to_stdout(
     tmp_path: Path,
 ) -> None:
@@ -258,6 +305,71 @@ def test_publish_one_posts_to_publish_endpoint_with_dlr_header(
     publish_calls = [call for call in responses.calls if "/publish" in call.request.url]
     assert len(publish_calls) == 1
     assert publish_calls[0].request.headers.get("System") == "DLR"
+
+
+@mock_aws
+@responses.activate
+def test_delete_publication_deletes_with_yes_flag(tmp_path: Path) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    responses.add(
+        responses.DELETE,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
+        status=202,
+    )
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "delete-publication",
+            RESULT_ID_NTNU,
+            "--key-file",
+            str(key),
+            "--yes",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "deleted" in result.output
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert len(delete_calls) == 1
+    assert delete_calls[0].request.headers.get("System") == "DLR"
+
+
+@mock_aws
+@responses.activate
+def test_delete_publication_aborts_without_confirmation(tmp_path: Path) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "delete-publication",
+            RESULT_ID_NTNU,
+            "--key-file",
+            str(key),
+        ],
+        input="n\n",
+    )
+
+    assert result.exit_code != 0
+    delete_calls = [c for c in responses.calls if c.request.method == "DELETE"]
+    assert delete_calls == []
 
 
 @mock_aws

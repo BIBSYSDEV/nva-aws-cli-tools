@@ -28,6 +28,11 @@ PART_PUT_TIMEOUT = (30, 900)
 FILE_TYPE_OPEN = "OpenFile"
 FILE_TYPE_INTERNAL = "InternalFile"
 
+# Every File artifact type ends in "File" (OpenFile, InternalFile,
+# PendingOpenFile, ...) whereas AssociatedLink does not, so the suffix
+# distinguishes uploaded files from links in associatedArtifacts.
+FILE_ARTIFACT_TYPE_SUFFIX = "File"
+
 PUBLISHER_VERSION_PUBLISHED = "PublishedVersion"
 PUBLISHER_VERSION_ACCEPTED = "AcceptedVersion"
 
@@ -374,6 +379,26 @@ class FileUploadApiService:
         _raise_for_status_with_body(response)
         return response.json()
 
+    def existing_file_signatures(
+        self, publication_identifier: str
+    ) -> set[tuple[str, int]]:
+        """Return {(name, size)} for File artifacts already on the publication.
+
+        Lets callers make uploads idempotent against NVA itself: a file whose
+        (name, size) already exists in associatedArtifacts can be skipped, even
+        when the local state file is missing.
+        """
+        publication = self.get_publication(publication_identifier)
+        signatures: set[tuple[str, int]] = set()
+        for artifact in publication.get("associatedArtifacts") or []:
+            if not str(artifact.get("type", "")).endswith(FILE_ARTIFACT_TYPE_SUFFIX):
+                continue
+            name = artifact.get("name")
+            size = artifact.get("size")
+            if name is not None and size is not None:
+                signatures.add((name, int(size)))
+        return signatures
+
     def update_publication(
         self, publication_identifier: str, publication: dict
     ) -> dict:
@@ -455,6 +480,18 @@ class FileUploadApiService:
             return
         _raise_for_status_with_body(response)
         logger.info("Published %s (%d)", publication_identifier, response.status_code)
+
+    def delete_publication(self, publication_identifier: str) -> None:
+        """Delete a DRAFT publication and its pending files.
+
+        NVA only allows deleting resources in status DRAFT; a published resource
+        is rejected (must be unpublished first). The response body carries the
+        reason on rejection.
+        """
+        url = f"https://{self.api_domain}/publication/{publication_identifier}"
+        response = requests.delete(url, headers=self._headers(), timeout=API_TIMEOUT)
+        _raise_for_status_with_body(response)
+        logger.info("Deleted %s (%d)", publication_identifier, response.status_code)
 
     def _post(self, publication_identifier: str, action: str, body: dict) -> dict:
         url = (
