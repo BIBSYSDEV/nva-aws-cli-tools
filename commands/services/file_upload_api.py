@@ -47,6 +47,12 @@ TERMINATE_REQUEST_TYPE = "DeletePublicationRequest"
 STATUS_DRAFT = "DRAFT"
 STATUS_PUBLISHED = "PUBLISHED"
 STATUS_UNPUBLISHED = "UNPUBLISHED"
+
+OTHER_PRESENTATION_TYPE = "OtherPresentation"
+UNCONFIRMED_ORGANIZATION_TYPE = "UnconfirmedOrganization"
+# DLR-migreringen ga alle OtherPresentation-poster samme Event-plassholdere.
+DLR_DEFAULT_AGENT_NAME = "dlr"
+DLR_DEFAULT_EVENT_NAME = "alle"
 ROUND_TRIP_FIELDS = (
     "entityDescription",
     "projects",
@@ -473,6 +479,55 @@ class FileUploadApiService:
                 f"{sorted(missing)}"
             )
         return (len(new_links), len(urls) - len(new_links))
+
+    def fix_presentation_metadata(
+        self,
+        publication_identifier: str,
+        organization_name: str,
+        dry_run: bool = False,
+    ) -> str:
+        """Repair the Event metadata on an OtherPresentation post.
+
+        Sets the event name to the post's mainTitle and the agent to the
+        institution. Only touches posts still on the DLR defaults (agent 'dlr'
+        or event name 'alle'), so re-running is a no-op.
+
+        Round-trips associatedArtifacts (and the other UpdatePublicationRequest
+        fields) so uploaded files/links are not wiped. Returns one of
+        'fixed', 'would-fix' (dry-run), 'already', 'not-presentation'.
+        """
+        publication = self.get_publication(publication_identifier)
+        entity_description = publication.get("entityDescription") or {}
+        reference = entity_description.get("reference") or {}
+        instance = reference.get("publicationInstance") or {}
+        if instance.get("type") != OTHER_PRESENTATION_TYPE:
+            return "not-presentation"
+        context = reference.get("publicationContext") or {}
+        agent = context.get("agent") or {}
+        on_defaults = (
+            agent.get("name") == DLR_DEFAULT_AGENT_NAME
+            or context.get("name") == DLR_DEFAULT_EVENT_NAME
+        )
+        if not on_defaults:
+            return "already"
+        if dry_run:
+            return "would-fix"
+        context["name"] = entity_description.get("mainTitle")
+        context["agent"] = {
+            "type": UNCONFIRMED_ORGANIZATION_TYPE,
+            "name": organization_name,
+        }
+        reference["publicationContext"] = context
+        body = {
+            "type": UPDATE_PUBLICATION_TYPE,
+            "identifier": publication_identifier,
+            "associatedArtifacts": publication.get("associatedArtifacts") or [],
+        }
+        for field_name in ROUND_TRIP_FIELDS:
+            if field_name in publication:
+                body[field_name] = publication[field_name]
+        self.update_publication(publication_identifier, body)
+        return "fixed"
 
     def publish(self, publication_identifier: str) -> None:
         """Publish a draft directly (no ticket). Idempotent: 409/already-published is ok.

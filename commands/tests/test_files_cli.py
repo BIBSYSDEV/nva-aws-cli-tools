@@ -509,6 +509,71 @@ def test_add_links_manifest_skips_dupes_per_resource(
     assert all("ignored" not in (link.get("id") or "") for link in links)
 
 
+@mock_aws
+@responses.activate
+def test_fix_presentation_metadata_fixes_defaults(tmp_path: Path) -> None:
+    _seed_ssm()
+    responses.add(
+        responses.POST,
+        TOKEN_URL,
+        json={"access_token": "token", "expires_in": 3600},
+    )
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
+        json={
+            "type": "Publication",
+            "entityDescription": {
+                "type": "EntityDescription",
+                "mainTitle": "International colloquium",
+                "reference": {
+                    "type": "Reference",
+                    "publicationContext": {
+                        "type": "Event",
+                        "name": "alle",
+                        "agent": {"type": "UnconfirmedOrganization", "name": "dlr"},
+                    },
+                    "publicationInstance": {"type": "OtherPresentation"},
+                },
+            },
+            "associatedArtifacts": [],
+        },
+    )
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{RESULT_ID_NTNU}",
+        json={"identifier": RESULT_ID_NTNU},
+    )
+    manifest = _manifest_file(tmp_path)
+    key = _key_file(tmp_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--quiet",
+            "files",
+            "fix-presentation-metadata",
+            str(manifest),
+            "--key-file",
+            str(key),
+            "--institution",
+            "ntnu.no",
+            "--organization-name",
+            "NTNU",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "fixed=1" in result.output
+    put_calls = [c for c in responses.calls if c.request.method == "PUT"]
+    assert len(put_calls) == 1
+    context = json.loads(put_calls[0].request.body)["entityDescription"]["reference"][
+        "publicationContext"
+    ]
+    assert context["name"] == "International colloquium"
+    assert context["agent"] == {"type": "UnconfirmedOrganization", "name": "NTNU"}
+
+
 def test_extract_handles_strips_prefix_and_filters_by_institution(
     tmp_path: Path,
 ) -> None:

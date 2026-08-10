@@ -586,6 +586,110 @@ def test_terminate_publication_sends_delete_request(tmp_path: Path) -> None:
     assert put_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
 
 
+def _presentation_publication(agent_name: str, event_name: str) -> dict:
+    return {
+        "type": "Publication",
+        "entityDescription": {
+            "type": "EntityDescription",
+            "mainTitle": "International colloquium",
+            "reference": {
+                "type": "Reference",
+                "publicationContext": {
+                    "type": "Event",
+                    "name": event_name,
+                    "agent": {"type": "UnconfirmedOrganization", "name": agent_name},
+                },
+                "publicationInstance": {"type": "OtherPresentation"},
+            },
+        },
+        "associatedArtifacts": [
+            {"type": "OpenFile", "identifier": "f-1", "name": "a.pdf", "size": 10}
+        ],
+    }
+
+
+@responses.activate
+def test_fix_presentation_metadata_sets_agent_and_title(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json=_presentation_publication(agent_name="dlr", event_name="alle"),
+    )
+    responses.add(
+        responses.PUT,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json={"identifier": PUBLICATION_IDENTIFIER},
+    )
+    service = _build_service(tmp_path)
+
+    status = service.fix_presentation_metadata(PUBLICATION_IDENTIFIER, "NTNU")
+
+    assert status == "fixed"
+    put_call = next(c for c in responses.calls if c.request.method == "PUT")
+    body = json.loads(put_call.request.body)
+    context = body["entityDescription"]["reference"]["publicationContext"]
+    assert context["name"] == "International colloquium"
+    assert context["agent"] == {"type": "UnconfirmedOrganization", "name": "NTNU"}
+    # the uploaded file is round-tripped, not wiped
+    assert body["associatedArtifacts"][0]["identifier"] == "f-1"
+    assert put_call.request.headers.get(SYSTEM_HEADER) == SYSTEM_DLR
+
+
+@responses.activate
+def test_fix_presentation_metadata_skips_already_fixed(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json=_presentation_publication(agent_name="NTNU", event_name="Real title"),
+    )
+    service = _build_service(tmp_path)
+
+    status = service.fix_presentation_metadata(PUBLICATION_IDENTIFIER, "NTNU")
+
+    assert status == "already"
+    assert [c for c in responses.calls if c.request.method == "PUT"] == []
+
+
+@responses.activate
+def test_fix_presentation_metadata_skips_non_presentation(tmp_path: Path) -> None:
+    _add_token_response()
+    publication = _presentation_publication(agent_name="dlr", event_name="alle")
+    publication["entityDescription"]["reference"]["publicationInstance"] = {
+        "type": "AcademicArticle"
+    }
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json=publication,
+    )
+    service = _build_service(tmp_path)
+
+    status = service.fix_presentation_metadata(PUBLICATION_IDENTIFIER, "NTNU")
+
+    assert status == "not-presentation"
+    assert [c for c in responses.calls if c.request.method == "PUT"] == []
+
+
+@responses.activate
+def test_fix_presentation_metadata_dry_run_does_not_write(tmp_path: Path) -> None:
+    _add_token_response()
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/publication/{PUBLICATION_IDENTIFIER}",
+        json=_presentation_publication(agent_name="dlr", event_name="alle"),
+    )
+    service = _build_service(tmp_path)
+
+    status = service.fix_presentation_metadata(
+        PUBLICATION_IDENTIFIER, "NTNU", dry_run=True
+    )
+
+    assert status == "would-fix"
+    assert [c for c in responses.calls if c.request.method == "PUT"] == []
+
+
 def test_local_file_source_reads_parts(tmp_path: Path) -> None:
     file_path = tmp_path / "data.bin"
     payload = b"ABCDEFGHIJ"

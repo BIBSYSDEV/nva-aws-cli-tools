@@ -448,6 +448,63 @@ def _plan_link_updates(
     return plans
 
 
+@files.command("fix-presentation-metadata")
+@click.argument("manifest", type=click.Path(exists=True))
+@click.option("--key-file", required=True, type=click.Path(exists=True))
+@click.option(
+    "--institution",
+    required=True,
+    help="Comma-separated email domains (e.g. 'ntnu.no,hist.no')",
+)
+@click.option(
+    "--organization-name",
+    required=True,
+    help="Value for the Event agent (arrangør), e.g. 'NTNU'",
+)
+@click.option("--dry-run", is_flag=True, default=False)
+@click.pass_obj
+def fix_presentation_metadata(
+    ctx: AppContext,
+    manifest: str,
+    key_file: str,
+    institution: str,
+    organization_name: str,
+    dry_run: bool,
+) -> None:
+    """Fix OtherPresentation Event metadata per resource.
+
+    Sets the agent (arrangør) to --organization-name and the event name to the
+    post's mainTitle. Only touches posts still on the DLR defaults (agent 'dlr'
+    / event name 'alle'), so re-running is a no-op. Run per institution so the
+    edit is owned by the right external client. --dry-run reports the plan
+    (read-only GET, no writes).
+    """
+    domains = _split_domains(institution)
+    items = _load_manifest_for_domains(manifest, domains)
+    console = Console()
+    console.print(
+        f"Resources: {len(items)}  organization={organization_name}  dry_run={dry_run}"
+    )
+
+    service = _build_service(ctx, key_file)
+    counts: Counter[str] = Counter()
+    for result_id, _resource in items:
+        try:
+            status = service.fix_presentation_metadata(
+                result_id, organization_name, dry_run=dry_run
+            )
+            counts[status] += 1
+            console.print(f"{status:16} {result_id}")
+        except Exception as exc:
+            counts["failed"] += 1
+            console.print(f"FAIL {result_id}: {exc}")
+    console.print(
+        f"Done. fixed={counts['fixed']} would_fix={counts['would-fix']} "
+        f"already={counts['already']} not_presentation={counts['not-presentation']} "
+        f"failed={counts['failed']}"
+    )
+
+
 @files.command("extract-handles")
 @click.argument("manifest", type=click.Path(exists=True))
 @click.option(
