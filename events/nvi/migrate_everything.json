@@ -1,0 +1,5 @@
+{
+  "type": "StartBatchJobRequest",
+  "jobType": "MIGRATE_CANDIDATES",
+  "maxItems": 10000000
+}
