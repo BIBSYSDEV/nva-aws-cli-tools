@@ -1,0 +1,10 @@
+{
+  "detail": {
+    "jobType": "REINDEX_RECORD",
+    "types": ["Resource"],
+    "filter": {
+      "publicationYears": ["2025", "2026"],
+      "statuses": ["PUBLISHED"]
+    }
+  }
+}

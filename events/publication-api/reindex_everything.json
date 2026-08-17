@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "jobType": "REINDEX_RECORD",
+    "types": ["Resource"]
+  }
+}
