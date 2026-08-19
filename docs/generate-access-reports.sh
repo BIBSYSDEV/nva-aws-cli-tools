@@ -13,11 +13,15 @@ if [[ -z "${AWS_PROFILE:-}" ]]; then
   exit 1
 fi
 
-OUTPUT_DIR="${1:-.}"
+OUTPUT_DIR="${1:-$PWD}"
+mkdir -p "$OUTPUT_DIR"
+OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 DATE="$(date +%F)"
 CURATOR_ROLES="Nvi-Curator,Support-Curator,Publishing-Curator,Doi-Curator,Curator-thesis,Curator-thesis-embargo"
-
-mkdir -p "$OUTPUT_DIR"
 
 echo "Profile: $AWS_PROFILE"
 echo "Output : $OUTPUT_DIR"

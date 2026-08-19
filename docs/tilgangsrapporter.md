@@ -25,7 +25,7 @@ Rapporter som lages:
 | Redaktører | `nva-redaktor-<dato>.xlsx` | `--include-roles "Editor"` |
 | Institusjonsadmin | `nva-admin-<dato>.xlsx` | `--include-roles "Institution-admin"` |
 | Internal-importer | `nva-internal-importer-<dato>.xlsx` | `--include-roles "Internal-importer"` |
-| Alle kuratorer | `nva-curators-<dato>.xlsx` | alle roller som inneholder «Curator» |
+| Alle kuratorer | `nva-curators-<dato>.xlsx` | eksplisitt liste over kurator-rollene (`CURATOR_ROLES` i scriptet) |
 | Alle unntatt kun Creator | `nva-all-except-only-creator-<dato>.xlsx` | `--exclude-only-roles "Creator"` |
 
 ## Manuelt / enkeltrapporter
