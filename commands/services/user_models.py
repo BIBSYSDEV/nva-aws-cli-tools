@@ -12,7 +12,7 @@ class Role:
 
     @classmethod
     def from_dynamodb(cls, item: dict[str, Any]) -> Role:
-        access_rights = [str(right) for right in item.get("accessRights", [])]
+        access_rights = [str(right) for right in item.get("accessRights") or []]
         return cls(
             name=item.get("name", ""),
             access_rights=access_rights,
@@ -30,7 +30,7 @@ class ViewingScope:
 
     @classmethod
     def from_dynamodb(cls, item: dict[str, Any]) -> ViewingScope:
-        included_units = [str(unit) for unit in item.get("includedUnits", [])]
+        included_units = [str(unit) for unit in item.get("includedUnits") or []]
 
         excluded_units_raw = item.get("excludedUnits")
         excluded_units = (
@@ -67,7 +67,7 @@ class User:
 
     @classmethod
     def from_dynamodb(cls, item: dict[str, Any]) -> User:
-        roles = [Role.from_dynamodb(role_item) for role_item in item.get("roles", [])]
+        roles = [Role.from_dynamodb(role_item) for role_item in item.get("roles") or []]
 
         viewing_scope_data = item.get("viewingScope")
         viewing_scope = (
