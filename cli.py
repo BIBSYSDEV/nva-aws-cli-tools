@@ -12,6 +12,7 @@ from commands.customers import customers
 from commands.dlq import dlq
 from commands.dynamodb import dynamodb
 from commands.handle import handle
+from commands.manual_update import manual_update
 from commands.organization_migration import organization_migration
 from commands.pipelines import pipelines
 from commands.publications import publications
@@ -64,6 +65,7 @@ cli.add_command(awslambda)
 cli.add_command(publications)
 cli.add_command(pipelines)
 cli.add_command(organization_migration)
+cli.add_command(manual_update)
 cli.add_command(cristin)
 cli.add_command(sqs)
 cli.add_command(search)
