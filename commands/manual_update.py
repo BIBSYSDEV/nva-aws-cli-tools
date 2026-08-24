@@ -54,13 +54,13 @@ def _shared_options(func):
     )(func)
     func = click.option(
         "--limit",
-        type=int,
+        type=click.IntRange(min=1),
         default=None,
         help="Max number of resources to change before stopping (default 10000).",
     )(func)
     func = click.option(
         "--page-size",
-        type=int,
+        type=click.IntRange(min=1, max=1000),
         default=None,
         help="Search page size, 1-1000 (default 100).",
     )(func)
@@ -356,6 +356,8 @@ def _parse_search(pairs: tuple[str, ...]) -> dict[str, str]:
         if "=" not in pair:
             raise click.UsageError(f"--search must be KEY=VALUE, got: {pair}")
         key, value = pair.split("=", 1)
+        if not key.strip():
+            raise click.UsageError(f"--search key must not be empty, got: {pair}")
         result[key.strip()] = value.strip()
     return result
 
@@ -430,7 +432,7 @@ def _write_change_log(request: ManualUpdateRequest, report: dict, phase: str) ->
         "limitReached": report.get("limitReached"),
         "changes": report.get("changes", []),
     }
-    with open(path, "w") as log_file:
+    with open(path, "w", encoding="utf-8") as log_file:
         json.dump(payload, log_file, indent=2, ensure_ascii=False)
     return path
 

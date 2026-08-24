@@ -381,6 +381,41 @@ def test_large_dry_run_writes_plan_log(monkeypatch, tmp_path):
 
 
 @mock_aws
+def test_non_positive_limit_is_rejected():
+    fake = _fake_lambda([])
+
+    result = _run(["manual-update", "publisher", "OLD", "NEW", "--limit", "0"], fake)
+
+    assert result.exit_code != 0
+    assert fake.invoke.call_count == 0
+
+
+@mock_aws
+def test_page_size_out_of_range_is_rejected():
+    fake = _fake_lambda([])
+
+    result = _run(
+        ["manual-update", "publisher", "OLD", "NEW", "--page-size", "5000"], fake
+    )
+
+    assert result.exit_code != 0
+    assert fake.invoke.call_count == 0
+
+
+@mock_aws
+def test_empty_search_key_is_rejected():
+    fake = _fake_lambda([])
+
+    result = _run(
+        ["manual-update", "publisher", "OLD", "NEW", "--search", "=value"], fake
+    )
+
+    assert result.exit_code != 0
+    assert "empty" in result.output.lower()
+    assert fake.invoke.call_count == 0
+
+
+@mock_aws
 def test_missing_lambda_reports_clean_error():
     result = _run(
         ["manual-update", "publisher", "OLD", "NEW"],
