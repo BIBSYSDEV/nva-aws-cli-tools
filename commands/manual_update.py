@@ -73,6 +73,12 @@ def _shared_options(func):
         default=False,
         help="Only preview the changes, never apply them.",
     )(func)
+    func = click.option(
+        "--no-dry-run",
+        is_flag=True,
+        default=False,
+        help="Skip the preview dry run and apply immediately.",
+    )(func)
     return func
 
 
@@ -82,7 +88,8 @@ def manual_update(ctx: AppContext):
     """Batch-update published metadata via the ManuallyUpdatePublications Lambda.
 
     Every command previews the change with a dry run and asks for confirmation
-    before writing anything.
+    before writing anything. Pass --no-dry-run to skip the preview and apply
+    immediately (still confirmed unless --yes is given).
     """
 
 
@@ -110,6 +117,7 @@ def run(
     page_size: int | None,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool,
 ) -> None:
     """Generic update mirroring the request format; covers every update type."""
     search_params = _parse_search(search_pairs)
@@ -126,7 +134,7 @@ def run(
         limit=limit,
         page_size=page_size,
     )
-    _execute(ctx, request, yes, dry_run_only)
+    _execute(ctx, request, yes, dry_run_only, no_dry_run)
 
 
 @manual_update.command()
@@ -144,6 +152,7 @@ def publisher(
     page_size: int | None,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool,
 ) -> None:
     """Replace publisher id OLD_VALUE with NEW_VALUE."""
     request = _build_request(
@@ -161,6 +170,7 @@ def publisher(
         request,
         yes,
         dry_run_only,
+        no_dry_run,
         old_label=resolver.publisher_name(old_value),
         new_label=resolver.publisher_name(new_value),
     )
@@ -181,6 +191,7 @@ def project(
     page_size: int | None,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool,
 ) -> None:
     """Replace project id OLD_VALUE with NEW_VALUE."""
     request = _build_request(
@@ -198,6 +209,7 @@ def project(
         request,
         yes,
         dry_run_only,
+        no_dry_run,
         old_label=resolver.project_title(old_value),
         new_label=resolver.project_title(new_value),
     )
@@ -218,6 +230,7 @@ def contributor_identifier(
     page_size: int | None,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool,
 ) -> None:
     """Replace contributor id OLD_VALUE with NEW_VALUE."""
     request = _build_request(
@@ -235,6 +248,7 @@ def contributor_identifier(
         request,
         yes,
         dry_run_only,
+        no_dry_run,
         old_label=resolver.person_name(old_value),
         new_label=resolver.person_name(new_value),
     )
@@ -261,6 +275,7 @@ def contributor_affiliation(
     page_size: int | None,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool,
 ) -> None:
     """Move contributor affiliation from OLD_VALUE URI to NEW_VALUE URI."""
     request = _build_request(
@@ -278,6 +293,7 @@ def contributor_affiliation(
         request,
         yes,
         dry_run_only,
+        no_dry_run,
         old_label=resolver.organization_label(old_value),
         new_label=resolver.organization_label(new_value),
     )
@@ -306,6 +322,7 @@ def unconfirmed_publisher(
     page_size: int | None,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool,
 ) -> None:
     """Convert unconfirmed publisher name OLD_VALUE to verified publisher id NEW_VALUE."""
     request = _build_request(
@@ -324,6 +341,7 @@ def unconfirmed_publisher(
         request,
         yes,
         dry_run_only,
+        no_dry_run,
         new_label=resolver.publisher_name(new_value),
     )
 
@@ -371,14 +389,29 @@ def _execute(
     request: ManualUpdateRequest,
     yes: bool,
     dry_run_only: bool,
+    no_dry_run: bool = False,
     old_label: str | None = None,
     new_label: str | None = None,
 ) -> None:
+    if no_dry_run and dry_run_only:
+        raise click.UsageError("--no-dry-run and --dry-run-only cannot be combined.")
     service = ManualUpdateService(session=ctx.session)
     console = Console()
     change_line = _describe_change(
         old_label, request.old_value, new_label, request.new_value
     )
+
+    if no_dry_run:
+        _render_header(console, request.type.value, "APPLYING", change_line)
+        if not yes:
+            _restore_interactive_terminal()
+            click.confirm(
+                "Apply immediately without a preview? This writes to published metadata.",
+                default=False,
+                abort=True,
+            )
+        _apply_and_report(service, console, request, change_line)
+        return
 
     report = service.dry_run(request)
     _render_report(console, report, "DRY RUN", change_line)
@@ -397,6 +430,15 @@ def _execute(
         _restore_interactive_terminal()
         click.confirm(f"Apply {len(changes)} change(s)?", default=True, abort=True)
 
+    _apply_and_report(service, console, request, change_line)
+
+
+def _apply_and_report(
+    service: ManualUpdateService,
+    console: Console,
+    request: ManualUpdateRequest,
+    change_line: str,
+) -> None:
     result = service.apply(request)
     _render_report(console, result, "APPLIED", change_line)
     log_path = _write_change_log(request, result, "applied")
@@ -480,11 +522,15 @@ def _render_report(
     console: Console, report: dict, phase: str, change_line: str | None = None
 ) -> None:
     body = change_line or f"{report.get('oldValue')} → {report.get('newValue')}"
-    console.print(
-        Panel(f"[bold]{phase}[/bold]  {report.get('type')}\n{body}", expand=False)
-    )
+    _render_header(console, report.get("type"), phase, body)
     _render_summary(console, report)
     _render_changes(console, report.get("changes", []))
+
+
+def _render_header(
+    console: Console, update_type: str | None, phase: str, body: str
+) -> None:
+    console.print(Panel(f"[bold]{phase}[/bold]  {update_type}\n{body}", expand=False))
 
 
 def _render_summary(console: Console, report: dict) -> None:

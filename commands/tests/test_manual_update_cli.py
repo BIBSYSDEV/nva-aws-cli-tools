@@ -149,6 +149,82 @@ def test_dry_run_only_never_applies():
 
 
 @mock_aws
+def test_no_dry_run_with_yes_applies_without_preview():
+    fake = _fake_lambda([_invoke_response(_report([_change()]))])
+
+    result = _run(
+        ["manual-update", "publisher", "OLD", "NEW", "--no-dry-run", "--yes"], fake
+    )
+
+    assert result.exit_code == 0, result.exception
+    assert fake.invoke.call_count == 1
+    assert _payload(fake, 0)["dryRun"] is False
+
+
+@mock_aws
+def test_no_dry_run_confirming_applies_without_preview():
+    fake = _fake_lambda([_invoke_response(_report([_change()]))])
+
+    result = _run(
+        ["manual-update", "publisher", "OLD", "NEW", "--no-dry-run"],
+        fake,
+        user_input="y\n",
+    )
+
+    assert result.exit_code == 0, result.exception
+    assert fake.invoke.call_count == 1
+    assert _payload(fake, 0)["dryRun"] is False
+
+
+@mock_aws
+def test_no_dry_run_declining_applies_nothing():
+    fake = _fake_lambda([_invoke_response(_report([_change()]))])
+
+    result = _run(
+        ["manual-update", "publisher", "OLD", "NEW", "--no-dry-run"],
+        fake,
+        user_input="n\n",
+    )
+
+    assert result.exit_code == 1
+    assert fake.invoke.call_count == 0
+
+
+@mock_aws
+def test_no_dry_run_defaults_to_no_on_empty_input():
+    fake = _fake_lambda([_invoke_response(_report([_change()]))])
+
+    result = _run(
+        ["manual-update", "publisher", "OLD", "NEW", "--no-dry-run"],
+        fake,
+        user_input="\n",
+    )
+
+    assert result.exit_code == 1
+    assert fake.invoke.call_count == 0
+
+
+@mock_aws
+def test_no_dry_run_conflicts_with_dry_run_only():
+    fake = _fake_lambda([])
+
+    result = _run(
+        [
+            "manual-update",
+            "publisher",
+            "OLD",
+            "NEW",
+            "--no-dry-run",
+            "--dry-run-only",
+        ],
+        fake,
+    )
+
+    assert result.exit_code != 0
+    assert fake.invoke.call_count == 0
+
+
+@mock_aws
 def test_no_changes_short_circuits_without_prompt():
     fake = _fake_lambda([_invoke_response(_report([]))])
 
