@@ -260,7 +260,7 @@ def contributor_identifier(
 @click.option(
     "--unit",
     default=None,
-    help="Place code to search by. Defaults to the last path segment of OLD_VALUE.",
+    help="Unit/Sub unit to search by. Defaults to the last path segment of OLD_VALUE.",
 )
 @_shared_options
 @click.pass_obj

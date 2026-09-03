@@ -3,7 +3,13 @@ import pytest
 import responses
 from moto import mock_aws
 
-from commands.services.entity_lookup import EntityResolver, _display_name
+from commands.services.entity_lookup import (
+    EntityResolver,
+    _display_name_organization,
+    _display_name_person,
+    _display_name_project,
+    _display_name_publisher,
+)
 
 API_DOMAIN = "api.example.org"
 PUBLISHER_URL = f"https://{API_DOMAIN}/publication-channels-v2/publisher"
@@ -27,10 +33,19 @@ def _resolver() -> EntityResolver:
     ("data", "expected"),
     [
         ({"name": "Universitetsforlaget"}, "Universitetsforlaget"),
-        ({"title": "A research project"}, "A research project"),
-        ({"title": {"nb": "Tittel", "en": "Title"}}, "Tittel"),
-        ({"labels": {"en": "Department", "nb": "Institutt"}}, "Institutt"),
-        ({"labels": {"en": "Department only"}}, "Department only"),
+        ({"name": {"nb": "Forlaget", "en": "The Publisher"}}, "Forlaget"),
+        ({"unknown": "value"}, None),
+        ({}, None),
+        (None, None),
+    ],
+)
+def test_display_name_publisher_handles_known_shapes(data, expected):
+    assert _display_name_publisher(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
         (
             {
                 "names": [
@@ -47,8 +62,36 @@ def _resolver() -> EntityResolver:
         (None, None),
     ],
 )
-def test_display_name_handles_known_shapes(data, expected):
-    assert _display_name(data) == expected
+def test_display_name_person_handles_known_shapes(data, expected):
+    assert _display_name_person(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ({"title": "A research project"}, "A research project"),
+        ({"title": {"nb": "Tittel", "en": "Title"}}, "Tittel"),
+        ({"unknown": "value"}, None),
+        ({}, None),
+        (None, None),
+    ],
+)
+def test_display_name_project_handles_known_shapes(data, expected):
+    assert _display_name_project(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ({"labels": {"en": "Department", "nb": "Institutt"}}, "Institutt"),
+        ({"labels": {"en": "Department only"}}, "Department only"),
+        ({"unknown": "value"}, None),
+        ({}, None),
+        (None, None),
+    ],
+)
+def test_display_name_organization_handles_known_shapes(data, expected):
+    assert _display_name_organization(data) == expected
 
 
 @mock_aws

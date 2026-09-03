@@ -23,19 +23,25 @@ class EntityResolver:
 
     def publisher_name(self, identifier: str) -> str | None:
         try:
-            return _display_name(self._channels.fetch(KIND_PUBLISHER, identifier))
+            return _display_name_publisher(
+                self._channels.fetch(KIND_PUBLISHER, identifier)
+            )
         except Exception as error:  # noqa: BLE001 - lookup must never block the update
             logger.debug("Publisher lookup failed for %s: %s", identifier, error)
             return None
 
     def person_name(self, identifier: str) -> str | None:
-        return _display_name(self._get_path(f"{CRISTIN_PERSON_PATH}/{identifier}"))
+        return _display_name_person(
+            self._get_path(f"{CRISTIN_PERSON_PATH}/{identifier}")
+        )
 
     def project_title(self, identifier: str) -> str | None:
-        return _display_name(self._get_path(f"{CRISTIN_PROJECT_PATH}/{identifier}"))
+        return _display_name_project(
+            self._get_path(f"{CRISTIN_PROJECT_PATH}/{identifier}")
+        )
 
     def organization_label(self, uri: str) -> str | None:
-        return _display_name(self._get_url(uri))
+        return _display_name_organization(self._get_url(uri))
 
     def _get_path(self, path: str) -> dict | None:
         try:
@@ -59,20 +65,33 @@ class EntityResolver:
             return None
 
 
-def _display_name(data: dict | None) -> str | None:
+def _display_name_publisher(data: dict | None) -> str | None:
+    return _text_or_label_map(data, "name")
+
+
+def _display_name_person(data: dict | None) -> str | None:
     if not isinstance(data, dict):
         return None
-    for key in ("name", "title"):
-        value = data.get(key)
-        if isinstance(value, str) and value.strip():
-            return value
-        label = _from_label_map(value)
-        if label:
-            return label
-    label = _from_label_map(data.get("labels"))
-    if label:
-        return label
     return _person_name(data)
+
+
+def _display_name_project(data: dict | None) -> str | None:
+    return _text_or_label_map(data, "title")
+
+
+def _display_name_organization(data: dict | None) -> str | None:
+    if not isinstance(data, dict):
+        return None
+    return _from_label_map(data.get("labels"))
+
+
+def _text_or_label_map(data: dict | None, key: str) -> str | None:
+    if not isinstance(data, dict):
+        return None
+    value = data.get(key)
+    if isinstance(value, str) and value.strip():
+        return value
+    return _from_label_map(value)
 
 
 def _from_label_map(labels: object) -> str | None:
