@@ -91,6 +91,7 @@ Options:
   --help              Show this message and exit.
 
 Commands:
+  approvals               Manage data owned by nva-handle-service (approvals table)
   awslambda               Manage AWS Lambda functions
   cognito                 Search Cognito users
   cristin                 Cristin integration commands
@@ -236,3 +237,33 @@ uv run cli.py users search "john"
     "logEntries": [...]
   }
   ```
+
+---
+
+#### **`approvals policies`**
+
+* **Description**: Manages the `IdentifierPolicy` rows in the approvals DynamoDB table owned by
+  [nva-handle-service](https://github.com/BIBSYSDEV/nva-handle-service). A policy lists which identifier names
+  (e.g. `ctis`, `dmp`, `rek`) a customer may use when creating approvals. There is at most one policy per customer,
+  stored under `PK0=Customer:<customer-uuid>` / `SK0=IdentifierPolicy`. Names are trimmed and lower-cased before they
+  are stored, matching the normalization in nva-handle-service.
+
+* **Common options** (every subcommand):
+  * `--table`: Substring of the approvals table name (default `nva-approvals-`). Make it more specific if several
+    stacks are deployed in the account.
+
+* **Arguments**:
+  * `customer_identifier`: The customer UUID, or the full customer URI (`https://api.nva.unit.no/customer/<uuid>`).
+
+* **Subcommands**:
+  * `list [--json]`: Show every policy with the customer name (resolved from the customers table when available).
+  * `get <customer_identifier>`: Print one policy as JSON.
+  * `add <customer_identifier> <name>...`: Create the policy. Fails if the customer already has one.
+  * `update <customer_identifier> [--add <name>]... [--remove <name>]...`: Add and/or remove allowed names.
+  * `delete <customer_identifier> [--yes]`: Delete the policy (asks for confirmation unless `--yes`).
+
+* **Examples**:
+  * `> uv run cli.py approvals policies list`
+  * `> uv run cli.py approvals policies add f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c ctis dmp`
+  * `> uv run cli.py approvals policies update f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --add rek --remove dmp`
+  * `> uv run cli.py approvals policies delete f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --yes`

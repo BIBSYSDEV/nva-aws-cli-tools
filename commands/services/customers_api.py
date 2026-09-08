@@ -2,13 +2,17 @@ import re
 
 import boto3
 
+from commands.services.aws_utils import find_table_name
 from commands.services.user_models import Customer
+
+CUSTOMERS_TABLE_NAME = "nva-customers"
+USERS_TABLE_NAME = "nva-users-and-roles"
 
 
 def list_missing_customers(session: boto3.Session) -> list[dict]:
     dynamodb = session.resource("dynamodb")
-    customers_table = dynamodb.Table(_get_table_name(session, "nva-customers"))
-    users_table = dynamodb.Table(_get_table_name(session, "nva-users-and-roles"))
+    customers_table = dynamodb.Table(find_table_name(session, CUSTOMERS_TABLE_NAME))
+    users_table = dynamodb.Table(find_table_name(session, USERS_TABLE_NAME))
 
     customer_identifiers = _extract_customer_identifiers(customers_table)
     return _find_missing_customers(users_table, customer_identifiers)
@@ -16,13 +20,13 @@ def list_missing_customers(session: boto3.Session) -> list[dict]:
 
 def list_duplicate_customers(session: boto3.Session) -> list[dict]:
     dynamodb = session.resource("dynamodb")
-    customers_table = dynamodb.Table(_get_table_name(session, "nva-customers"))
+    customers_table = dynamodb.Table(find_table_name(session, CUSTOMERS_TABLE_NAME))
     return _find_duplicate_customers(customers_table)
 
 
 def get_all_customers(session: boto3.Session) -> list[Customer]:
     dynamodb = session.resource("dynamodb")
-    customers_table = dynamodb.Table(_get_table_name(session, "nva-customers"))
+    customers_table = dynamodb.Table(find_table_name(session, CUSTOMERS_TABLE_NAME))
     raw_customers = _scan_table(customers_table)
     return [Customer.from_dynamodb(item) for item in raw_customers]
 
@@ -82,11 +86,3 @@ def _find_missing_customers(users_table, customer_identifiers: set[str]) -> list
                 }
             )
     return missing_customers
-
-
-def _get_table_name(session: boto3.Session, name_prefix: str) -> str:
-    response = session.client("dynamodb").list_tables()
-    for table_name in response["TableNames"]:
-        if table_name.startswith(name_prefix):
-            return table_name
-    raise ValueError(f"No table found with prefix {name_prefix!r}")

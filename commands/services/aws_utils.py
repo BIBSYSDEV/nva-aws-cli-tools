@@ -22,6 +22,29 @@ def get_account_alias(session: boto3.Session) -> str | None:
     return account_aliases[0] if account_aliases else None
 
 
+def find_table_name(session: boto3.Session, name_substring: str) -> str:
+    matching_names = [
+        table_name
+        for table_name in _list_all_table_names(session)
+        if name_substring in table_name
+    ]
+    if not matching_names:
+        raise ValueError(f"No DynamoDB table found containing {name_substring!r}")
+    if len(matching_names) > 1:
+        raise ValueError(
+            f"Several DynamoDB tables contain {name_substring!r}: "
+            f"{', '.join(sorted(matching_names))}. Use a more specific name."
+        )
+    return matching_names[0]
+
+
+def _list_all_table_names(session: boto3.Session) -> list[str]:
+    paginator = session.client("dynamodb").get_paginator("list_tables")
+    return [
+        table_name for page in paginator.paginate() for table_name in page["TableNames"]
+    ]
+
+
 def prettify(object) -> str:
     return json.dumps(
         object, indent=2, sort_keys=False, default=str, ensure_ascii=False

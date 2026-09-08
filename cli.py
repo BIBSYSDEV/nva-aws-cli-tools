@@ -4,6 +4,7 @@ import logging
 
 import click
 
+from commands.approvals import approvals
 from commands.awslambda import awslambda
 from commands.channels import channels
 from commands.cognito import cognito
@@ -54,6 +55,7 @@ def cli(ctx: click.Context, log_level: int, profile: str | None):
     )
 
 
+cli.add_command(approvals)
 cli.add_command(channels)
 cli.add_command(cognito)
 cli.add_command(dlq)

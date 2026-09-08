@@ -17,6 +17,8 @@ from boto3.dynamodb.conditions import ConditionBase
 from boto3.dynamodb.types import Binary
 from tqdm import tqdm
 
+from commands.services.aws_utils import find_table_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,23 +41,9 @@ class GenericDynamodbExporter:
     def __init__(self, session: boto3.Session, table_name_substring: str) -> None:
         self.table_name_substring = table_name_substring
         self.session = session
-        self.dynamodb = self.session.client("dynamodb")
-        self.table = self._get_table()
-        self.table_name: str = self.table.name
+        self.table_name: str = find_table_name(session, table_name_substring)
+        self.table = self.session.resource("dynamodb").Table(self.table_name)
         self._thread_local = threading.local()
-
-    def _get_table(self) -> Any:
-        response = self.dynamodb.list_tables()
-        table_names = response["TableNames"]
-        table_name = next(
-            (name for name in table_names if self.table_name_substring in name), None
-        )
-
-        if table_name is None:
-            raise ValueError(f"No table found containing '{self.table_name_substring}'")
-
-        dynamodb_resource = self.session.resource("dynamodb")
-        return dynamodb_resource.Table(table_name)
 
     def _decompress_data(self, data_field: Any) -> dict[str, Any] | None:
         if not isinstance(data_field, (bytes, str, Binary)):
