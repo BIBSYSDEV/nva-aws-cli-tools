@@ -5,9 +5,12 @@ import boto3
 import requests
 
 from commands.services.api_client import ApiClient
+from commands.services.aws_utils import find_table_name
 from commands.services.user_models import User
 
 SYSTEM_USER = "nva-backend@20754.0.0.0"
+USERS_TABLE_NAME = "nva-users-and-roles"
+TERMS_TABLE_NAME = "terms-and-conditions"
 
 
 def search_users(session: boto3.Session, search_term: str) -> list[dict]:
@@ -113,22 +116,14 @@ def _current_terms_uri(client: ApiClient) -> str:
 
 def _users_table(session: boto3.Session):
     return session.resource("dynamodb").Table(
-        _table_name(session, "nva-users-and-roles")
+        find_table_name(session, USERS_TABLE_NAME)
     )
 
 
 def _terms_table(session: boto3.Session):
     return session.resource("dynamodb").Table(
-        _table_name(session, "terms-and-conditions")
+        find_table_name(session, TERMS_TABLE_NAME)
     )
-
-
-def _table_name(session: boto3.Session, prefix: str) -> str:
-    response = session.client("dynamodb").list_tables()
-    for table_name in response["TableNames"]:
-        if table_name.startswith(prefix):
-            return table_name
-    raise ValueError(f"No table found with prefix {prefix!r}")
 
 
 def _filter(items: list[dict], search_words: list[str]) -> list[dict]:

@@ -15,7 +15,9 @@ from commands.services.dynamodb_exporter import DynamoDBEncoder, GenericDynamodb
 
 def _make_mock_session(table_names, table_name=None):
     mock_client = Mock()
-    mock_client.list_tables.return_value = {"TableNames": table_names}
+    mock_client.get_paginator.return_value.paginate.return_value = [
+        {"TableNames": table_names}
+    ]
 
     mock_table = Mock()
     if table_name is not None:
@@ -77,8 +79,17 @@ def test_get_table_success():
 def test_get_table_not_found():
     session = _make_mock_session(["other-table", "another-table"])
 
-    with pytest.raises(ValueError, match="No table found containing 'resources'"):
+    with pytest.raises(
+        ValueError, match="No DynamoDB table found containing 'resources'"
+    ):
         GenericDynamodbExporter(session, "resources")
+
+
+def test_get_table_fails_when_several_tables_match():
+    session = _make_mock_session(["my-table-dev-123", "my-table-prod-456"])
+
+    with pytest.raises(ValueError, match="Several DynamoDB tables contain 'my-table'"):
+        GenericDynamodbExporter(session, "my-table")
 
 
 def test_decompress_data(mock_exporter):
