@@ -35,6 +35,34 @@ def build_customer_lookup(session: boto3.Session) -> dict[str, str]:
     }
 
 
+def search_customers(session: boto3.Session, search_term: str) -> list[Customer]:
+    search_words = search_term.lower().split()
+    matching_customers = [
+        customer
+        for customer in get_all_customers(session)
+        if _matches_all_words(customer, search_words)
+    ]
+    return sorted(matching_customers, key=lambda customer: customer.name.lower())
+
+
+def _matches_all_words(customer: Customer, search_words: list[str]) -> bool:
+    searchable_text = _searchable_text(customer)
+    return all(word in searchable_text for word in search_words)
+
+
+def _searchable_text(customer: Customer) -> str:
+    values = (
+        customer.identifier,
+        customer.name,
+        customer.display_name,
+        customer.short_name,
+        customer.cristin_id,
+        customer.feideOrganizationDomain,
+        customer.cname,
+    )
+    return " ".join(value for value in values if value).lower()
+
+
 def _find_duplicate_customers(customers_table) -> list[dict]:
     cristin_id_counts: dict[str, int] = {}
     matching_items = []

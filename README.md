@@ -136,6 +136,21 @@ uv run cli.py users search "john"
 
 * **Description**: Searches for duplicate customer references (same Cristin ID).
 
+#### **`customers search`**
+
+* **Description**: Searches customers case-insensitively by name, display name, short name, Cristin ID, Feide domain,
+  cname or identifier. Every word must match. Handy for finding the customer UUID other commands ask for.
+
+* **Arguments**:
+  * `search_term`: One or more words to search for.
+
+* **Options**:
+  * `--json`: Print the matching customers as JSON instead of a table.
+
+* **Examples**:
+  * `> uv run cli.py customers search sikt`
+  * `> uv run cli.py customers search universitetet i oslo --json`
+
 ---
 
 #### **`users search`**
