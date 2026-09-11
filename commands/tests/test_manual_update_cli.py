@@ -28,7 +28,7 @@ def _report(changes: list | None = None, **overrides) -> dict:
         "resourcesMatched": len(changes or []),
         "resourcesChanged": len(changes or []),
         "pagesFetched": 1,
-        "limit": 10000,
+        "limit": 10,
         "limitReached": False,
         "pageSize": 100,
         "changes": changes or [],
