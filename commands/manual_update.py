@@ -56,7 +56,7 @@ def _shared_options(func):
         "--limit",
         type=click.IntRange(min=1),
         default=None,
-        help="Max number of resources to change before stopping (default 10000).",
+        help="Max number of resources to change before stopping (default 10).",
     )(func)
     func = click.option(
         "--page-size",
@@ -249,8 +249,8 @@ def contributor_identifier(
         yes,
         dry_run_only,
         no_dry_run,
-        old_label=resolver.person_name(old_value),
-        new_label=resolver.person_name(new_value),
+        old_label=resolver.person_label(old_value),
+        new_label=resolver.person_label(new_value),
     )
 
 
@@ -491,11 +491,20 @@ def _describe_change(
     new_label: str | None,
     new_value: str,
 ) -> str:
-    return f"{_labelled(old_label, old_value)} → {_labelled(new_label, new_value)}"
+    old_text = _labelled(old_label, old_value)
+    new_text = _labelled(new_label, new_value)
+    if "\n" in old_text or "\n" in new_text:
+        return f"{old_text}\n  ↓\n{new_text}"
+    return f"{old_text} → {new_text}"
 
 
 def _labelled(label: str | None, value: str) -> str:
-    return f"{label} ({value})" if label else value
+    if not label:
+        return value
+    if "\n" in label:
+        first_line, remaining_lines = label.split("\n", 1)
+        return f"{first_line} ({value})\n{remaining_lines}"
+    return f"{label} ({value})"
 
 
 def _restore_interactive_terminal() -> None:

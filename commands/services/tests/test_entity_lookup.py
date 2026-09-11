@@ -5,6 +5,7 @@ from moto import mock_aws
 
 from commands.services.entity_lookup import (
     EntityResolver,
+    _display_label_person,
     _display_name_organization,
     _display_name_person,
     _display_name_project,
@@ -22,6 +23,14 @@ def _seed_aws() -> None:
     ssm.put_parameter(Name="/NVA/ApiDomain", Value=API_DOMAIN, Type="String")
     ssm.put_parameter(
         Name="/NVA/CognitoUri", Value="https://cognito.example.org", Type="String"
+    )
+
+
+def _seed_backend_credentials() -> None:
+    secretsmanager = boto3.client("secretsmanager", region_name="eu-west-1")
+    secretsmanager.create_secret(
+        Name="BackendCognitoClientCredentials",
+        SecretString='{"backendClientId": "client-id", "backendClientSecret": "client-secret"}',
     )
 
 
@@ -69,6 +78,40 @@ def test_display_name_person_handles_known_shapes(data, expected):
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
+        (
+            {
+                "names": [
+                    {"type": "FirstName", "value": "Ola"},
+                    {"type": "LastName", "value": "Nordmann"},
+                ],
+                "identifiers": [
+                    {"type": "CristinIdentifier", "value": "1366281"},
+                    {"type": "NationalIdentificationNumber", "value": "01019012345"},
+                ],
+            },
+            "Ola Nordmann, fnr 01019012345",
+        ),
+        (
+            {
+                "names": [{"type": "FirstName", "value": "Ola"}],
+                "identifiers": [{"type": "CristinIdentifier", "value": "1366281"}],
+            },
+            "Ola",
+        ),
+        (
+            {"identifiers": [{"type": "NationalIdentificationNumber", "value": "x"}]},
+            None,
+        ),
+        (None, None),
+    ],
+)
+def test_display_label_person_includes_national_id_when_present(data, expected):
+    assert _display_label_person(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
         ({"title": "A research project"}, "A research project"),
         ({"title": {"nb": "Tittel", "en": "Title"}}, "Tittel"),
         ({"unknown": "value"}, None),
@@ -107,7 +150,7 @@ def test_publisher_name_reads_channel_name():
 
 @mock_aws
 @responses.activate
-def test_person_name_reads_from_cristin_proxy():
+def test_person_label_falls_back_to_unauthenticated_lookup():
     _seed_aws()
     responses.add(
         responses.GET,
@@ -120,7 +163,91 @@ def test_person_name_reads_from_cristin_proxy():
         },
     )
 
-    assert _resolver().person_name("1366281") == "Ada Lovelace"
+    assert _resolver().person_label("1366281") == "Ada Lovelace"
+
+
+@mock_aws
+@responses.activate
+def test_person_label_falls_back_to_raw_position_code_and_org_segment():
+    _seed_aws()
+    org_uri = f"https://{API_DOMAIN}/cristin/organization/20202.0.0.0"
+    responses.add(
+        responses.GET,
+        f"{PERSON_URL}/1366281",
+        json={
+            "names": [
+                {"type": "FirstName", "value": "Ada"},
+                {"type": "LastName", "value": "Lovelace"},
+            ],
+            "employments": [
+                {
+                    "type": f"https://{API_DOMAIN}/cristin/position#1087",
+                    "organization": org_uri,
+                }
+            ],
+        },
+    )
+    responses.add(responses.GET, f"https://{API_DOMAIN}/cristin/position", status=404)
+    responses.add(responses.GET, org_uri, status=404)
+
+    assert _resolver().person_label("1366281") == ("Ada Lovelace\n  1087, 20202.0.0.0")
+
+
+@mock_aws
+@responses.activate
+def test_person_label_uses_auth_token_and_includes_national_id():
+    _seed_aws()
+    _seed_backend_credentials()
+    responses.add(
+        responses.POST,
+        "https://cognito.example.org/oauth2/token",
+        json={"access_token": "test-token", "expires_in": 3600},
+    )
+    org_uri = f"https://{API_DOMAIN}/cristin/organization/20202.0.0.0"
+    responses.add(
+        responses.GET,
+        f"{PERSON_URL}/1366281",
+        json={
+            "names": [
+                {"type": "FirstName", "value": "Ada"},
+                {"type": "LastName", "value": "Lovelace"},
+            ],
+            "identifiers": [
+                {"type": "CristinIdentifier", "value": "1366281"},
+                {"type": "NationalIdentificationNumber", "value": "01019012345"},
+            ],
+            "employments": [
+                {
+                    "type": f"https://{API_DOMAIN}/cristin/position#1087",
+                    "organization": org_uri,
+                    "startDate": "2008-01-01T00:00:00Z",
+                    "endDate": "2019-12-31T00:00:00Z",
+                    "fullTimeEquivalentPercentage": 100.0,
+                }
+            ],
+        },
+        match=[
+            responses.matchers.header_matcher({"Authorization": "Bearer test-token"})
+        ],
+    )
+    responses.add(
+        responses.GET,
+        f"https://{API_DOMAIN}/cristin/position",
+        json={
+            "positions": [
+                {
+                    "id": f"https://{API_DOMAIN}/positions#1087",
+                    "labels": {"nb": "Overingeniør"},
+                }
+            ]
+        },
+    )
+    responses.add(responses.GET, org_uri, json={"labels": {"nb": "Institutt for IT"}})
+
+    assert _resolver().person_label("1366281") == (
+        "Ada Lovelace, fnr 01019012345\n"
+        "  Overingeniør, Institutt for IT (2008-01-01–2019-12-31, 100%)"
+    )
 
 
 @mock_aws
@@ -155,4 +282,4 @@ def test_failed_lookup_returns_none():
 
 @mock_aws
 def test_lookup_returns_none_when_api_domain_unavailable():
-    assert _resolver().person_name("1366281") is None
+    assert _resolver().person_label("1366281") is None
