@@ -8,6 +8,7 @@ import requests
 
 CREDENTIALS_SECRET_NAME = "BackendCognitoClientCredentials"
 TOKEN_REFRESH_BUFFER_SECONDS = 30
+TOKEN_REQUEST_TIMEOUT_SECONDS = 15
 
 
 @dataclass
@@ -56,6 +57,7 @@ class ApiClient:
                 "client_id": self._credentials["backendClientId"],
                 "client_secret": self._credentials["backendClientSecret"],
             },
+            timeout=TOKEN_REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         body = response.json()
