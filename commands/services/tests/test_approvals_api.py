@@ -152,6 +152,35 @@ def test_find_table_name_fails_when_several_tables_match():
 
 
 @mock_aws
+def test_find_table_name_lets_user_choose_when_several_tables_match(monkeypatch):
+    _create_approvals_table("nva-customers-master-pipelines-NvaIdentityService")
+    _create_approvals_table("backup-duplicate-nva-customers-master-pipelines")
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("click.prompt", lambda *args, **kwargs: 2)
+
+    assert (
+        find_table_name(boto3.Session(), "nva-customers")
+        == "nva-customers-master-pipelines-NvaIdentityService"
+    )
+
+
+@mock_aws
+def test_find_table_name_lists_candidates_sorted_when_prompting(monkeypatch, capsys):
+    _create_approvals_table("nva-customers-stack-two")
+    _create_approvals_table("nva-customers-stack-one")
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("click.prompt", lambda *args, **kwargs: 1)
+
+    find_table_name(boto3.Session(), "nva-customers")
+
+    printed_lines = capsys.readouterr().out.splitlines()
+    assert printed_lines[1:] == [
+        "  1. nva-customers-stack-one",
+        "  2. nva-customers-stack-two",
+    ]
+
+
+@mock_aws
 def test_create_policy_writes_row_with_normalized_names():
     _create_approvals_table()
     service = IdentifierPolicyService(boto3.Session())
