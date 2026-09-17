@@ -143,9 +143,10 @@ def test_find_table_name_fails_when_nothing_matches():
 
 
 @mock_aws
-def test_find_table_name_fails_when_several_tables_match():
+def test_find_table_name_fails_when_several_tables_match(monkeypatch):
     _create_approvals_table("nva-approvals-stack-one")
     _create_approvals_table("nva-approvals-stack-two")
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False)
 
     with pytest.raises(ValueError, match="Several DynamoDB tables"):
         find_table_name(boto3.Session(), "nva-approvals-")
