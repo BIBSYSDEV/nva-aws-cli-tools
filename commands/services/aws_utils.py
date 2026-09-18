@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 
 import boto3
 import click
@@ -23,19 +24,31 @@ def get_account_alias(session: boto3.Session) -> str | None:
 
 
 def find_table_name(session: boto3.Session, name_substring: str) -> str:
-    matching_names = [
+    matching_names = sorted(
         table_name
         for table_name in _list_all_table_names(session)
         if name_substring in table_name
-    ]
+    )
     if not matching_names:
         raise ValueError(f"No DynamoDB table found containing {name_substring!r}")
-    if len(matching_names) > 1:
+    if len(matching_names) == 1:
+        return matching_names[0]
+    return _prompt_for_table_name(matching_names, name_substring)
+
+
+def _prompt_for_table_name(matching_names: list[str], name_substring: str) -> str:
+    if not sys.stdin.isatty():
         raise ValueError(
             f"Several DynamoDB tables contain {name_substring!r}: "
-            f"{', '.join(sorted(matching_names))}. Use a more specific name."
+            f"{', '.join(matching_names)}. Use a more specific name."
         )
-    return matching_names[0]
+    click.echo(f"Several DynamoDB tables contain {name_substring!r}:")
+    for number, table_name in enumerate(matching_names, start=1):
+        click.echo(f"  {number}. {table_name}")
+    chosen_number = click.prompt(
+        "Choose table", type=click.IntRange(1, len(matching_names))
+    )
+    return matching_names[chosen_number - 1]
 
 
 def _list_all_table_names(session: boto3.Session) -> list[str]:
