@@ -169,6 +169,77 @@ def test_exclude_fields_sets_nodes_excluded_query_param():
     assert params["nodesExcluded"] == "contributorsPreview,tags,otherIdentifiers"
 
 
+@mock_aws
+@responses.activate
+def test_default_sort_is_created_date_ascending():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search, ["resources", "--unit", A_UNIT, "--id-only"], obj=_ctx()
+    )
+
+    assert result.exit_code == 0, result.output
+    params = _request_params(0)
+    assert params["sort"] == "createdDate:asc"
+    assert "relevance" not in params["sort"]
+
+
+@mock_aws
+@responses.activate
+def test_relevance_sort_is_rejected_before_any_request():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search,
+        ["resources", "--unit", A_UNIT, "--sort", "relevance,identifier"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code != 0
+    assert "relevance" in result.output.lower()
+    assert len(responses.calls) == 0
+
+
+@mock_aws
+@responses.activate
+def test_relevance_sort_via_query_parameter_is_rejected():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search,
+        ["resources", "--unit", A_UNIT, "--query", "sort=relevance"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code != 0
+    assert len(responses.calls) == 0
+
+
+@mock_aws
+@responses.activate
+def test_order_is_passed_through_as_sort_direction():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search,
+        ["resources", "--unit", A_UNIT, "--sort", "modifiedDate", "--order", "desc"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code == 0, result.output
+    params = _request_params(0)
+    assert params["sort"] == "modifiedDate"
+    assert params["order"] == "desc"
+
+
 def test_split_csv_flattens_trims_and_drops_empty():
     assert _split_csv(("a,b", " c ", "", "d")) == ["a", "b", "c", "d"]
     assert _split_csv(()) == []
@@ -239,6 +310,11 @@ def test_command_default_prints_pretty_json_to_stdout():
     assert result.exit_code == 0, result.output
     assert '"identifier": "a"' in result.output
     assert "{\n" in result.output
+
+
+def _request_params(call_index: int) -> dict:
+    query = urllib.parse.urlparse(str(responses.calls[call_index].request.url)).query
+    return dict(urllib.parse.parse_qsl(query))
 
 
 def _read_lines(filename: str) -> list:
