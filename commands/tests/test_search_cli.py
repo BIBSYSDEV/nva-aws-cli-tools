@@ -8,7 +8,13 @@ import responses
 from click.testing import CliRunner
 from moto import mock_aws
 
-from commands.search import _format_hit_line, _JsonlSink, _split_csv, search
+from commands.search import (
+    SearchParams,
+    _format_hit_line,
+    _JsonlSink,
+    _split_csv,
+    search,
+)
 from commands.utils import AppContext
 
 API_DOMAIN = "api.example.org"
@@ -223,7 +229,7 @@ def test_relevance_sort_via_query_parameter_is_rejected():
 
 @mock_aws
 @responses.activate
-def test_order_is_passed_through_as_sort_direction():
+def test_order_is_inlined_into_sort_and_never_sent_separately():
     _seed_ssm()
     responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
 
@@ -236,8 +242,64 @@ def test_order_is_passed_through_as_sort_direction():
 
     assert result.exit_code == 0, result.output
     params = _request_params(0)
-    assert params["sort"] == "modifiedDate"
-    assert params["order"] == "desc"
+    assert params["sort"] == "modifiedDate:desc"
+    assert "order" not in params
+
+
+@mock_aws
+@responses.activate
+def test_order_overrides_default_sort_direction():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search, ["resources", "--unit", A_UNIT, "--order", "desc"], obj=_ctx()
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _request_params(0)["sort"] == "createdDate:desc"
+
+
+@mock_aws
+@responses.activate
+def test_inline_direction_wins_over_order():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search,
+        ["resources", "--unit", A_UNIT, "--sort", "title:asc", "--order", "desc"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _request_params(0)["sort"] == "title:asc"
+
+
+@mock_aws
+@responses.activate
+def test_direction_is_applied_per_field():
+    _seed_ssm()
+    responses.add(responses.GET, SEARCH_URL, json={"hits": [_a_hit("a")]})
+
+    runner = CliRunner()
+    result = runner.invoke(
+        search,
+        ["resources", "--unit", A_UNIT, "--sort", "title:asc,createdDate"],
+        obj=_ctx(),
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _request_params(0)["sort"] == "title:asc,createdDate:asc"
+
+
+def test_sort_value_never_contains_more_than_one_direction_per_field():
+    params = SearchParams(sort="createdDate:desc,title", order="asc")
+
+    for field in params.sort_with_direction().split(","):
+        assert field.count(":") <= 1
 
 
 def test_split_csv_flattens_trims_and_drops_empty():

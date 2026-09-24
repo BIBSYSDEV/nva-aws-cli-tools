@@ -1,6 +1,6 @@
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import ClassVar, Self, TextIO
 
@@ -21,7 +21,9 @@ from log_config import log_console
 logger = logging.getLogger(__name__)
 
 RELEVANCE_SORT_KEY = "relevance"
-DEFAULT_SORT = "createdDate:asc"
+DEFAULT_SORT_FIELD = "createdDate"
+DEFAULT_SORT_DIRECTION = "asc"
+DEFAULT_SORT = f"{DEFAULT_SORT_FIELD}:{DEFAULT_SORT_DIRECTION}"
 RELEVANCE_SORT_ERROR = (
     "Sorting by relevance cannot be combined with pagination. This command pages "
     "through results with search-after, which the API rejects together with "
@@ -42,8 +44,8 @@ class SearchParams:
     funding_identifier: str | None = None
     category: str | None = None
     instance_type: str | None = None
-    order: str | None = None
-    sort: str = DEFAULT_SORT
+    order: str = DEFAULT_SORT_DIRECTION
+    sort: str = DEFAULT_SORT_FIELD
 
     PARAM_MAPPING: ClassVar[dict[str, str]] = {
         "aggregation": "aggregation",
@@ -57,7 +59,6 @@ class SearchParams:
         "funding_identifier": "fundingIdentifier",
         "category": "category",
         "instance_type": "instanceType",
-        "order": "order",
         "sort": "sort",
     }
 
@@ -81,11 +82,27 @@ class SearchParams:
                 f"https://{api_domain}/cristin/project/{project_id}"
             )
 
+        query_params["sort"] = self.sort_with_direction()
+
         return query_params
+
+    def sort_with_direction(self) -> str:
+        """Build the sort value with the direction inlined per field.
+
+        The API merges a separate 'order' parameter into the sort value, which
+        produces an invalid value when a field already carries a direction. We
+        therefore only ever send 'sort', with ':direction' appended to the fields
+        that do not specify one.
+        """
+        fields = [part.strip() for part in self.sort.split(",") if part.strip()]
+        return ",".join(
+            field if ":" in field or not self.order else f"{field}:{self.order}"
+            for field in fields
+        )
 
     @classmethod
     def from_kwargs(cls, **kwargs) -> SearchParams:
-        field_names = {f for f in cls.PARAM_MAPPING}
+        field_names = {field.name for field in fields(cls)}
         filtered = {k: v for k, v in kwargs.items() if k in field_names}
         return cls(**filtered)
 
@@ -169,14 +186,16 @@ def search(ctx: AppContext):
 )
 @click.option(
     "--order",
-    type=str,
-    help="Sort direction, asc or desc. Applies to the fields given in --sort; "
-    "a direction given inline (--sort createdDate:desc) takes precedence",
+    type=click.Choice(["asc", "desc"]),
+    default=DEFAULT_SORT_DIRECTION,
+    show_default=True,
+    help="Sort direction, applied to the fields in --sort that do not carry one "
+    "inline. A direction given inline (--sort createdDate:desc) wins",
 )
 @click.option(
     "--sort",
     type=str,
-    default=DEFAULT_SORT,
+    default=DEFAULT_SORT_FIELD,
     show_default=True,
     help="Sort field(s), comma-separated, each optionally with a direction "
     "(field:asc). Valid fields: identifier, category, instanceType, createdDate, "
@@ -286,17 +305,12 @@ def resources(
     search_params = SearchParams.from_kwargs(**kwargs)
     _reject_relevance_sort(search_params.sort, "--sort")
 
+    query_overrides = _parse_query_overrides(query)
+    _reject_relevance_sort(query_overrides.get("sort"), "--query sort")
+
     search_service = SearchApiService(session=ctx.session)
     query_params = search_params.to_query_params(search_service.api_domain)
-
-    for q in query:
-        if "=" in q:
-            key, value = q.split("=", 1)
-            query_params[key] = value
-        else:
-            logger.warning(f"Ignoring invalid query parameter: {q}")
-
-    _reject_relevance_sort(query_params.get("sort"), "--query sort")
+    query_params.update(query_overrides)
 
     excluded = _split_csv(exclude_fields)
     if excluded:
@@ -338,6 +352,17 @@ def resources(
     except Exception as e:  # noqa: BLE001 - top-level CLI boundary, report and abort
         logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
+
+
+def _parse_query_overrides(query: tuple[str, ...]) -> dict:
+    overrides = {}
+    for q in query:
+        if "=" in q:
+            key, value = q.split("=", 1)
+            overrides[key] = value
+        else:
+            logger.warning(f"Ignoring invalid query parameter: {q}")
+    return overrides
 
 
 def _reject_relevance_sort(sort_value: str | None, param_hint: str) -> None:
