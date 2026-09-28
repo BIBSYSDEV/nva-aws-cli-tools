@@ -2,9 +2,11 @@ import logging
 
 import boto3
 import click
+from mypy_boto3_codepipeline.client import CodePipelineClient
 from rich.console import Console
 from rich.table import Table
 
+from commands.services import pipeline_branch
 from commands.services.aws_utils import get_account_alias
 from commands.services.pipelines import get_pipeline_details_for_account
 from commands.utils import AppContext
@@ -64,3 +66,155 @@ def show_summary_table(session: boto3.Session) -> None:
 
     console.print(table)
     console.print("")
+
+
+def with_pipeline_selection(command):
+    command = click.option(
+        "--pipeline",
+        "pipeline_name",
+        help="Pipeline name (default: looked up from the repository)",
+    )(command)
+    return click.option(
+        "--repository",
+        "-r",
+        help="GitHub repository, OWNER/REPO (default: from the git remote origin of the current directory)",
+    )(command)
+
+
+@pipelines.command(
+    help="Point this repository's CodePipeline at a Git branch and start an execution. "
+    "Run it from inside the service repository."
+)
+@with_pipeline_selection
+@click.option(
+    "--branch", "-b", help="Branch to deploy (default: the current Git branch)"
+)
+@click.option(
+    "--no-start",
+    "start_execution",
+    is_flag=True,
+    flag_value=False,
+    default=True,
+    help="Update the pipeline without starting an execution",
+)
+@click.option("--yes", "-y", is_flag=True, help="Skip the confirmation prompt")
+@click.pass_obj
+def deploy(
+    ctx: AppContext,
+    repository: str | None,
+    pipeline_name: str | None,
+    branch: str | None,
+    start_execution: bool,
+    yes: bool,
+) -> None:
+    codepipeline = ctx.session.client("codepipeline")
+    pipeline_name = pipeline_name or resolve_pipeline_name(codepipeline, repository)
+    branch = branch or pipeline_branch.current_git_branch()
+    if not branch:
+        raise click.UsageError(
+            "Could not determine the current branch (detached HEAD?). Use --branch."
+        )
+    if pipeline_branch.is_git_repository() and not (
+        pipeline_branch.branch_exists_on_origin(branch)
+    ):
+        raise click.ClickException(
+            f"Branch '{branch}' does not exist on origin. Push it first."
+        )
+
+    pipeline_definition = codepipeline.get_pipeline(name=pipeline_name)["pipeline"]
+    click.echo(f"Account:  {get_account_alias(ctx.session)}")
+    click.echo(f"Pipeline: {pipeline_name}")
+    click.echo(
+        f"Branch:   {pipeline_branch.configured_branch(pipeline_definition)} -> {branch}"
+    )
+    if not yes:
+        click.confirm("Continue?", abort=True)
+
+    codepipeline.update_pipeline(
+        pipeline=pipeline_branch.with_branch(pipeline_definition, branch)
+    )
+    click.echo("Pipeline updated.")
+
+    if start_execution:
+        execution = codepipeline.start_pipeline_execution(name=pipeline_name)
+        click.echo(f"Started execution {execution['pipelineExecutionId']}")
+
+    click.echo(pipeline_branch.console_link(pipeline_name, ctx.session.region_name))
+
+
+@pipelines.command(
+    help="Show the branch, latest execution and stage statuses of this repository's CodePipeline"
+)
+@with_pipeline_selection
+@click.pass_obj
+def status(ctx: AppContext, repository: str | None, pipeline_name: str | None) -> None:
+    codepipeline = ctx.session.client("codepipeline")
+    pipeline_name = pipeline_name or resolve_pipeline_name(codepipeline, repository)
+    pipeline_definition = codepipeline.get_pipeline(name=pipeline_name)["pipeline"]
+
+    click.echo(f"Pipeline: {pipeline_name}")
+    click.echo(f"Branch:   {pipeline_branch.configured_branch(pipeline_definition)}")
+    click.echo()
+
+    executions = codepipeline.list_pipeline_executions(
+        pipelineName=pipeline_name, maxResults=1
+    )["pipelineExecutionSummaries"]
+    if executions:
+        latest_execution = executions[0]
+        trigger_type = latest_execution.get("trigger", {}).get(
+            "triggerType", "unknown trigger"
+        )
+        started = pipeline_branch.format_timestamp(latest_execution.get("startTime"))
+        click.echo(
+            f"Latest execution: {latest_execution['status']} "
+            f"(started {started}, {trigger_type})"
+        )
+        source_revisions = latest_execution.get("sourceRevisions", [])
+        if source_revisions:
+            click.echo(
+                f"Commit:           {pipeline_branch.commit_summary(source_revisions[0])}"
+            )
+    else:
+        click.echo("Latest execution: none")
+    click.echo()
+
+    stage_table = Table(show_header=True, header_style="bold cyan")
+    stage_table.add_column("Stage")
+    stage_table.add_column("Status")
+    stage_table.add_column("Last change", no_wrap=True)
+    stage_states = codepipeline.get_pipeline_state(name=pipeline_name)["stageStates"]
+    for stage_state in stage_states:
+        stage_table.add_row(
+            stage_state["stageName"],
+            stage_state.get("latestExecution", {}).get("status", "-"),
+            pipeline_branch.format_timestamp(
+                pipeline_branch.stage_last_change(stage_state)
+            ),
+        )
+    Console().print(stage_table)
+    click.echo(pipeline_branch.console_link(pipeline_name, ctx.session.region_name))
+
+
+def resolve_pipeline_name(
+    codepipeline: CodePipelineClient, repository: str | None
+) -> str:
+    repository = repository or pipeline_branch.git_remote_repository()
+    if not repository:
+        raise click.UsageError(
+            "Could not determine the repository from the git remote origin. "
+            "Use --repository or --pipeline."
+        )
+    click.echo(f"Looking up pipeline for {repository}...", err=True)
+    matching_pipelines = pipeline_branch.find_pipelines_for_repository(
+        codepipeline, repository
+    )
+    if not matching_pipelines:
+        raise click.ClickException(
+            f"No pipeline found with source repository {repository}."
+        )
+    if len(matching_pipelines) > 1:
+        raise click.ClickException(
+            f"Several pipelines use {repository}, pick one with --pipeline: "
+            + ", ".join(matching_pipelines)
+        )
+    return matching_pipelines[0]

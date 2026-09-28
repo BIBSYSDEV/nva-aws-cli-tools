@@ -154,6 +154,44 @@ uv run cli.py users search "john"
 
 ---
 
+#### **`pipelines deploy`**
+
+* **Description**: Points a service's CodePipeline at a Git branch and starts an execution.
+  It sets `BranchName` on the GitHub source action and deletes the pipeline's Git triggers, so CodePipeline
+  regenerates the default push trigger for the new branch. Run it from inside the service repository: the
+  pipeline is looked up from the repository's `origin` remote and the branch defaults to the current one.
+
+* **Options**:
+  * `--branch`, `-b`: Branch to deploy (default: the current Git branch). The branch must exist on `origin`.
+  * `--repository`, `-r`: GitHub repository as `OWNER/REPO` (default: from the `origin` remote).
+  * `--pipeline`: Pipeline name, skipping the lookup by repository.
+  * `--no-start`: Update the pipeline without starting an execution.
+  * `--yes`, `-y`: Skip the confirmation prompt.
+
+* **Examples**:
+  * `> uv run cli.py --profile sikt-nva-dev pipelines deploy`
+  * `> uv run cli.py pipelines deploy --branch main --yes`
+
+#### **`pipelines status`**
+
+* **Description**: Shows the branch, latest execution, and stage statuses of a service's CodePipeline.
+  Takes the same `--repository` and `--pipeline` options as `pipelines deploy`.
+
+#### Running the pipeline commands from any directory
+
+`uv run --project` selects the CLI's environment without changing the working directory, so the Git lookups
+run against the repository you are standing in. For example, as a [mise](https://mise.jdx.dev) shell alias
+(defined by `mise activate` while you are inside the config's directory tree):
+
+```toml
+[shell_alias]
+nva = "uv run --quiet --project ~/path/to/nva-aws-cli-tools ~/path/to/nva-aws-cli-tools/cli.py"
+```
+
+Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy` from inside a service repository.
+
+---
+
 #### **`users search`**
 
 * **Description**: Searches for users by user values.
