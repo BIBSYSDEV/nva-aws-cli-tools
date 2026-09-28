@@ -1,6 +1,6 @@
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import ClassVar, Self, TextIO
 
@@ -20,6 +20,16 @@ from log_config import log_console
 
 logger = logging.getLogger(__name__)
 
+RELEVANCE_SORT_KEY = "relevance"
+DEFAULT_SORT_FIELD = "createdDate"
+DEFAULT_SORT_DIRECTION = "asc"
+DEFAULT_SORT = f"{DEFAULT_SORT_FIELD}:{DEFAULT_SORT_DIRECTION}"
+RELEVANCE_SORT_ERROR = (
+    "Sorting by relevance cannot be combined with pagination. This command pages "
+    "through results with search-after, which the API rejects together with "
+    f"relevance sorting. Use a field instead, e.g. --sort {DEFAULT_SORT}"
+)
+
 
 @dataclass
 class SearchParams:
@@ -34,8 +44,8 @@ class SearchParams:
     funding_identifier: str | None = None
     category: str | None = None
     instance_type: str | None = None
-    order: str | None = None
-    sort: str = "relevance,identifier"
+    order: str = DEFAULT_SORT_DIRECTION
+    sort: str = DEFAULT_SORT_FIELD
 
     PARAM_MAPPING: ClassVar[dict[str, str]] = {
         "aggregation": "aggregation",
@@ -49,7 +59,6 @@ class SearchParams:
         "funding_identifier": "fundingIdentifier",
         "category": "category",
         "instance_type": "instanceType",
-        "order": "order",
         "sort": "sort",
     }
 
@@ -73,11 +82,27 @@ class SearchParams:
                 f"https://{api_domain}/cristin/project/{project_id}"
             )
 
+        query_params["sort"] = self.sort_with_direction()
+
         return query_params
+
+    def sort_with_direction(self) -> str:
+        """Build the sort value with the direction inlined per field.
+
+        The API merges a separate 'order' parameter into the sort value, which
+        produces an invalid value when a field already carries a direction. We
+        therefore only ever send 'sort', with ':direction' appended to the fields
+        that do not specify one.
+        """
+        fields = [part.strip() for part in self.sort.split(",") if part.strip()]
+        return ",".join(
+            field if ":" in field or not self.order else f"{field}:{self.order}"
+            for field in fields
+        )
 
     @classmethod
     def from_kwargs(cls, **kwargs) -> SearchParams:
-        field_names = {f for f in cls.PARAM_MAPPING}
+        field_names = {field.name for field in fields(cls)}
         filtered = {k: v for k, v in kwargs.items() if k in field_names}
         return cls(**filtered)
 
@@ -161,16 +186,23 @@ def search(ctx: AppContext):
 )
 @click.option(
     "--order",
-    type=str,
-    help="Order field (e.g., modifiedDate, createdDate). For large exports prefer "
-    "an immutable field like createdDate; modifiedDate can cause updated records "
-    "to be skipped (see the command help for details)",
+    type=click.Choice(["asc", "desc"]),
+    default=DEFAULT_SORT_DIRECTION,
+    show_default=True,
+    help="Sort direction, applied to the fields in --sort that do not carry one "
+    "inline. A direction given inline (--sort createdDate:desc) wins",
 )
 @click.option(
     "--sort",
     type=str,
-    default="relevance,identifier",
-    help="Sort order (default: relevance,identifier)",
+    default=DEFAULT_SORT_FIELD,
+    show_default=True,
+    help="Sort field(s), comma-separated, each optionally with a direction "
+    "(field:asc). Valid fields: identifier, category, instanceType, createdDate, "
+    "modifiedDate, publishedDate, publicationDate, title, unitId, user. Relevance "
+    "sorting is not supported because it cannot be combined with pagination. For "
+    "large exports prefer an immutable field like createdDate; modifiedDate can "
+    "cause updated records to be skipped (see the command help for details)",
 )
 @click.option(
     "--id-only",
@@ -228,17 +260,20 @@ def resources(
 
     Stable pagination (avoiding skipped records): search-after is only stable when
     the sort key never changes for a document while you page. Sorting on
-    --order modifiedDate is unsafe for large exports, because an updated document
+    --sort modifiedDate is unsafe for large exports, because an updated document
     gets a new modifiedDate and moves past the cursor, so it is skipped. Prefer an
-    immutable field: --order createdDate never changes after creation, so existing
-    documents are never lost and new ones land at the end (picked up with
-    --sort asc). The API appends the unique 'identifier' as a tie-breaker, so equal
-    sort values between pages are already handled; duplicates may appear (e.g. docs
-    created during the run) but no existing record is dropped.
+    immutable field: --sort createdDate:asc never changes after creation, so
+    existing documents are never lost and new ones land at the end. The API appends
+    the unique 'identifier' as a tie-breaker, so equal sort values between pages are
+    already handled; duplicates may appear (e.g. docs created during the run) but no
+    existing record is dropped.
+
+    Relevance sorting is rejected up front: the API refuses it together with
+    search-after, so it would only ever return the first page.
 
     \b
-    Recommended for a full export:
-    uv run cli.py search resources --order createdDate --sort asc --output out.jsonl
+    Recommended for a full export (also the default sort):
+    uv run cli.py search resources --sort createdDate:asc --output out.jsonl
 
     \b
     Examples:
@@ -267,16 +302,15 @@ def resources(
         # Drop heavy fields from each hit (nodesExcluded)
         uv run cli.py search resources --exclude-fields contributorsPreview,tags --output out.jsonl
     """
-    search_service = SearchApiService(session=ctx.session)
     search_params = SearchParams.from_kwargs(**kwargs)
-    query_params = search_params.to_query_params(search_service.api_domain)
+    _reject_relevance_sort(search_params.sort, "--sort")
 
-    for q in query:
-        if "=" in q:
-            key, value = q.split("=", 1)
-            query_params[key] = value
-        else:
-            logger.warning(f"Ignoring invalid query parameter: {q}")
+    query_overrides = _parse_query_overrides(query)
+    _reject_relevance_sort(query_overrides.get("sort"), "--query sort")
+
+    search_service = SearchApiService(session=ctx.session)
+    query_params = search_params.to_query_params(search_service.api_domain)
+    query_params.update(query_overrides)
 
     excluded = _split_csv(exclude_fields)
     if excluded:
@@ -318,6 +352,22 @@ def resources(
     except Exception as e:  # noqa: BLE001 - top-level CLI boundary, report and abort
         logger.error(f"Error fetching resources: {e}")
         raise click.Abort()
+
+
+def _parse_query_overrides(query: tuple[str, ...]) -> dict:
+    overrides = {}
+    for q in query:
+        if "=" in q:
+            key, value = q.split("=", 1)
+            overrides[key] = value
+        else:
+            logger.warning(f"Ignoring invalid query parameter: {q}")
+    return overrides
+
+
+def _reject_relevance_sort(sort_value: str | None, param_hint: str) -> None:
+    if RELEVANCE_SORT_KEY in (sort_value or "").lower():
+        raise click.BadParameter(RELEVANCE_SORT_ERROR, param_hint=param_hint)
 
 
 def _split_csv(values: tuple[str, ...]) -> list[str]:
