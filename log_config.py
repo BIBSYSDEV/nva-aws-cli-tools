@@ -7,9 +7,10 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 log_console = Console(stderr=True)
+log_file_next_to_cli = Path(__file__).resolve().parent / "logs.jsonl"
 
 
-def get_json_handler(log_file: Path = Path("logs.jsonl")):
+def get_json_handler(log_file: Path = log_file_next_to_cli):
     json_formatter = JsonFormatter(
         fmt="%(asctime)s %(levelname)s %(message)s %(name)s",
         rename_fields={"asctime": "time", "levelname": "level"},
