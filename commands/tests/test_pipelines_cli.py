@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
@@ -6,6 +7,9 @@ from click.testing import CliRunner
 from moto import mock_aws
 
 from cli import cli
+from commands.services import pipeline_branch
+
+OSLO_SUMMER_TIME = timezone(timedelta(hours=2))
 
 
 def _build_session_with_stubbed_codepipeline(fake_codepipeline) -> boto3.Session:
@@ -80,3 +84,299 @@ def test_pipelines_branches_skips_pipelines_without_source_details():
     assert result.exit_code == 0, result.exception
     assert "irrelevant" not in result.output
     assert "0 pipelines" in result.output
+
+
+def _fake_codepipeline_for_repository(repository="BIBSYSDEV/nva-foo") -> MagicMock:
+    fake_codepipeline = MagicMock()
+    fake_codepipeline.get_paginator.return_value.paginate.return_value = [
+        {"pipelines": [{"name": "foo-pipeline"}]}
+    ]
+    fake_codepipeline.get_pipeline.return_value = {
+        "pipeline": {
+            "name": "foo-pipeline",
+            "stages": [
+                {
+                    "name": "Source",
+                    "actions": [
+                        {
+                            "name": "Source",
+                            "actionTypeId": {"provider": "CodeStarSourceConnection"},
+                            "configuration": {
+                                "FullRepositoryId": repository,
+                                "BranchName": "main",
+                            },
+                        }
+                    ],
+                }
+            ],
+            "triggers": [{"providerType": "CodeStarSourceConnection"}],
+        }
+    }
+    fake_codepipeline.start_pipeline_execution.return_value = {
+        "pipelineExecutionId": "execution-1"
+    }
+    return fake_codepipeline
+
+
+def _invoke_with_git(
+    fake_codepipeline,
+    arguments,
+    remote_repository: str | None = "BIBSYSDEV/nva-foo",
+    current_branch: str | None = "feature",
+    branch_exists_in_repository: MagicMock | None = None,
+    **kwargs,
+):
+    branch_exists_in_repository = branch_exists_in_repository or MagicMock(
+        return_value=True
+    )
+    with (
+        patch(
+            "cli.build_session",
+            return_value=_build_session_with_stubbed_codepipeline(fake_codepipeline),
+        ),
+        patch(
+            "commands.services.pipeline_branch.git_remote_repository",
+            return_value=remote_repository,
+        ),
+        patch(
+            "commands.services.pipeline_branch.current_git_branch",
+            return_value=current_branch,
+        ),
+        patch(
+            "commands.services.pipeline_branch.branch_exists_in_repository",
+            new=branch_exists_in_repository,
+        ),
+    ):
+        return CliRunner().invoke(cli, ["--quiet", "pipelines", *arguments], **kwargs)
+
+
+@mock_aws
+def test_pipelines_deploy_points_pipeline_at_current_branch_and_starts_execution():
+    boto3.client("iam").create_account_alias(AccountAlias="nva-test")
+    fake_codepipeline = _fake_codepipeline_for_repository()
+
+    result = _invoke_with_git(fake_codepipeline, ["deploy", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    updated_pipeline = fake_codepipeline.update_pipeline.call_args.kwargs["pipeline"]
+    source_configuration = updated_pipeline["stages"][0]["actions"][0]["configuration"]
+    assert source_configuration["BranchName"] == "feature"
+    assert "triggers" not in updated_pipeline
+    fake_codepipeline.start_pipeline_execution.assert_called_once_with(
+        name="foo-pipeline"
+    )
+    assert "nva-test" in result.output
+    assert "main -> feature" in result.output
+    assert "Started execution execution-1" in result.output
+
+
+@mock_aws
+def test_pipelines_deploy_with_no_start_only_updates_pipeline():
+    boto3.client("iam").create_account_alias(AccountAlias="nva-test")
+    fake_codepipeline = _fake_codepipeline_for_repository()
+
+    result = _invoke_with_git(
+        fake_codepipeline,
+        [
+            "deploy",
+            "--yes",
+            "--no-start",
+            "--branch",
+            "main",
+            "--pipeline",
+            "foo-pipeline",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    fake_codepipeline.update_pipeline.assert_called_once()
+    fake_codepipeline.start_pipeline_execution.assert_not_called()
+    fake_codepipeline.get_paginator.assert_not_called()
+
+
+@mock_aws
+def test_pipelines_deploy_aborts_when_confirmation_is_declined():
+    boto3.client("iam").create_account_alias(AccountAlias="nva-test")
+    fake_codepipeline = _fake_codepipeline_for_repository()
+
+    result = _invoke_with_git(fake_codepipeline, ["deploy"], input="n\n")
+
+    assert result.exit_code == 1
+    fake_codepipeline.update_pipeline.assert_not_called()
+
+
+def test_pipelines_deploy_checks_branch_in_pipeline_repository_not_current_directory():
+    fake_codepipeline = _fake_codepipeline_for_repository(
+        repository="BIBSYSDEV/nva-foo"
+    )
+    branch_exists_in_repository = MagicMock(return_value=False)
+
+    result = _invoke_with_git(
+        fake_codepipeline,
+        ["deploy", "--yes", "--pipeline", "foo-pipeline", "--branch", "feature"],
+        remote_repository="BIBSYSDEV/nva-aws-cli-tools",
+        branch_exists_in_repository=branch_exists_in_repository,
+    )
+
+    assert result.exit_code == 1
+    assert "Branch 'feature' does not exist in BIBSYSDEV/nva-foo" in result.output
+    branch_exists_in_repository.assert_called_once_with("BIBSYSDEV/nva-foo", "feature")
+    fake_codepipeline.update_pipeline.assert_not_called()
+
+
+def test_pipelines_deploy_fails_when_branch_check_fails():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    failing_branch_check = MagicMock(
+        side_effect=pipeline_branch.BranchCheckError(
+            "Could not list branches of BIBSYSDEV/nva-foo: not found"
+        )
+    )
+
+    result = _invoke_with_git(
+        fake_codepipeline,
+        ["deploy", "--yes"],
+        branch_exists_in_repository=failing_branch_check,
+    )
+
+    assert result.exit_code == 1
+    assert "Could not list branches of BIBSYSDEV/nva-foo" in result.output
+    fake_codepipeline.update_pipeline.assert_not_called()
+
+
+def test_pipelines_deploy_refuses_pipeline_without_github_source():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    fake_codepipeline.get_pipeline.return_value = {
+        "pipeline": {
+            "name": "s3-pipeline",
+            "stages": [
+                {
+                    "name": "Source",
+                    "actions": [
+                        {
+                            "name": "Source",
+                            "actionTypeId": {"provider": "S3"},
+                            "configuration": {"S3Bucket": "bucket"},
+                        }
+                    ],
+                }
+            ],
+        }
+    }
+
+    result = _invoke_with_git(
+        fake_codepipeline, ["deploy", "--yes", "--pipeline", "s3-pipeline"]
+    )
+
+    assert result.exit_code == 1
+    assert "has no GitHub (CodeStar connection) source" in result.output
+    fake_codepipeline.update_pipeline.assert_not_called()
+    fake_codepipeline.start_pipeline_execution.assert_not_called()
+
+
+def test_pipelines_deploy_fails_when_no_pipeline_uses_repository():
+    fake_codepipeline = _fake_codepipeline_for_repository(repository="BIBSYSDEV/other")
+
+    result = _invoke_with_git(fake_codepipeline, ["deploy", "--yes"])
+
+    assert result.exit_code == 1
+    assert "No pipeline found with source repository BIBSYSDEV/nva-foo" in result.output
+
+
+def test_pipelines_deploy_fails_when_several_pipelines_use_repository():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    fake_codepipeline.get_paginator.return_value.paginate.return_value = [
+        {"pipelines": [{"name": "foo-pipeline"}, {"name": "foo-pipeline-copy"}]}
+    ]
+
+    result = _invoke_with_git(fake_codepipeline, ["deploy", "--yes"])
+
+    assert result.exit_code == 1
+    assert "foo-pipeline, foo-pipeline-copy" in result.output
+
+
+def test_pipelines_deploy_requires_repository_outside_git_repository():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+
+    result = _invoke_with_git(
+        fake_codepipeline, ["deploy", "--yes"], remote_repository=None
+    )
+
+    assert result.exit_code == 2
+    assert "Use --repository or --pipeline" in result.output
+
+
+def test_pipelines_deploy_requires_branch_on_detached_head():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+
+    result = _invoke_with_git(
+        fake_codepipeline, ["deploy", "--yes"], current_branch=None
+    )
+
+    assert result.exit_code == 2
+    assert "Use --branch" in result.output
+
+
+def test_pipelines_status_shows_branch_latest_execution_and_stages():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    fake_codepipeline.list_pipeline_executions.return_value = {
+        "pipelineExecutionSummaries": [
+            {
+                "status": "Succeeded",
+                "startTime": datetime(2026, 9, 25, 12, 0, tzinfo=OSLO_SUMMER_TIME),
+                "trigger": {"triggerType": "Webhook"},
+                "sourceRevisions": [
+                    {
+                        "revisionId": "0123456789abcdef",
+                        "revisionSummary": '{"ProviderType":"GitHub","CommitMessage":"Fix [bug]"}',
+                    }
+                ],
+            }
+        ]
+    }
+    fake_codepipeline.get_pipeline_state.return_value = {
+        "stageStates": [
+            {
+                "stageName": "Source",
+                "latestExecution": {"status": "Succeeded"},
+                "actionStates": [
+                    {
+                        "latestExecution": {
+                            "lastStatusChange": datetime(2026, 9, 25, 10, 1, tzinfo=UTC)
+                        }
+                    },
+                    {
+                        "latestExecution": {
+                            "lastStatusChange": datetime(2026, 9, 25, 10, 2, tzinfo=UTC)
+                        }
+                    },
+                ],
+            },
+            {"stageName": "Deploy"},
+        ]
+    }
+
+    result = _invoke_with_git(fake_codepipeline, ["status"])
+
+    assert result.exit_code == 0, result.output
+    assert "Branch:   main" in result.output
+    assert "Succeeded (started 2026-09-25 10:00 UTC, Webhook)" in result.output
+    assert "0123456789 Fix [bug]" in result.output
+    assert "2026-09-25 10:02 UTC" in result.output
+    assert "2026-09-25 10:01 UTC" not in result.output
+    assert "Deploy" in result.output
+    assert "view?region=" in result.output
+
+
+def test_pipelines_status_handles_pipeline_without_executions():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    fake_codepipeline.list_pipeline_executions.return_value = {
+        "pipelineExecutionSummaries": []
+    }
+    fake_codepipeline.get_pipeline_state.return_value = {"stageStates": []}
+
+    result = _invoke_with_git(
+        fake_codepipeline, ["status", "--pipeline", "foo-pipeline"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Latest execution: none" in result.output

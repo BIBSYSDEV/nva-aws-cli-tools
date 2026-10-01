@@ -154,6 +154,32 @@ uv run cli.py users search "john"
 
 ---
 
+#### **`pipelines deploy`** and **`pipelines status`**
+
+* **Description**: Points a service's CodePipeline at a branch and starts an execution, or shows the pipeline's status.
+  Run `--help` on each command for its options.
+
+* **Examples**:
+  * From inside a service repository, deploy its current branch:
+    `> uv run --project ~/path/to/nva-aws-cli-tools ~/path/to/nva-aws-cli-tools/cli.py --profile sikt-nva-dev pipelines deploy`
+  * From this repository, naming the target explicitly:
+    `> uv run cli.py --profile sikt-nva-dev pipelines deploy --repository BIBSYSDEV/nva-publication-api --branch main --yes`
+
+#### Running the CLI from any directory
+
+`uv run --project` selects the CLI's environment without changing the working directory, so the Git lookups run
+against the repository you are standing in. A [mise](https://mise.jdx.dev) shell alias makes this short
+(`mise activate` defines it while you are inside the config's directory tree):
+
+```toml
+[shell_alias]
+nva = "uv run --quiet --project ~/path/to/nva-aws-cli-tools ~/path/to/nva-aws-cli-tools/cli.py"
+```
+
+Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy` from inside a service repository.
+
+---
+
 #### **`users search`**
 
 * **Description**: Searches for users by user values.
