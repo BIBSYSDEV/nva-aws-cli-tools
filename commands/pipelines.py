@@ -109,23 +109,35 @@ def deploy(
 ) -> None:
     codepipeline = ctx.session.client("codepipeline")
     pipeline_name = pipeline_name or resolve_pipeline_name(codepipeline, repository)
+    pipeline_definition = codepipeline.get_pipeline(name=pipeline_name)["pipeline"]
+    source_repository = pipeline_branch.source_repository(pipeline_definition)
+    if not source_repository:
+        raise click.ClickException(
+            f"Pipeline {pipeline_name} has no GitHub (CodeStar connection) source, "
+            "so there is no branch to change."
+        )
+
     branch = branch or pipeline_branch.current_git_branch()
     if not branch:
         raise click.UsageError(
             "Could not determine the current branch (detached HEAD?). Use --branch."
         )
-    if pipeline_branch.is_git_repository() and not (
-        pipeline_branch.branch_exists_on_origin(branch)
-    ):
+    try:
+        branch_exists = pipeline_branch.branch_exists_in_repository(
+            source_repository, branch
+        )
+    except pipeline_branch.BranchCheckError as error:
+        raise click.ClickException(str(error)) from error
+    if not branch_exists:
         raise click.ClickException(
-            f"Branch '{branch}' does not exist on origin. Push it first."
+            f"Branch '{branch}' does not exist in {source_repository}. Push it first."
         )
 
-    pipeline_definition = codepipeline.get_pipeline(name=pipeline_name)["pipeline"]
-    click.echo(f"Account:  {get_account_alias(ctx.session)}")
-    click.echo(f"Pipeline: {pipeline_name}")
+    click.echo(f"Account:    {get_account_alias(ctx.session)}")
+    click.echo(f"Pipeline:   {pipeline_name}")
+    click.echo(f"Repository: {source_repository}")
     click.echo(
-        f"Branch:   {pipeline_branch.configured_branch(pipeline_definition)} -> {branch}"
+        f"Branch:     {pipeline_branch.configured_branch(pipeline_definition)} -> {branch}"
     )
     if not yes:
         click.confirm("Continue?", abort=True)

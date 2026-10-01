@@ -162,7 +162,8 @@ uv run cli.py users search "john"
   pipeline is looked up from the repository's `origin` remote and the branch defaults to the current one.
 
 * **Options**:
-  * `--branch`, `-b`: Branch to deploy (default: the current Git branch). The branch must exist on `origin`.
+  * `--branch`, `-b`: Branch to deploy (default: the current Git branch). The branch must exist in the pipeline's
+    GitHub repository.
   * `--repository`, `-r`: GitHub repository as `OWNER/REPO` (default: from the `origin` remote).
   * `--pipeline`: Pipeline name, skipping the lookup by repository.
   * `--no-start`: Update the pipeline without starting an execution.

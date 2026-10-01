@@ -59,6 +59,18 @@ def test_configured_branch_is_none_without_github_source_action():
     assert pipeline_branch.configured_branch(definition) is None
 
 
+def test_source_repository_reads_repository_from_github_source_action():
+    definition = _pipeline_definition(repository="BIBSYSDEV/nva-foo")
+
+    assert pipeline_branch.source_repository(definition) == "BIBSYSDEV/nva-foo"
+
+
+def test_source_repository_is_none_without_github_source_action():
+    definition = cast(PipelineDeclarationOutputTypeDef, {"stages": [{"actions": []}]})
+
+    assert pipeline_branch.source_repository(definition) is None
+
+
 def test_uses_repository_ignores_case():
     definition = _pipeline_definition(repository="BIBSYSDEV/nva-foo")
 
@@ -142,34 +154,61 @@ def test_repository_from_remote_url_returns_none_for_unparseable_url():
     assert pipeline_branch.repository_from_remote_url("not-a-url") is None
 
 
-def _completed(returncode=0, stdout=""):
-    return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout)
+def _completed(returncode=0, stdout="", stderr=""):
+    return subprocess.CompletedProcess(
+        args=[], returncode=returncode, stdout=stdout, stderr=stderr
+    )
 
 
-def test_git_helpers_parse_git_output():
-    with patch.object(
-        pipeline_branch.subprocess,
-        "run",
-        side_effect=[
-            _completed(stdout="git@github.com:BIBSYSDEV/nva-foo.git\n"),
-            _completed(stdout="feature\n"),
-            _completed(returncode=0),
-            _completed(returncode=2),
-        ],
-    ):
+def _fake_git(result: subprocess.CompletedProcess):
+    return patch.object(pipeline_branch.subprocess, "run", return_value=result)
+
+
+def test_git_remote_repository_parses_origin_url():
+    with _fake_git(_completed(stdout="git@github.com:BIBSYSDEV/nva-foo.git\n")):
         assert pipeline_branch.git_remote_repository() == "BIBSYSDEV/nva-foo"
+
+
+def test_current_git_branch_strips_output():
+    with _fake_git(_completed(stdout="feature\n")):
         assert pipeline_branch.current_git_branch() == "feature"
-        assert pipeline_branch.is_git_repository()
-        assert not pipeline_branch.branch_exists_on_origin("missing")
 
 
 def test_git_helpers_return_none_outside_git_repository():
-    with patch.object(
-        pipeline_branch.subprocess, "run", return_value=_completed(returncode=128)
-    ):
+    with _fake_git(_completed(returncode=128)):
         assert pipeline_branch.git_remote_repository() is None
         assert pipeline_branch.current_git_branch() is None
-        assert not pipeline_branch.is_git_repository()
+
+
+def test_branch_exists_in_repository_queries_github_repository():
+    with _fake_git(_completed(stdout="abc\trefs/heads/feature\n")) as fake_run:
+        assert pipeline_branch.branch_exists_in_repository(
+            "BIBSYSDEV/nva-foo", "feature"
+        )
+
+    git_arguments = fake_run.call_args.args[0]
+    assert "https://github.com/BIBSYSDEV/nva-foo.git" in git_arguments
+    assert "origin" not in git_arguments
+    assert fake_run.call_args.kwargs["env"]["GIT_TERMINAL_PROMPT"] == "0"
+
+
+def test_branch_exists_in_repository_is_false_for_missing_branch():
+    with _fake_git(_completed(returncode=2)):
+        assert not pipeline_branch.branch_exists_in_repository(
+            "BIBSYSDEV/nva-foo", "missing"
+        )
+
+
+def test_branch_exists_in_repository_raises_when_repository_is_unreachable():
+    unreachable = _completed(returncode=128, stderr="fatal: repository not found\n")
+
+    with (
+        _fake_git(unreachable),
+        pytest.raises(pipeline_branch.BranchCheckError) as error,
+    ):
+        pipeline_branch.branch_exists_in_repository("BIBSYSDEV/nva-foo", "main")
+
+    assert "BIBSYSDEV/nva-foo: fatal: repository not found" in str(error.value)
 
 
 def test_current_git_branch_is_none_on_detached_head():

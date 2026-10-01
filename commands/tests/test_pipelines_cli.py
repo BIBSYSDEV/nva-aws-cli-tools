@@ -7,6 +7,7 @@ from click.testing import CliRunner
 from moto import mock_aws
 
 from cli import cli
+from commands.services import pipeline_branch
 
 OSLO_SUMMER_TIME = timezone(timedelta(hours=2))
 
@@ -122,9 +123,12 @@ def _invoke_with_git(
     arguments,
     remote_repository: str | None = "BIBSYSDEV/nva-foo",
     current_branch: str | None = "feature",
-    branch_on_origin=True,
+    branch_exists_in_repository: MagicMock | None = None,
     **kwargs,
 ):
+    branch_exists_in_repository = branch_exists_in_repository or MagicMock(
+        return_value=True
+    )
     with (
         patch(
             "cli.build_session",
@@ -138,10 +142,9 @@ def _invoke_with_git(
             "commands.services.pipeline_branch.current_git_branch",
             return_value=current_branch,
         ),
-        patch("commands.services.pipeline_branch.is_git_repository", return_value=True),
         patch(
-            "commands.services.pipeline_branch.branch_exists_on_origin",
-            return_value=branch_on_origin,
+            "commands.services.pipeline_branch.branch_exists_in_repository",
+            new=branch_exists_in_repository,
         ),
     ):
         return CliRunner().invoke(cli, ["--quiet", "pipelines", *arguments], **kwargs)
@@ -202,16 +205,72 @@ def test_pipelines_deploy_aborts_when_confirmation_is_declined():
     fake_codepipeline.update_pipeline.assert_not_called()
 
 
-def test_pipelines_deploy_refuses_branch_missing_on_origin():
-    fake_codepipeline = _fake_codepipeline_for_repository()
+def test_pipelines_deploy_checks_branch_in_pipeline_repository_not_current_directory():
+    fake_codepipeline = _fake_codepipeline_for_repository(
+        repository="BIBSYSDEV/nva-foo"
+    )
+    branch_exists_in_repository = MagicMock(return_value=False)
 
     result = _invoke_with_git(
-        fake_codepipeline, ["deploy", "--yes"], branch_on_origin=False
+        fake_codepipeline,
+        ["deploy", "--yes", "--pipeline", "foo-pipeline", "--branch", "feature"],
+        remote_repository="BIBSYSDEV/nva-aws-cli-tools",
+        branch_exists_in_repository=branch_exists_in_repository,
     )
 
     assert result.exit_code == 1
-    assert "does not exist on origin" in result.output
+    assert "Branch 'feature' does not exist in BIBSYSDEV/nva-foo" in result.output
+    branch_exists_in_repository.assert_called_once_with("BIBSYSDEV/nva-foo", "feature")
     fake_codepipeline.update_pipeline.assert_not_called()
+
+
+def test_pipelines_deploy_fails_when_branch_check_fails():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    failing_branch_check = MagicMock(
+        side_effect=pipeline_branch.BranchCheckError(
+            "Could not list branches of BIBSYSDEV/nva-foo: not found"
+        )
+    )
+
+    result = _invoke_with_git(
+        fake_codepipeline,
+        ["deploy", "--yes"],
+        branch_exists_in_repository=failing_branch_check,
+    )
+
+    assert result.exit_code == 1
+    assert "Could not list branches of BIBSYSDEV/nva-foo" in result.output
+    fake_codepipeline.update_pipeline.assert_not_called()
+
+
+def test_pipelines_deploy_refuses_pipeline_without_github_source():
+    fake_codepipeline = _fake_codepipeline_for_repository()
+    fake_codepipeline.get_pipeline.return_value = {
+        "pipeline": {
+            "name": "s3-pipeline",
+            "stages": [
+                {
+                    "name": "Source",
+                    "actions": [
+                        {
+                            "name": "Source",
+                            "actionTypeId": {"provider": "S3"},
+                            "configuration": {"S3Bucket": "bucket"},
+                        }
+                    ],
+                }
+            ],
+        }
+    }
+
+    result = _invoke_with_git(
+        fake_codepipeline, ["deploy", "--yes", "--pipeline", "s3-pipeline"]
+    )
+
+    assert result.exit_code == 1
+    assert "has no GitHub (CodeStar connection) source" in result.output
+    fake_codepipeline.update_pipeline.assert_not_called()
+    fake_codepipeline.start_pipeline_execution.assert_not_called()
 
 
 def test_pipelines_deploy_fails_when_no_pipeline_uses_repository():

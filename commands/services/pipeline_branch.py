@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 import re
 import subprocess
 from datetime import UTC, datetime
@@ -14,6 +15,7 @@ from mypy_boto3_codepipeline.type_defs import (
 
 GITHUB_SOURCE_PROVIDER = "CodeStarSourceConnection"
 DEFAULT_REGION = "eu-west-1"
+LS_REMOTE_NO_MATCHING_REFS = 2
 
 
 def github_source_actions(
@@ -34,6 +36,15 @@ def configured_branch(
     if not source_actions:
         return None
     return source_actions[0]["configuration"].get("BranchName")
+
+
+def source_repository(
+    pipeline_definition: PipelineDeclarationOutputTypeDef,
+) -> str | None:
+    source_actions = github_source_actions(pipeline_definition)
+    if not source_actions:
+        return None
+    return source_actions[0]["configuration"].get("FullRepositoryId")
 
 
 def uses_repository(
@@ -116,14 +127,18 @@ def repository_from_remote_url(remote_url: str) -> str | None:
     return f"{match.group(1)}/{match.group(2)}" if match else None
 
 
+class BranchCheckError(Exception):
+    pass
+
+
 def _run_git(*arguments: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["git", *arguments], capture_output=True, text=True, check=False
+        ["git", *arguments],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
     )
-
-
-def is_git_repository() -> bool:
-    return _run_git("rev-parse", "--git-dir").returncode == 0
 
 
 def git_remote_repository() -> str | None:
@@ -140,8 +155,22 @@ def current_git_branch() -> str | None:
     return result.stdout.strip() or None
 
 
-def branch_exists_on_origin(branch: str) -> bool:
-    return (
-        _run_git("ls-remote", "--exit-code", "--heads", "origin", branch).returncode
-        == 0
+def branch_exists_in_repository(repository: str, branch: str) -> bool:
+    """
+    Checks the GitHub repository itself rather than the origin of the current
+    directory, so the check holds for --repository and --pipeline too.
+    """
+    result = _run_git(
+        "ls-remote",
+        "--exit-code",
+        "--heads",
+        f"https://github.com/{repository}.git",
+        branch,
     )
+    if result.returncode == LS_REMOTE_NO_MATCHING_REFS:
+        return False
+    if result.returncode != 0:
+        raise BranchCheckError(
+            f"Could not list branches of {repository}: {result.stderr.strip()}"
+        )
+    return True
