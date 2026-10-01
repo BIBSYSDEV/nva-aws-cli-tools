@@ -72,22 +72,24 @@ def with_pipeline_selection(command):
     command = click.option(
         "--pipeline",
         "pipeline_name",
-        help="Pipeline name (default: looked up from the repository)",
+        help="Pipeline name (default: found from the repository)",
     )(command)
     return click.option(
         "--repository",
         "-r",
-        help="GitHub repository, OWNER/REPO (default: from the git remote origin of the current directory)",
+        help="GitHub repository as OWNER/REPO (default: origin of the current directory)",
     )(command)
 
 
 @pipelines.command(
-    help="Point this repository's CodePipeline at a Git branch and start an execution. "
-    "Run it from inside the service repository."
+    help="Point a service's CodePipeline at a branch and start an execution. "
+    "Defaults to the Git repository and branch of the current working directory."
 )
 @with_pipeline_selection
 @click.option(
-    "--branch", "-b", help="Branch to deploy (default: the current Git branch)"
+    "--branch",
+    "-b",
+    help="Branch to deploy, must exist in the pipeline's repository (default: current branch)",
 )
 @click.option(
     "--no-start",
@@ -155,7 +157,8 @@ def deploy(
 
 
 @pipelines.command(
-    help="Show the branch, latest execution and stage statuses of this repository's CodePipeline"
+    help="Show the branch, latest execution and stages of a service's CodePipeline. "
+    "Defaults to the Git repository of the current working directory."
 )
 @with_pipeline_selection
 @click.pass_obj

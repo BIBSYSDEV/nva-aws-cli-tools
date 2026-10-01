@@ -154,35 +154,22 @@ uv run cli.py users search "john"
 
 ---
 
-#### **`pipelines deploy`**
+#### **`pipelines deploy`** and **`pipelines status`**
 
-* **Description**: Points a service's CodePipeline at a Git branch and starts an execution.
-  It sets `BranchName` on the GitHub source action and deletes the pipeline's Git triggers, so CodePipeline
-  regenerates the default push trigger for the new branch. Run it from inside the service repository: the
-  pipeline is looked up from the repository's `origin` remote and the branch defaults to the current one.
-
-* **Options**:
-  * `--branch`, `-b`: Branch to deploy (default: the current Git branch). The branch must exist in the pipeline's
-    GitHub repository.
-  * `--repository`, `-r`: GitHub repository as `OWNER/REPO` (default: from the `origin` remote).
-  * `--pipeline`: Pipeline name, skipping the lookup by repository.
-  * `--no-start`: Update the pipeline without starting an execution.
-  * `--yes`, `-y`: Skip the confirmation prompt.
+* **Description**: Points a service's CodePipeline at a branch and starts an execution, or shows the pipeline's status.
+  Run `--help` on each command for its options.
 
 * **Examples**:
-  * `> uv run cli.py --profile sikt-nva-dev pipelines deploy`
-  * `> uv run cli.py pipelines deploy --branch main --yes`
+  * From inside a service repository, deploy its current branch:
+    `> uv run --project ~/path/to/nva-aws-cli-tools ~/path/to/nva-aws-cli-tools/cli.py --profile sikt-nva-dev pipelines deploy`
+  * From this repository, naming the target explicitly:
+    `> uv run cli.py --profile sikt-nva-dev pipelines deploy --repository BIBSYSDEV/nva-publication-api --branch main --yes`
 
-#### **`pipelines status`**
+#### Running the CLI from any directory
 
-* **Description**: Shows the branch, latest execution, and stage statuses of a service's CodePipeline.
-  Takes the same `--repository` and `--pipeline` options as `pipelines deploy`.
-
-#### Running the pipeline commands from any directory
-
-`uv run --project` selects the CLI's environment without changing the working directory, so the Git lookups
-run against the repository you are standing in. For example, as a [mise](https://mise.jdx.dev) shell alias
-(defined by `mise activate` while you are inside the config's directory tree):
+`uv run --project` selects the CLI's environment without changing the working directory, so the Git lookups run
+against the repository you are standing in. A [mise](https://mise.jdx.dev) shell alias makes this short
+(`mise activate` defines it while you are inside the config's directory tree):
 
 ```toml
 [shell_alias]
