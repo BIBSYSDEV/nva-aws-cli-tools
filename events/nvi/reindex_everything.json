@@ -1,0 +1,5 @@
+{
+  "type": "StartBatchJobRequest",
+  "jobType": "REFRESH_CANDIDATES",
+  "maxItems": 10000000
+}

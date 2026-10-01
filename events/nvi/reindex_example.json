@@ -1,0 +1,9 @@
+{
+  "type": "StartBatchJobRequest",
+  "jobType": "REFRESH_CANDIDATES",
+  "filter": {
+    "type": "ReportingYearFilter",
+    "reportingYears": ["2024"]
+  },
+  "maxItems": 10
+}
