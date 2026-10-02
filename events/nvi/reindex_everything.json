@@ -1,5 +1,5 @@
 {
   "type": "StartBatchJobRequest",
-  "jobType": "BACKFILL_CREATOR_DATA",
+  "jobType": "REFRESH_CANDIDATES",
   "maxItems": 10000000
 }
