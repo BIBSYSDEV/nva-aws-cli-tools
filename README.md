@@ -335,9 +335,9 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
     ```
 
     `-path=microsoft` matters: the OIDC auth method is mounted there, not at the default `oidc`, and leaving it
-    out fails with `403 permission denied`. A token that is about to expire is renewed automatically when it is renewable; otherwise log in again. You
-    can also copy a token from the user menu at <https://vault.sikt.no:8200/ui> and `export VAULT_TOKEN=<token>`.
-    Override the address with `VAULT_ADDR`.
+    out fails with `403 permission denied`. The token lasts about eight hours; when it expires, log in again. You
+    can also copy a token from the user menu at <https://vault.sikt.no:8200/ui> and `export VAULT_TOKEN=<token>`,
+    which takes precedence over `~/.vault-token`. Override the address with `VAULT_ADDR`.
 
   See [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438) for
   the Tailscale and Vault group memberships, and for the routines themselves.
