@@ -331,10 +331,11 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 
     ```bash
     brew tap hashicorp/tap && brew install hashicorp/tap/vault
-    vault login -method=oidc -address=https://vault.sikt.no:8200
+    vault login -method=oidc -path=microsoft -address=https://vault.sikt.no:8200
     ```
 
-    A token that is about to expire is renewed automatically when it is renewable; otherwise log in again. You
+    `-path=microsoft` matters: the OIDC auth method is mounted there, not at the default `oidc`, and leaving it
+    out fails with `403 permission denied`. A token that is about to expire is renewed automatically when it is renewable; otherwise log in again. You
     can also copy a token from the user menu at <https://vault.sikt.no:8200/ui> and `export VAULT_TOKEN=<token>`.
     Override the address with `VAULT_ADDR`.
 
