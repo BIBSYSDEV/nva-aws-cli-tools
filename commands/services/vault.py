@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -27,6 +28,10 @@ CALLBACK_HOST = "localhost"
 CALLBACK_PORT = 8250
 CALLBACK_PATH = "/oidc/callback"
 LOGIN_TIMEOUT_SECONDS = 180
+CALLBACK_REQUEST_TIMEOUT_SECONDS = 10
+TOKEN_FILE_MODE = 0o600
+STATE_PARAMETER = "state"
+CODE_PARAMETER = "code"
 
 KV_V2_DATA_SEGMENT = "data"
 
@@ -44,6 +49,10 @@ class VaultTokenRejectedError(VaultError):
     pass
 
 
+def _state_from(auth_url: str) -> str | None:
+    return parse_qs(urlparse(auth_url).query).get(STATE_PARAMETER, [None])[0]
+
+
 def read_cached_token() -> str | None:
     token = os.environ.get(VAULT_TOKEN_ENV)
     if token and token.strip():
@@ -58,28 +67,44 @@ def read_cached_token() -> str | None:
 def cache_token(token: str) -> None:
     token_file = Path(VAULT_TOKEN_FILE).expanduser()
     try:
-        token_file.write_text(token, encoding="utf-8")
-        token_file.chmod(0o600)
+        descriptor = os.open(
+            token_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, TOKEN_FILE_MODE
+        )
+        os.fchmod(descriptor, TOKEN_FILE_MODE)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as cache_file:
+            cache_file.write(token)
     except OSError as error:
         logger.debug("Could not cache Vault token in %s: %s", token_file, error)
 
 
 class _CallbackHandler(BaseHTTPRequestHandler):
     query_parameters: ClassVar[dict[str, list[str]]] = {}
+    expected_state: ClassVar[str | None] = None
+    timeout = CALLBACK_REQUEST_TIMEOUT_SECONDS
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path != CALLBACK_PATH:
             self.send_error(404)
             return
-        type(self).query_parameters = parse_qs(parsed.query)
+        parameters = parse_qs(parsed.query)
+        if not self._has_expected_state(parameters):
+            logger.debug("Ignoring OIDC callback with an unexpected state")
+            self.send_error(400)
+            return
+        type(self).query_parameters = parameters
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(BROWSER_RESPONSE_BODY)
 
     def log_message(self, format: str, *args: Any) -> None:
-        logger.debug("OIDC callback: %s", format % args)
+        logger.debug("OIDC callback received")
+
+    def _has_expected_state(self, parameters: dict[str, list[str]]) -> bool:
+        expected_state = type(self).expected_state
+        received_state = parameters.get(STATE_PARAMETER, [None])[0]
+        return bool(expected_state) and received_state == expected_state
 
 
 class VaultClient:
@@ -144,13 +169,14 @@ class VaultClient:
 
     def _await_callback(self, auth_url: str) -> dict[str, list[str]]:
         _CallbackHandler.query_parameters = {}
+        _CallbackHandler.expected_state = _state_from(auth_url)
         try:
             server = HTTPServer((CALLBACK_HOST, CALLBACK_PORT), _CallbackHandler)
         except OSError as error:
             raise VaultError(
                 f"Could not listen on {CALLBACK_HOST}:{CALLBACK_PORT} for the Vault login callback: {error}"
-            )
-        server.timeout = LOGIN_TIMEOUT_SECONDS
+            ) from error
+        server.timeout = CALLBACK_REQUEST_TIMEOUT_SECONDS
         logger.info("Opening browser for Vault login")
         print(f"Logg inn i nettleseren hvis den ikke åpner seg: {auth_url}")
         browser_thread = threading.Thread(
@@ -158,11 +184,19 @@ class VaultClient:
         )
         browser_thread.start()
         with server:
-            server.handle_request()
+            self._serve_until_callback(server)
         parameters = _CallbackHandler.query_parameters
-        if not parameters.get("code") or not parameters.get("state"):
+        if not parameters.get(CODE_PARAMETER) or not parameters.get(STATE_PARAMETER):
             raise VaultError("Vault login was not completed in the browser")
         return parameters
+
+    @staticmethod
+    def _serve_until_callback(server: HTTPServer) -> None:
+        deadline = time.monotonic() + LOGIN_TIMEOUT_SECONDS
+        while not _CallbackHandler.query_parameters:
+            if time.monotonic() >= deadline:
+                return
+            server.handle_request()
 
     def _exchange_callback(self, mount: str, parameters: dict[str, list[str]]) -> str:
         url = f"{self.address}/v1/auth/{mount}/oidc/callback"
@@ -175,7 +209,9 @@ class VaultClient:
                 url, params=query, timeout=REQUEST_TIMEOUT_SECONDS
             )
         except requests.RequestException as error:
-            raise VaultError(f"Could not reach Vault at {self.address}: {error}")
+            raise VaultError(
+                f"Could not reach Vault at {self.address}: {error}"
+            ) from error
         if not response.ok:
             raise VaultError(
                 f"Vault login failed ({response.status_code}): {response.text}"
@@ -186,10 +222,17 @@ class VaultClient:
         return token
 
     def _read_any(self, logical_path: str) -> dict[str, Any]:
+        denials: list[VaultTokenRejectedError] = []
         for api_path in self._candidate_paths(logical_path):
-            secret = self._read(api_path)
+            try:
+                secret = self._read(api_path)
+            except VaultTokenRejectedError as denial:
+                denials.append(denial)
+                continue
             if secret is not None:
                 return secret
+        if denials:
+            raise denials[0]
         raise VaultError(
             f"Secret {logical_path!r} not found in Vault at {self.address}. "
             "Check the path and that your token has access to it."
@@ -204,7 +247,9 @@ class VaultClient:
                 timeout=REQUEST_TIMEOUT_SECONDS,
             )
         except requests.RequestException as error:
-            raise VaultError(f"Could not reach Vault at {self.address}: {error}")
+            raise VaultError(
+                f"Could not reach Vault at {self.address}: {error}"
+            ) from error
         if response.status_code == 404:
             logger.debug("Vault returned 404 for %s", url)
             return None
@@ -225,7 +270,9 @@ class VaultClient:
                 url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS
             )
         except requests.RequestException as error:
-            raise VaultError(f"Could not reach Vault at {self.address}: {error}")
+            raise VaultError(
+                f"Could not reach Vault at {self.address}: {error}"
+            ) from error
         if not response.ok:
             raise VaultError(
                 f"Vault request to {api_path} failed ({response.status_code}): {response.text}"
