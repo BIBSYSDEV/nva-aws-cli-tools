@@ -30,7 +30,9 @@ class VaultError(Exception):
 
 
 class VaultTokenRejectedError(VaultError):
-    pass
+    def __init__(self, message: str, status_code: int = 403) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def read_cached_token() -> str | None:
@@ -154,20 +156,26 @@ class VaultClient:
         return str(options.get("version") or "")
 
     def _read_any(self, logical_path: str) -> dict[str, Any]:
-        denials: list[VaultTokenRejectedError] = []
-        for api_path in self._api_paths(logical_path):
+        attempts: list[str] = []
+        denied = False
+        api_paths, source = self._api_paths(logical_path)
+        for api_path in api_paths:
             try:
                 secret = self._read(api_path)
             except VaultTokenRejectedError as denial:
-                denials.append(denial)
+                attempts.append(f"  {api_path} -> {denial.status_code}")
+                denied = True
                 continue
             if secret is not None:
                 return secret
-        if denials:
-            raise denials[0]
+            attempts.append(f"  {api_path} -> 404")
+        report = f"Tried {source}:\n" + "\n".join(attempts)
+        if denied:
+            raise VaultTokenRejectedError(
+                f"Vault denied access to {logical_path!r}.\n{report}"
+            )
         raise VaultError(
-            f"Secret {logical_path!r} not found in Vault at {self.address}. "
-            "Check the path and that your token has access to it."
+            f"Secret {logical_path!r} not found in Vault at {self.address}.\n{report}"
         )
 
     def _read(self, api_path: str) -> dict[str, Any] | None:
@@ -187,7 +195,8 @@ class VaultClient:
             return None
         if response.status_code in (401, 403):
             raise VaultTokenRejectedError(
-                f"Vault denied access to {api_path!r} ({response.status_code})"
+                f"Vault denied access to {api_path!r} ({response.status_code})",
+                response.status_code,
             )
         if not response.ok:
             raise VaultError(
@@ -195,11 +204,13 @@ class VaultClient:
             )
         return self._unwrap(response.json())
 
-    def _api_paths(self, logical_path: str) -> list[str]:
+    def _api_paths(self, logical_path: str) -> tuple[list[str], str]:
         resolved = self._resolve_api_path(logical_path)
         if resolved:
-            return [resolved]
-        return self._candidate_paths(logical_path)
+            return [resolved], "the mount Vault reported"
+        return self._candidate_paths(logical_path), (
+            "guessed paths, because the mount could not be looked up"
+        )
 
     @staticmethod
     def _candidate_paths(logical_path: str) -> list[str]:
