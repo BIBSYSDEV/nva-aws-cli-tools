@@ -8,6 +8,7 @@ SECRET_PATH = "service/cristin/database/test"
 KV_V2_URL = f"{VAULT_ADDRESS}/v1/service/data/cristin/database/test"
 KV_V1_URL = f"{VAULT_ADDRESS}/v1/service/cristin/database/test"
 TOKEN_LOOKUP_URL = f"{VAULT_ADDRESS}/v1/auth/token/lookup-self"
+TOKEN_RENEW_URL = f"{VAULT_ADDRESS}/v1/auth/token/renew-self"
 
 
 def build_client() -> VaultClient:
@@ -45,6 +46,43 @@ def test_denied_kv_v2_probe_still_falls_back_to_kv_v1():
     secret = build_client().read_secret(SECRET_PATH)
 
     assert secret == {"FRIDA": "frida-password"}
+
+
+@responses.activate
+def test_a_token_close_to_expiry_is_renewed_before_reading():
+    responses.get(
+        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
+    )
+    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
+    responses.get(KV_V2_URL, json={"data": {"data": {"FRIDA": "pw"}}}, status=200)
+
+    build_client().read_secret(SECRET_PATH)
+
+    assert renewal.call_count == 1
+
+
+@responses.activate
+def test_a_token_with_plenty_of_time_left_is_not_renewed():
+    responses.get(
+        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 3600}}, status=200
+    )
+    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
+    responses.get(KV_V2_URL, json={"data": {"data": {"FRIDA": "pw"}}}, status=200)
+
+    build_client().read_secret(SECRET_PATH)
+
+    assert renewal.call_count == 0
+
+
+@responses.activate
+def test_a_failed_renewal_does_not_stop_the_read():
+    responses.get(
+        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
+    )
+    responses.post(TOKEN_RENEW_URL, json={"errors": ["no"]}, status=403)
+    responses.get(KV_V2_URL, json={"data": {"data": {"FRIDA": "pw"}}}, status=200)
+
+    assert build_client().read_secret(SECRET_PATH) == {"FRIDA": "pw"}
 
 
 @responses.activate

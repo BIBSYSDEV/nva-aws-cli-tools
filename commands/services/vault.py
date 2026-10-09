@@ -18,6 +18,8 @@ REQUEST_TIMEOUT_SECONDS = 15
 
 KV_V2_DATA_SEGMENT = "data"
 TOKEN_LOOKUP_PATH = "auth/token/lookup-self"
+TOKEN_RENEW_PATH = "auth/token/renew-self"
+RENEW_WHEN_SECONDS_LEFT = 300
 
 
 class VaultError(Exception):
@@ -51,16 +53,38 @@ class VaultClient:
         logical_path = path.strip("/")
         if not self.token:
             raise VaultError(f"No Vault token found.\n{self.login_instructions()}")
+        self.renew_token_if_expiring()
         try:
             return self._read_any(logical_path)
         except VaultTokenRejectedError as denial:
             raise VaultError(self._explain_denial(logical_path, denial)) from denial
 
+    def renew_token_if_expiring(self) -> None:
+        token_data = self._look_up_token()
+        if not token_data or not token_data.get("renewable"):
+            return
+        seconds_left = token_data.get("ttl")
+        if not isinstance(seconds_left, int) or seconds_left > RENEW_WHEN_SECONDS_LEFT:
+            return
+        logger.debug("Renewing Vault token with %s seconds left", seconds_left)
+        try:
+            response = self.http_client.post(
+                f"{self.address}/v1/{TOKEN_RENEW_PATH}",
+                headers={VAULT_TOKEN_HEADER: self.token or ""},
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except requests.RequestException as error:
+            logger.debug("Could not renew the Vault token: %s", error)
+            return
+        if not response.ok:
+            logger.debug("Vault refused to renew the token: %s", response.status_code)
+
     def login_instructions(self) -> str:
         return (
-            "Log in with the Vault CLI (install it with `brew install vault`):\n"
+            "Log in with the Vault CLI:\n"
+            "    brew tap hashicorp/tap && brew install hashicorp/tap/vault\n"
             f"    vault login -method=oidc -address={self.address}\n"
-            f"Or copy a token from {self.address}/ui and run:\n"
+            f"Or copy a token from {self.address}/ui (user menu) and run:\n"
             f"    export {VAULT_TOKEN_ENV}=<the token>"
         )
 
@@ -78,6 +102,9 @@ class VaultClient:
         )
 
     def _token_is_valid(self) -> bool:
+        return self._look_up_token() is not None
+
+    def _look_up_token(self) -> dict[str, Any] | None:
         try:
             response = self.http_client.get(
                 f"{self.address}/v1/{TOKEN_LOOKUP_PATH}",
@@ -86,8 +113,11 @@ class VaultClient:
             )
         except requests.RequestException as error:
             logger.debug("Could not look up the Vault token: %s", error)
-            return False
-        return response.ok
+            return None
+        if not response.ok:
+            return None
+        data = response.json().get("data")
+        return data if isinstance(data, dict) else {}
 
     def _read_any(self, logical_path: str) -> dict[str, Any]:
         denials: list[VaultTokenRejectedError] = []
