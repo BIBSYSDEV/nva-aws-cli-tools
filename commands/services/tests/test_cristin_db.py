@@ -229,9 +229,10 @@ def test_merge_rolls_back_on_error():
     connection = FakeConnection(merge_error="ORA-20001")
     service = build_service(connection)
 
-    with pytest.raises(CristinDatabaseError, match="ORA-20001"):
+    with pytest.raises(CristinDatabaseError, match="ORA-20001") as error:
         service.merge_person(FROM_LOPENR, TO_LOPENR)
 
+    assert "kan allerede være lagret" in str(error.value)
     assert connection.commits == 0
     assert connection.rollbacks == 1
 
