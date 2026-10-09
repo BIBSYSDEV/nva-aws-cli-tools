@@ -46,8 +46,14 @@ def build_service(monkeypatch, profiles=None, merge_error=None) -> MagicMock:
         service.merge_person.return_value = MergeResult(
             session_id=SESSION_ID, output_lines=["Sessionid: 4711"]
         )
+    service.construction = []
+
+    def record_construction(*args, **kwargs):
+        service.construction.append((args, kwargs))
+        return service
+
     monkeypatch.setattr(
-        "commands.cristin_db.CristinDatabaseService", lambda *args, **kwargs: service
+        "commands.cristin_db.CristinDatabaseService", record_construction
     )
     return service
 
@@ -66,6 +72,30 @@ def test_merge_person_shows_preview_and_merges_after_confirmation(monkeypatch):
     assert "Ansettelser" in result.output
     assert "Sessionid: 4711" in result.output
     service.merge_person.assert_called_once_with(FROM_LOPENR, TO_LOPENR)
+
+
+def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch):
+    service = build_service(monkeypatch)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--profile",
+            "sikt-nva-prod",
+            "cristin-db",
+            "merge-person",
+            str(FROM_LOPENR),
+            str(TO_LOPENR),
+            "--vault-path",
+            "service/cristin/database/prod",
+            "--yes",
+        ],
+    )
+
+    assert result.exit_code == 0
+    arguments, keyword_arguments = service.construction[0]
+    assert arguments[0] == "sikt-nva-prod"
+    assert keyword_arguments["vault_path"] == "service/cristin/database/prod"
 
 
 def test_merge_person_aborts_when_not_confirmed(monkeypatch):
