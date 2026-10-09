@@ -102,6 +102,7 @@ Commands:
   organization-migration  Publication organization migrations
   pipelines               AWS pipeline management
   publications            Publication CRUD, export, migration
+  routines                Manual routines spanning both NVA and Cristin
   sqs                     SQS queue management
   users                   User search and management
 ```
@@ -388,3 +389,26 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 * **Examples**:
   * `> uv run cli.py cristin-db merge-person 123456 654321`
   * `> uv run cli.py cristin-db merge-person 123456 654321 --yes`
+
+---
+
+#### **`routines merge-person`**
+
+* **Description**: Runs the full "slå sammen personprofiler" routine in the order the manual describes: first the
+  NVA step (`manual-update contributor-identifier`, which moves the publications via the
+  ManuallyUpdatePublications Lambda), then the Cristin step (`cristin-db merge-person`). The command only
+  orchestrates the two commands; the logic lives with each system.
+
+* **Prerequisites**: The same as `cristin-db merge-person`, plus AWS credentials for the Lambda.
+
+* **Options**:
+  * `--limit`: Max number of NVA resources to move in the first step.
+  * `--yes`: Skip the confirmation prompts.
+  * `--vault-path`: Read the Cristin credentials from another Vault path.
+
+* **Output**: Step 1 previews the NVA changes with a dry run and asks before applying them; step 2 prints the
+  profile comparison and asks before merging in Cristin.
+
+* **Examples**:
+  * `> uv run cli.py routines merge-person 123456 654321`
+  * `> uv run cli.py routines merge-person 123456 654321 --limit 50`

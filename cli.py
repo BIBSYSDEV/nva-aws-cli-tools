@@ -19,6 +19,7 @@ from commands.organization_migration import organization_migration
 from commands.pipelines import pipelines
 from commands.publications import publications
 from commands.reports import reports
+from commands.routines import routines
 from commands.s3 import s3
 from commands.search import search
 from commands.services.aws_utils import build_session
@@ -71,6 +72,7 @@ cli.add_command(organization_migration)
 cli.add_command(manual_update)
 cli.add_command(cristin)
 cli.add_command(cristin_db)
+cli.add_command(routines)
 cli.add_command(sqs)
 cli.add_command(search)
 cli.add_command(reports)
