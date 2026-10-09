@@ -79,7 +79,8 @@ def merge_person(
     """Merge Cristin person FROM_LOPENR into TO_LOPENR (PK_FDS200010.P_Merge_Person).
 
     FROM_LOPENR is the profile that disappears, TO_LOPENR the one that is kept.
-    Move the publications in NVA first with `manual-update contributor-identifier`.
+    Move the publications in NVA first with `manual-update contributor-identifier`,
+    or run the whole routine with `routines merge-person`.
     """
     run_merge_person(ctx, from_lopenr, to_lopenr, yes, vault_path, username)
 
