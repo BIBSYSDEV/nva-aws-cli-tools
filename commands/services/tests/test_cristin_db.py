@@ -178,7 +178,7 @@ def test_enable_thick_mode_explains_how_to_install_the_client(monkeypatch):
 
     monkeypatch.setattr(oracledb, "init_oracle_client", refuse)
 
-    with pytest.raises(CristinDatabaseError, match="instantclient-basic"):
+    with pytest.raises(CristinDatabaseError, match="macos-arm64-downloads"):
         enable_thick_mode()
 
 
