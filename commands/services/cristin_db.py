@@ -52,11 +52,12 @@ end;
 ORACLE_CLIENT_LIB_DIR_ENV = "ORACLE_CLIENT_LIB_DIR"
 INSTANT_CLIENT_HELP = (
     "The Cristin database requires Oracle Native Network Encryption, which python-oracledb "
-    "only supports with the Oracle Instant Client installed. Install it with:\n"
-    "    brew tap InstantClientTap/instantclient\n"
-    "    brew install instantclient-basic\n"
-    f"If the libraries end up somewhere unusual, point {ORACLE_CLIENT_LIB_DIR_ENV} at the "
-    "directory holding them."
+    "only supports with the Oracle Instant Client loaded. The client must match the Python "
+    "you are running: on Apple Silicon that means the arm64 build, which Oracle only ships "
+    "as a manual download (the homebrew formula is x86_64 and cannot be loaded).\n"
+    "    https://www.oracle.com/database/technologies/instant-client/macos-arm64-downloads.html\n"
+    "Unpack it, then point the CLI at it:\n"
+    f"    export {ORACLE_CLIENT_LIB_DIR_ENV}=~/Downloads/instantclient_23_3"
 )
 
 PARTIAL_MERGE_WARNING = (
