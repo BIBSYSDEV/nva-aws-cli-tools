@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from commands.services.cristin_db import (
+    DEFAULT_DB_USER,
     CristinDatabaseError,
     CristinDatabaseService,
     MergeResult,
@@ -31,7 +32,13 @@ def handle_database_errors(func):
     return wrapper
 
 
-def vault_path_option(func):
+def credential_options(func):
+    func = click.option(
+        "--db-user",
+        "username",
+        default=None,
+        help=f"Database user to connect as, looked up in the Vault secret. Defaults to {DEFAULT_DB_USER}.",
+    )(func)
     return click.option(
         "--vault-path",
         default=None,
@@ -57,7 +64,7 @@ def cristin_db(ctx: AppContext) -> None:
 @click.option(
     "--yes", is_flag=True, default=False, help="Skip the confirmation prompt."
 )
-@vault_path_option
+@credential_options
 @click.pass_obj
 @handle_database_errors
 def merge_person(
@@ -66,13 +73,14 @@ def merge_person(
     to_lopenr: int,
     yes: bool,
     vault_path: str | None,
+    username: str | None,
 ) -> None:
     """Merge Cristin person FROM_LOPENR into TO_LOPENR (PK_FDS200010.P_Merge_Person).
 
     FROM_LOPENR is the profile that disappears, TO_LOPENR the one that is kept.
     Move the publications in NVA first with `manual-update contributor-identifier`.
     """
-    run_merge_person(ctx, from_lopenr, to_lopenr, yes, vault_path)
+    run_merge_person(ctx, from_lopenr, to_lopenr, yes, vault_path, username)
 
 
 def run_merge_person(
@@ -81,10 +89,13 @@ def run_merge_person(
     to_lopenr: int,
     yes: bool,
     vault_path: str | None,
+    username: str | None = None,
     console: Console | None = None,
 ) -> None:
     console = console or Console()
-    with CristinDatabaseService(ctx.profile, vault_path=vault_path) as service:
+    with CristinDatabaseService(
+        ctx.profile, vault_path=vault_path, username=username
+    ) as service:
         print_merge_preview(console, service, from_lopenr, to_lopenr)
         if not yes:
             click.confirm(
