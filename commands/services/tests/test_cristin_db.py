@@ -22,6 +22,8 @@ FROM_LOPENR = 123456
 TO_LOPENR = 654321
 SESSION_ID = 4711
 ROW_COUNT = 3
+PROD_PROFILE = "a-profile-named-prod"
+NON_PROD_PROFILE = "a-profile-named-anything-else"
 
 PERSON_COLUMNS = ("PERSONLOPENR", "FORNAVN", "ETTERNAVN", "EPOST")
 PERSON_ROWS = {
@@ -129,14 +131,14 @@ class FakeConnection:
         self.closed = True
 
 
-def build_service(connection: FakeConnection, profile: str = "sikt-nva-test"):
+def build_service(connection: FakeConnection, profile: str = NON_PROD_PROFILE):
     return CristinDatabaseService(profile, connection=connection)
 
 
 def test_profile_decides_environment():
-    assert dsn_for("sikt-nva-prod") == PROD_DSN
-    assert vault_path_for("sikt-nva-prod") == PROD_VAULT_PATH
-    assert dsn_for("sikt-nva-sandbox") == TEST_DSN
+    assert dsn_for(PROD_PROFILE) == PROD_DSN
+    assert vault_path_for(PROD_PROFILE) == PROD_VAULT_PATH
+    assert dsn_for(NON_PROD_PROFILE) == TEST_DSN
     assert vault_path_for(None) == TEST_VAULT_PATH
 
 
