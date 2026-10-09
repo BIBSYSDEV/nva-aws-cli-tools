@@ -333,17 +333,19 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 
     ```bash
     hdiutil mount ~/Downloads/instantclient-basic-macos.arm64-*.dmg
-    mkdir -p ~/.local/lib/instantclient_23_3
-    cp -R /Volumes/instantclient-basic-macos.arm64-*/* ~/.local/lib/instantclient_23_3/
-    xattr -r -d com.apple.quarantine ~/.local/lib/instantclient_23_3
+    client=~/.local/lib/instantclient_23_26          # name it after the version you downloaded
+    mkdir -p "$client"
+    cp -R /Volumes/instantclient-basic-macos.arm64-*/* "$client"/
+    chmod -R u+w "$client"                           # the copies inherit the DMG's read-only bits
+    xattr -r -d com.apple.quarantine "$client"
     hdiutil unmount /Volumes/instantclient-basic-macos.arm64-*
-    ls ~/.local/lib/instantclient_23_3/libclntsh.dylib   # must exist
+    ls "$client"/libclntsh.dylib                     # must exist
     ```
 
     Keep the libraries together in their own directory rather than loose in `~/.local/lib`: the client loads
     sibling files such as `libnnz`, and a dedicated directory makes it easy to replace or remove a version.
 
-    Then set `ORACLE_CLIENT_LIB_DIR=~/.local/lib/instantclient_23_3` permanently, in your shell profile or next
+    Then set `ORACLE_CLIENT_LIB_DIR` to that directory permanently, in your shell profile or next
     to the `nva` alias in the mise config. Removing the quarantine attribute matters: without it macOS refuses
     to load the libraries. The DMG also ships `install_ic.sh`, which copies to `~/Downloads` and clears the
     attribute for you.
