@@ -9,6 +9,7 @@ from commands.awslambda import awslambda
 from commands.channels import channels
 from commands.cognito import cognito
 from commands.cristin import cristin
+from commands.cristin_db import cristin_db
 from commands.customers import customers
 from commands.dlq import dlq
 from commands.dynamodb import dynamodb
@@ -69,6 +70,7 @@ cli.add_command(pipelines)
 cli.add_command(organization_migration)
 cli.add_command(manual_update)
 cli.add_command(cristin)
+cli.add_command(cristin_db)
 cli.add_command(sqs)
 cli.add_command(search)
 cli.add_command(reports)

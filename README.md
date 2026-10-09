@@ -95,6 +95,7 @@ Commands:
   awslambda               Manage AWS Lambda functions
   cognito                 Search Cognito users
   cristin                 Cristin integration commands
+  cristin-db              Manual Cristin database routines (Oracle)
   customers               Customer data validation
   dlq                     Dead letter queue handling
   handle                  Handle registration tasks
@@ -308,3 +309,82 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   * `> uv run cli.py approvals policies add f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c ctis dmp`
   * `> uv run cli.py approvals policies update f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --add rek --remove dmp`
   * `> uv run cli.py approvals policies delete f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --yes`
+
+---
+
+#### **`cristin-db merge-person`**
+
+* **Description**: Merges two Cristin person profiles by calling `PK_FDS200010.P_Merge_Person` in the Cristin
+  Oracle database, as described in
+  [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438).
+  The first argument is the profile that disappears, the second the one that is kept. Move the publications in
+  NVA first with `manual-update contributor-identifier`.
+
+* **Prerequisites**:
+  * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
+  * The Oracle Instant Client. Cristin requires Oracle Native Network Encryption, which python-oracledb only
+    supports in thick mode:
+
+    The client has to match the architecture of the Python you run. On Apple Silicon that is the arm64 build,
+    which Oracle only ships as a manual download — the homebrew formula is x86_64 and cannot be loaded by an
+    arm64 Python. Download it from
+    [Instant Client for macOS (ARM64)](https://www.oracle.com/database/technologies/instant-client/macos-arm64-downloads.html),
+    unpack it, and point the CLI at it:
+
+    ```bash
+    hdiutil mount ~/Downloads/instantclient-basic-macos.arm64-*.dmg
+    client=~/.local/lib/instantclient_23_26          # name it after the version you downloaded
+    mkdir -p "$client"
+    cp -R /Volumes/instantclient-basic-macos.arm64-*/* "$client"/
+    chmod -R u+w "$client"                           # the copies inherit the DMG's read-only bits
+    xattr -r -d com.apple.quarantine "$client"
+    hdiutil unmount /Volumes/instantclient-basic-macos.arm64-*
+    ls "$client"/libclntsh.dylib                     # must exist
+    ```
+
+    Keep the libraries together in their own directory rather than loose in `~/.local/lib`: the client loads
+    sibling files such as `libnnz`, and a dedicated directory makes it easy to replace or remove a version.
+
+    Then set `ORACLE_CLIENT_LIB_DIR` to that directory permanently, in your shell profile or next
+    to the `nva` alias in the mise config. Removing the quarantine attribute matters: without it macOS refuses
+    to load the libraries. The DMG also ships `install_ic.sh`, which copies to `~/Downloads` and clears the
+    attribute for you.
+
+    Without a client the connection fails with `DPY-3001`; with one of the wrong architecture it fails with
+    `DPI-1047`.
+  * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
+    `secret/service/cristin/database/test` and `secret/service/cristin/database/prod` (the `secret` KV v2 mount,
+    so the API path is `secret/data/service/...`), where each key is a database username
+    and its value is that user's password. The CLI connects as `FRIDA` unless `--db-user` names another user
+    from the same secret.
+  * A Vault token. The CLI reads it from `VAULT_TOKEN` or `~/.vault-token` and never logs in by itself, so log
+    in with the Vault CLI first:
+
+    ```bash
+    brew tap hashicorp/tap && brew install hashicorp/tap/vault
+    vault login -method=oidc -path=microsoft -address=https://vault.sikt.no:8200
+    ```
+
+    `-path=microsoft` matters: the OIDC auth method is mounted there, not at the default `oidc`, and leaving it
+    out fails with `403 permission denied`. The token lasts about eight hours; when it expires, log in again. You
+    can also copy a token from the user menu at <https://vault.sikt.no:8200/ui> and `export VAULT_TOKEN=<token>`,
+    which takes precedence over `~/.vault-token`. Override the address with `VAULT_ADDR`.
+
+  See [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438) for
+  the Tailscale and Vault group memberships, and for the routines themselves.
+
+* **Environment**: Chosen from the AWS profile, like the other commands. A profile containing `prod` connects to
+  `CRISPRD`, everything else to `CRISTST`.
+
+* **Options**:
+  * `--yes`: Skip the confirmation prompt.
+  * `--vault-path`: Read the credentials from another Vault path.
+  * `--db-user`: Connect as another database user from the same secret (default `FRIDA`).
+
+* **Output**: A table comparing the two profiles (name, key `PERSON` columns and row counts in related tables),
+  then a confirmation prompt, and finally the session id and `DBMS_OUTPUT` from the procedure. The merge runs
+  with `inOppdDB=1` and is committed.
+
+* **Examples**:
+  * `> uv run cli.py cristin-db merge-person 123456 654321`
+  * `> uv run cli.py cristin-db merge-person 123456 654321 --yes`
