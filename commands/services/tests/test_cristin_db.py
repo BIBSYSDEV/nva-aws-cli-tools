@@ -2,8 +2,13 @@ import oracledb
 import pytest
 
 from commands.services.cristin_db import (
+    MERGE_PERSON_STATEMENT,
+    PERSON_KEY_COLUMN,
+    PERSON_TABLE,
     PROD_DSN,
     PROD_VAULT_PATH,
+    RELATED_COUNT_TABLES,
+    SCHEMA,
     TEST_DSN,
     TEST_VAULT_PATH,
     CristinDatabaseError,
@@ -16,11 +21,25 @@ from commands.services.cristin_db import (
 FROM_LOPENR = 123456
 TO_LOPENR = 654321
 SESSION_ID = 4711
+ROW_COUNT = 3
 
 PERSON_COLUMNS = ("PERSONLOPENR", "FORNAVN", "ETTERNAVN", "EPOST")
 PERSON_ROWS = {
     FROM_LOPENR: (FROM_LOPENR, "Ola", "Nordmann", "ola@example.no"),
     TO_LOPENR: (TO_LOPENR, "Ola", "Nordmann", "ola@uio.no"),
+}
+
+KNOWN_TABLES = ("ANSETTELSE",)
+PERSON_LOOKUP_STATEMENT = (
+    f"select * from {SCHEMA}.{PERSON_TABLE} where {PERSON_KEY_COLUMN} = :lopenr"
+)
+COLUMN_LOOKUP_STATEMENT = (
+    "select count(*) from all_tab_columns "
+    "where owner = :owner and table_name = :table_name and column_name = :column_name"
+)
+COUNT_STATEMENTS = {
+    f"select count(*) from {SCHEMA}.{table_name} where {PERSON_KEY_COLUMN} = :lopenr"
+    for _, table_name in RELATED_COUNT_TABLES
 }
 
 
@@ -44,32 +63,39 @@ class FakeCursor:
     def __exit__(self, exception_type, exception, traceback):
         return False
 
-    def var(self, _type):
+    def var(self, _type, size=None):
         return FakeVariable()
 
     def execute(self, statement, **parameters):
         self.connection.statements.append((statement, parameters))
-        if "P_Merge_Person" in statement:
+        self._rows = self._rows_for(statement, parameters)
+
+    def _rows_for(self, statement, parameters):
+        if statement == MERGE_PERSON_STATEMENT:
             if self.connection.merge_error:
                 raise oracledb.DatabaseError(self.connection.merge_error)
             parameters["session_id"].value = SESSION_ID
-            self._rows = []
-            return
-        if "all_tab_columns" in statement:
-            self._rows = [(1 if parameters["table_name"] == "ANSETTELSE" else 0,)]
-            return
-        if "count(*)" in statement:
-            self._rows = [(3,)]
-            return
-        row = PERSON_ROWS.get(parameters["lopenr"])
+            return []
+        if statement == COLUMN_LOOKUP_STATEMENT:
+            return [(1 if parameters["table_name"] in KNOWN_TABLES else 0,)]
+        if statement in COUNT_STATEMENTS:
+            return [(ROW_COUNT,)]
+        if statement != PERSON_LOOKUP_STATEMENT:
+            raise AssertionError(f"Unexpected statement: {statement}")
+        if self.connection.lookup_error:
+            raise oracledb.DatabaseError(self.connection.lookup_error)
         self.description = [(column,) for column in PERSON_COLUMNS]
-        self._rows = [row] if row else []
+        row = PERSON_ROWS.get(parameters["lopenr"])
+        return [row] if row else []
 
     def fetchone(self):
         return self._rows[0] if self._rows else None
 
     def callproc(self, name, arguments):
+        self.connection.procedures.append(name)
         if name == "dbms_output.get_line":
+            if self.connection.output_failure:
+                raise self.connection.output_failure
             line, status = arguments
             if self.connection.output_lines:
                 line.value = self.connection.output_lines.pop(0)
@@ -81,8 +107,11 @@ class FakeCursor:
 class FakeConnection:
     def __init__(self, output_lines=None, merge_error=None):
         self.statements = []
+        self.procedures = []
         self.output_lines = list(output_lines or [])
         self.merge_error = merge_error
+        self.output_failure = None
+        self.lookup_error = None
         self.commits = 0
         self.rollbacks = 0
         self.closed = False
@@ -132,7 +161,7 @@ def test_fetch_person_returns_attributes_and_counts():
     assert person.full_name == "Ola Nordmann"
     assert person.attributes["PERSONLOPENR"] == FROM_LOPENR
     assert "EPOST" not in person.attributes
-    assert person.related_counts == {"Ansettelser": 3}
+    assert person.related_counts == {"Ansettelser": ROW_COUNT}
 
 
 def test_fetch_person_returns_none_when_missing():
@@ -163,6 +192,17 @@ def test_merge_commits_with_update_flag():
     assert merge_call["to_lopenr"] == TO_LOPENR
 
 
+def test_merge_enables_and_reads_output_before_committing():
+    connection = FakeConnection(output_lines=["Sessionid: 4711"])
+    service = build_service(connection)
+
+    service.merge_person(FROM_LOPENR, TO_LOPENR)
+
+    assert connection.procedures[0] == "dbms_output.enable"
+    assert "dbms_output.get_line" in connection.procedures
+    assert connection.commits == 1
+
+
 def test_merge_rolls_back_on_error():
     connection = FakeConnection(merge_error="ORA-20001")
     service = build_service(connection)
@@ -172,6 +212,27 @@ def test_merge_rolls_back_on_error():
 
     assert connection.commits == 0
     assert connection.rollbacks == 1
+
+
+def test_merge_rolls_back_when_reading_output_fails():
+    connection = FakeConnection()
+    service = build_service(connection)
+    connection.output_failure = RuntimeError("connection lost")
+
+    with pytest.raises(RuntimeError):
+        service.merge_person(FROM_LOPENR, TO_LOPENR)
+
+    assert connection.commits == 0
+    assert connection.rollbacks == 1
+
+
+def test_fetch_person_translates_oracle_errors():
+    connection = FakeConnection()
+    service = build_service(connection)
+    connection.lookup_error = "ORA-00942: table or view does not exist"
+
+    with pytest.raises(CristinDatabaseError, match="ORA-00942"):
+        service.fetch_person(FROM_LOPENR)
 
 
 def test_merging_a_person_into_itself_is_rejected():
