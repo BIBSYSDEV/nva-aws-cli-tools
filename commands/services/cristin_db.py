@@ -16,10 +16,8 @@ TEST_DSN = "cmanora-prod05.uio.no:5434/CRISTST.uio.no"
 PROD_VAULT_PATH = "service/cristin/database/prod"
 TEST_VAULT_PATH = "service/cristin/database/test"
 
-USERNAME_KEYS = ("username", "user", "login")
-PASSWORD_KEYS = ("password", "pass", "passwd")
-
 SCHEMA = "FRIDA"
+DEFAULT_DB_USER = SCHEMA
 PERSON_TABLE = "PERSON"
 PERSON_KEY_COLUMN = "PERSONLOPENR"
 
@@ -90,24 +88,34 @@ def vault_path_for(profile: str | None) -> str:
     return PROD_VAULT_PATH if is_production(profile) else TEST_VAULT_PATH
 
 
-def extract_credentials(secret: dict[str, Any]) -> tuple[str, str]:
-    username = _first_present(secret, USERNAME_KEYS)
-    password = _first_present(secret, PASSWORD_KEYS)
-    if not username or not password:
-        available = ", ".join(sorted(secret)) or "(no fields)"
+def extract_credentials(
+    secret: dict[str, Any], username: str | None = None
+) -> tuple[str, str]:
+    users = {
+        key: value
+        for key, value in secret.items()
+        if isinstance(value, str) and value.strip()
+    }
+    if not users:
         raise CristinDatabaseError(
-            f"Vault secret has no recognizable username/password fields. Fields: {available}"
+            "Vault secret holds no database users. It should map each username to its password."
         )
-    return username, password
+    wanted_username = username or DEFAULT_DB_USER
+    return wanted_username, _password_for(users, wanted_username)
 
 
-def _first_present(secret: dict[str, Any], keys: tuple[str, ...]) -> str | None:
-    lowercased = {key.lower(): value for key, value in secret.items()}
-    for key in keys:
-        value = lowercased.get(key)
-        if isinstance(value, str) and value.strip():
-            return value
-    return None
+def _password_for(users: dict[str, str], username: str) -> str:
+    for candidate, password in users.items():
+        if candidate.lower() == username.lower():
+            return password
+    raise CristinDatabaseError(
+        f"Vault secret has no database user named {username!r}. "
+        f"Available: {_usernames(users)}"
+    )
+
+
+def _usernames(users: dict[str, str]) -> str:
+    return ", ".join(sorted(users))
 
 
 class CristinDatabaseService:
@@ -115,12 +123,14 @@ class CristinDatabaseService:
         self,
         profile: str | None,
         vault_path: str | None = None,
+        username: str | None = None,
         vault_client: VaultClient | None = None,
         connection: Any | None = None,
     ) -> None:
         self.profile = profile
         self.dsn = dsn_for(profile)
         self.vault_path = vault_path or vault_path_for(profile)
+        self.username = username or DEFAULT_DB_USER
         self._vault_client = vault_client
         self._connection = connection
 
@@ -218,7 +228,7 @@ class CristinDatabaseService:
             secret = client.read_secret(self.vault_path)
         except VaultError as error:
             raise CristinDatabaseError(str(error)) from error
-        return extract_credentials(secret)
+        return extract_credentials(secret, self.username)
 
     def _open_connection(self, username: str, password: str) -> Any:
         logger.debug("Connecting to %s as %s", self.dsn, username)
