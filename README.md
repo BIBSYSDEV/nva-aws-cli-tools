@@ -323,7 +323,8 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 * **Prerequisites**:
   * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
   * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
-    `service/cristin/database/test` and `service/cristin/database/prod`, where each key is a database username
+    `secret/service/cristin/database/test` and `secret/service/cristin/database/prod` (the `secret` KV v2 mount,
+    so the API path is `secret/data/service/...`), where each key is a database username
     and its value is that user's password. The CLI connects as `FRIDA` unless `--db-user` names another user
     from the same secret.
   * A Vault token. The CLI reads it from `VAULT_TOKEN` or `~/.vault-token` and never logs in by itself, so log
