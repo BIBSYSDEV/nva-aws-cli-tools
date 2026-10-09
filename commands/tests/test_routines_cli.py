@@ -14,7 +14,9 @@ CRISTIN_STEP = "cristin"
 VALIDATION_STEP = "validation"
 
 
-def patch_steps(monkeypatch, nva_report=None) -> list[str]:
+def patch_steps(
+    monkeypatch, nva_report=None
+) -> tuple[list[str], MagicMock, MagicMock, MagicMock]:
     calls: list[str] = []
     nva_step = MagicMock(
         side_effect=lambda **kwargs: calls.append(NVA_STEP) or nva_report
@@ -62,8 +64,9 @@ def test_nva_step_arguments_match_the_real_command_signature(monkeypatch):
 
     run_routine("--yes")
 
-    signature = inspect.signature(contributor_identifier.callback)
-    signature.bind_partial(**nva_step.call_args.kwargs)
+    callback = contributor_identifier.callback
+    assert callback is not None
+    inspect.signature(callback).bind_partial(**nva_step.call_args.kwargs)
 
 
 def test_merge_person_passes_limit_to_nva_step(monkeypatch):
