@@ -4,10 +4,10 @@ import click
 from rich.console import Console
 
 from commands.cristin_db import (
+    credential_options,
     handle_database_errors,
     require_persons_exist,
     run_merge_person,
-    vault_path_option,
 )
 from commands.manual_update import contributor_identifier, has_pending_results
 from commands.utils import AppContext
@@ -46,7 +46,7 @@ def routines(ctx: AppContext) -> None:
 @click.option(
     "--yes", is_flag=True, default=False, help="Skip the confirmation prompts."
 )
-@vault_path_option
+@credential_options
 @click.pass_context
 @handle_database_errors
 def merge_person(
@@ -56,6 +56,7 @@ def merge_person(
     limit: int | None,
     yes: bool,
     vault_path: str | None,
+    username: str | None,
 ) -> None:
     """Merge Cristin person FROM_LOPENR into TO_LOPENR, in NVA and then in Cristin.
 
@@ -68,7 +69,9 @@ def merge_person(
     console = Console()
 
     console.rule(VALIDATION_HEADING)
-    require_persons_exist(app_context, (from_lopenr, to_lopenr), vault_path, console)
+    require_persons_exist(
+        app_context, (from_lopenr, to_lopenr), vault_path, username, console
+    )
 
     console.rule(NVA_STEP_HEADING)
     report = click_context.invoke(
@@ -88,5 +91,6 @@ def merge_person(
         to_lopenr,
         yes,
         vault_path,
+        username,
         console=console,
     )
