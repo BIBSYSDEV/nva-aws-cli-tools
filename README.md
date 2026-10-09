@@ -95,6 +95,7 @@ Commands:
   awslambda               Manage AWS Lambda functions
   cognito                 Search Cognito users
   cristin                 Cristin integration commands
+  cristin-db              Manual Cristin database routines (Oracle)
   customers               Customer data validation
   dlq                     Dead letter queue handling
   handle                  Handle registration tasks
@@ -308,3 +309,36 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   * `> uv run cli.py approvals policies add f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c ctis dmp`
   * `> uv run cli.py approvals policies update f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --add rek --remove dmp`
   * `> uv run cli.py approvals policies delete f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --yes`
+
+---
+
+#### **`cristin-db merge-person`**
+
+* **Description**: Merges two Cristin person profiles by calling `PK_FDS200010.P_Merge_Person` in the Cristin
+  Oracle database, as described in
+  [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438).
+  The first argument is the profile that disappears, the second the one that is kept. Move the publications in
+  NVA first with `manual-update contributor-identifier`, or run both steps with `routines merge-person`.
+
+* **Prerequisites**:
+  * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
+  * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
+    `service/cristin/database/test` and `service/cristin/database/prod`. An existing token in `VAULT_TOKEN` or
+    `~/.vault-token` is used when present; otherwise the CLI opens a browser for an OIDC login and caches the
+    token. Override the Vault address with `VAULT_ADDR`, and the auth mount/role with `VAULT_OIDC_MOUNT` /
+    `VAULT_OIDC_ROLE`.
+
+* **Environment**: Chosen from the AWS profile, like the other commands. A profile containing `prod` connects to
+  `CRISPRD`, everything else to `CRISTST`.
+
+* **Options**:
+  * `--yes`: Skip the confirmation prompt.
+  * `--vault-path`: Read the credentials from another Vault path.
+
+* **Output**: A table comparing the two profiles (name, key `PERSON` columns and row counts in related tables),
+  then a confirmation prompt, and finally the session id and `DBMS_OUTPUT` from the procedure. The merge runs
+  with `inOppdDB=1` and is committed.
+
+* **Examples**:
+  * `> uv run cli.py cristin-db merge-person 123456 654321`
+  * `> uv run cli.py cristin-db merge-person 123456 654321 --yes`
