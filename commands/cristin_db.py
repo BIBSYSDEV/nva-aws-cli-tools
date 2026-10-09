@@ -100,7 +100,7 @@ def run_merge_person(
         if not yes:
             click.confirm(
                 f"Slå sammen {from_lopenr} inn i {to_lopenr} i {service.environment}?",
-                default=False,
+                default=True,
                 abort=True,
             )
         console.print(
