@@ -48,6 +48,11 @@ begin
 end;
 """
 
+PARTIAL_MERGE_WARNING = (
+    "Prosedyren committer underveis, så deler av sammenslåingen kan allerede være lagret. "
+    "Sjekk begge profilene i Cristin før du prøver på nytt."
+)
+
 DBMS_OUTPUT_BUFFER_SIZE = 1_000_000
 DBMS_OUTPUT_LINE_SIZE = 32767
 UPDATE_DATABASE = 1
@@ -210,7 +215,8 @@ class CristinDatabaseService:
                 committed = True
             except oracledb.Error as error:
                 raise CristinDatabaseError(
-                    f"PK_FDS200010.P_Merge_Person feilet: {error}"
+                    f"PK_FDS200010.P_Merge_Person feilet: {error}\n"
+                    f"{PARTIAL_MERGE_WARNING}"
                     f"{self._reported_output(connection)}"
                 ) from error
             finally:
