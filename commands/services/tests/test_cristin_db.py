@@ -17,6 +17,7 @@ from commands.services.cristin_db import (
     dsn_for,
     enable_thick_mode,
     extract_credentials,
+    instant_client_lib_dir,
     vault_path_for,
 )
 
@@ -180,6 +181,22 @@ def test_enable_thick_mode_explains_how_to_install_the_client(monkeypatch):
 
     with pytest.raises(CristinDatabaseError, match="macos-arm64-downloads"):
         enable_thick_mode()
+
+
+def test_instant_client_lib_dir_expands_a_home_relative_path(monkeypatch):
+    monkeypatch.setenv("ORACLE_CLIENT_LIB_DIR", "~/.local/lib/instantclient_23_3")
+
+    lib_dir = instant_client_lib_dir()
+
+    assert lib_dir is not None
+    assert not lib_dir.startswith("~")
+    assert lib_dir.endswith("/.local/lib/instantclient_23_3")
+
+
+def test_instant_client_lib_dir_is_none_when_unset(monkeypatch):
+    monkeypatch.delenv("ORACLE_CLIENT_LIB_DIR", raising=False)
+
+    assert instant_client_lib_dir() is None
 
 
 def test_enable_thick_mode_does_nothing_when_already_thick(monkeypatch):
