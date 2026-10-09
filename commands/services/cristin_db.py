@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 PROD_DSN = "cmanora-prod05.uio.no:5435/CRISPRD.uio.no"
 TEST_DSN = "cmanora-prod05.uio.no:5434/CRISTST.uio.no"
 
-PROD_VAULT_PATH = "service/cristin/database/prod"
-TEST_VAULT_PATH = "service/cristin/database/test"
+PROD_VAULT_PATH = "secret/service/cristin/database/prod"
+TEST_VAULT_PATH = "secret/service/cristin/database/test"
 
 SCHEMA = "FRIDA"
 DEFAULT_DB_USER = SCHEMA
