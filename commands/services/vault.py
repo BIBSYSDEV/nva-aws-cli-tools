@@ -14,6 +14,7 @@ VAULT_ADDR_ENV = "VAULT_ADDR"
 VAULT_TOKEN_ENV = "VAULT_TOKEN"
 VAULT_TOKEN_FILE = "~/.vault-token"
 VAULT_TOKEN_HEADER = "X-Vault-Token"
+OIDC_LOGIN_PATH = "microsoft"
 REQUEST_TIMEOUT_SECONDS = 15
 
 KV_V2_DATA_SEGMENT = "data"
@@ -83,7 +84,7 @@ class VaultClient:
         return (
             "Log in with the Vault CLI:\n"
             "    brew tap hashicorp/tap && brew install hashicorp/tap/vault\n"
-            f"    vault login -method=oidc -address={self.address}\n"
+            f"    vault login -method=oidc -path={OIDC_LOGIN_PATH} -address={self.address}\n"
             f"Or copy a token from {self.address}/ui (user menu) and run:\n"
             f"    export {VAULT_TOKEN_ENV}=<the token>"
         )
