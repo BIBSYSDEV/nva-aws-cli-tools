@@ -57,7 +57,7 @@ INSTANT_CLIENT_HELP = (
     "as a manual download (the homebrew formula is x86_64 and cannot be loaded).\n"
     "    https://www.oracle.com/database/technologies/instant-client/macos-arm64-downloads.html\n"
     "Unpack it, then point the CLI at it:\n"
-    f"    export {ORACLE_CLIENT_LIB_DIR_ENV}=~/Downloads/instantclient_23_3"
+    f"    export {ORACLE_CLIENT_LIB_DIR_ENV}=~/.local/lib/instantclient_23_3"
 )
 
 PARTIAL_MERGE_WARNING = (
@@ -101,11 +101,16 @@ def dsn_for(profile: str | None) -> str:
     return PROD_DSN if is_production(profile) else TEST_DSN
 
 
+def instant_client_lib_dir() -> str | None:
+    configured = os.environ.get(ORACLE_CLIENT_LIB_DIR_ENV)
+    return os.path.expanduser(configured) if configured else None
+
+
 def enable_thick_mode() -> None:
     if not oracledb.is_thin_mode():
         return
     try:
-        oracledb.init_oracle_client(lib_dir=os.environ.get(ORACLE_CLIENT_LIB_DIR_ENV))
+        oracledb.init_oracle_client(lib_dir=instant_client_lib_dir())
     except oracledb.Error as error:
         raise CristinDatabaseError(f"{error}\n{INSTANT_CLIENT_HELP}") from error
 
