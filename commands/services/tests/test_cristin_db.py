@@ -15,6 +15,7 @@ from commands.services.cristin_db import (
     CristinDatabaseError,
     CristinDatabaseService,
     dsn_for,
+    enable_thick_mode,
     extract_credentials,
     vault_path_for,
 )
@@ -167,6 +168,29 @@ def test_extract_credentials_reads_the_password_of_the_requested_user():
 def test_extract_credentials_lists_the_users_it_found_when_asked_for_another():
     with pytest.raises(CristinDatabaseError, match="FRIDA_SYSTEM"):
         extract_credentials({"FRIDA_SYSTEM": "system-password"}, "NOBODY")
+
+
+def test_enable_thick_mode_explains_how_to_install_the_client(monkeypatch):
+    monkeypatch.setattr(oracledb, "is_thin_mode", lambda: True)
+
+    def refuse(**_):
+        raise oracledb.DatabaseError("DPY-6000: cannot load libclntsh")
+
+    monkeypatch.setattr(oracledb, "init_oracle_client", refuse)
+
+    with pytest.raises(CristinDatabaseError, match="instantclient-basic"):
+        enable_thick_mode()
+
+
+def test_enable_thick_mode_does_nothing_when_already_thick(monkeypatch):
+    monkeypatch.setattr(oracledb, "is_thin_mode", lambda: False)
+
+    def fail(**_):
+        raise AssertionError("init_oracle_client should not be called")
+
+    monkeypatch.setattr(oracledb, "init_oracle_client", fail)
+
+    enable_thick_mode()
 
 
 def test_extract_credentials_rejects_an_empty_secret():
