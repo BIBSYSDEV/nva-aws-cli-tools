@@ -5,16 +5,23 @@ from rich.console import Console
 
 from commands.cristin_db import (
     handle_database_errors,
+    require_persons_exist,
     run_merge_person,
     vault_path_option,
 )
-from commands.manual_update import contributor_identifier
+from commands.manual_update import contributor_identifier, has_pending_results
 from commands.utils import AppContext
 
 logger = logging.getLogger(__name__)
 
+VALIDATION_HEADING = "Sjekker at begge personprofilene finnes i Cristin"
 NVA_STEP_HEADING = "Steg 1 – flytt forskningsresultater i NVA"
 CRISTIN_STEP_HEADING = "Steg 2 – slå sammen personprofilene i Cristin"
+PENDING_RESULTS_MESSAGE = (
+    "Steg 1 stoppet på limitReached med flere treff igjen i NVA. "
+    "Profilene er ikke slått sammen i Cristin. Kjør manual-update contributor-identifier "
+    "med høyere --limit til ingen treff gjenstår, og kjør deretter denne kommandoen på nytt."
+)
 
 
 @click.group()
@@ -60,18 +67,19 @@ def merge_person(
     app_context: AppContext = click_context.obj
     console = Console()
 
+    console.rule(VALIDATION_HEADING)
+    require_persons_exist(app_context, (from_lopenr, to_lopenr), vault_path, console)
+
     console.rule(NVA_STEP_HEADING)
-    click_context.invoke(
+    report = click_context.invoke(
         contributor_identifier,
         old_value=str(from_lopenr),
         new_value=str(to_lopenr),
-        search_pairs=(),
         limit=limit,
-        page_size=None,
         yes=yes,
-        dry_run_only=False,
-        no_dry_run=False,
     )
+    if has_pending_results(report):
+        raise click.ClickException(PENDING_RESULTS_MESSAGE)
 
     console.rule(CRISTIN_STEP_HEADING)
     run_merge_person(
