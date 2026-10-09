@@ -2,6 +2,7 @@ import oracledb
 import pytest
 
 from commands.services.cristin_db import (
+    DEFAULT_DB_USER,
     MERGE_PERSON_STATEMENT,
     PERSON_KEY_COLUMN,
     PERSON_TABLE,
@@ -142,16 +143,29 @@ def test_profile_decides_environment():
     assert vault_path_for(None) == TEST_VAULT_PATH
 
 
-def test_extract_credentials_accepts_alternative_field_names():
-    assert extract_credentials({"user": "frida", "pass": "secret"}) == (
-        "frida",
-        "secret",
+def test_extract_credentials_reads_the_password_of_the_default_user():
+    secret = {"FRIDA": "frida-password", "FRIDA_SYSTEM": "system-password"}
+
+    assert extract_credentials(secret) == (DEFAULT_DB_USER, "frida-password")
+
+
+def test_extract_credentials_reads_the_password_of_the_requested_user():
+    secret = {"FRIDA": "frida-password", "FRIDA_SYSTEM": "system-password"}
+
+    assert extract_credentials(secret, "frida_system") == (
+        "frida_system",
+        "system-password",
     )
 
 
-def test_extract_credentials_reports_unknown_fields():
-    with pytest.raises(CristinDatabaseError, match="apikey"):
-        extract_credentials({"apikey": "nope"})
+def test_extract_credentials_lists_the_users_it_found_when_asked_for_another():
+    with pytest.raises(CristinDatabaseError, match="FRIDA_SYSTEM"):
+        extract_credentials({"FRIDA_SYSTEM": "system-password"}, "NOBODY")
+
+
+def test_extract_credentials_rejects_an_empty_secret():
+    with pytest.raises(CristinDatabaseError, match="no database users"):
+        extract_credentials({})
 
 
 def test_fetch_person_returns_attributes_and_counts():
