@@ -322,6 +322,16 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 
 * **Prerequisites**:
   * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
+  * The Oracle Instant Client. Cristin requires Oracle Native Network Encryption, which python-oracledb only
+    supports in thick mode:
+
+    ```bash
+    brew tap InstantClientTap/instantclient
+    brew install instantclient-basic
+    ```
+
+    Without it the connection fails with `DPY-3001`. Set `ORACLE_CLIENT_LIB_DIR` if the libraries are somewhere
+    the loader does not find on its own.
   * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
     `secret/service/cristin/database/test` and `secret/service/cristin/database/prod` (the `secret` KV v2 mount,
     so the API path is `secret/data/service/...`), where each key is a database username
