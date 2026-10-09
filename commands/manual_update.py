@@ -231,7 +231,7 @@ def contributor_identifier(
     yes: bool,
     dry_run_only: bool,
     no_dry_run: bool,
-) -> None:
+) -> dict | None:
     """Replace contributor id OLD_VALUE with NEW_VALUE."""
     request = _build_request(
         ManualUpdateType.CONTRIBUTOR_IDENTIFIER,
@@ -243,7 +243,7 @@ def contributor_identifier(
         page_size,
     )
     resolver = EntityResolver(ctx.session)
-    _execute(
+    return _execute(
         ctx,
         request,
         yes,
@@ -392,7 +392,7 @@ def _execute(
     no_dry_run: bool = False,
     old_label: str | None = None,
     new_label: str | None = None,
-) -> None:
+) -> dict | None:
     if no_dry_run and dry_run_only:
         raise click.UsageError("--no-dry-run and --dry-run-only cannot be combined.")
     service = ManualUpdateService(session=ctx.session)
@@ -410,8 +410,7 @@ def _execute(
                 default=False,
                 abort=True,
             )
-        _apply_and_report(service, console, request, change_line)
-        return
+        return _apply_and_report(service, console, request, change_line)
 
     report = service.dry_run(request)
     _render_report(console, report, "DRY RUN", change_line)
@@ -419,18 +418,18 @@ def _execute(
     changes = report.get("changes", [])
     if not changes:
         console.print("[yellow]No changes to apply.[/yellow]")
-        return
+        return None
     if _is_truncated(changes):
         log_path = _write_change_log(request, report, "dry-run")
         console.print(f"[dim]Full plan written to {log_path}[/dim]")
     if dry_run_only:
-        return
+        return None
 
     if not yes:
         _restore_interactive_terminal()
         click.confirm(f"Apply {len(changes)} change(s)?", default=True, abort=True)
 
-    _apply_and_report(service, console, request, change_line)
+    return _apply_and_report(service, console, request, change_line)
 
 
 def _apply_and_report(
@@ -438,7 +437,7 @@ def _apply_and_report(
     console: Console,
     request: ManualUpdateRequest,
     change_line: str,
-) -> None:
+) -> dict:
     result = service.apply(request)
     _render_report(console, result, "APPLIED", change_line)
     log_path = _write_change_log(request, result, "applied")
@@ -448,6 +447,13 @@ def _apply_and_report(
             f"[yellow]Stopped at your limit of {result.get('limit')} change(s) with more "
             "results still pending — run again to continue.[/yellow]"
         )
+    return result
+
+
+def has_pending_results(result: dict | None) -> bool:
+    if not result:
+        return False
+    return bool(result.get("limitReached")) and _more_results_pending(result)
 
 
 def _is_truncated(changes: list) -> bool:
