@@ -325,13 +325,20 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   * The Oracle Instant Client. Cristin requires Oracle Native Network Encryption, which python-oracledb only
     supports in thick mode:
 
+    The client has to match the architecture of the Python you run. On Apple Silicon that is the arm64 build,
+    which Oracle only ships as a manual download — the homebrew formula is x86_64 and cannot be loaded by an
+    arm64 Python. Download it from
+    [Instant Client for macOS (ARM64)](https://www.oracle.com/database/technologies/instant-client/macos-arm64-downloads.html),
+    unpack it, and point the CLI at it:
+
     ```bash
-    brew tap InstantClientTap/instantclient
-    brew install instantclient-basic
+    hdiutil mount ~/Downloads/instantclient-basic-macos.arm64-*.dmg
+    /Volumes/instantclient-basic-macos.arm64-*/install_ic.sh
+    export ORACLE_CLIENT_LIB_DIR=~/Downloads/instantclient_23_3
     ```
 
-    Without it the connection fails with `DPY-3001`. Set `ORACLE_CLIENT_LIB_DIR` if the libraries are somewhere
-    the loader does not find on its own.
+    Without a client the connection fails with `DPY-3001`; with one of the wrong architecture it fails with
+    `DPI-1047`.
   * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
     `secret/service/cristin/database/test` and `secret/service/cristin/database/prod` (the `secret` KV v2 mount,
     so the API path is `secret/data/service/...`), where each key is a database username
