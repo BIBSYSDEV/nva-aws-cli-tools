@@ -117,10 +117,13 @@ def require_persons_exist(
     ctx: AppContext,
     lopenrs: Collection[int],
     vault_path: str | None,
+    username: str | None = None,
     console: Console | None = None,
 ) -> None:
     console = console or Console()
-    with CristinDatabaseService(ctx.profile, vault_path=vault_path) as service:
+    with CristinDatabaseService(
+        ctx.profile, vault_path=vault_path, username=username
+    ) as service:
         for lopenr in lopenrs:
             person = require_person(service, lopenr)
             console.print(f"{lopenr}: {person.full_name} ({service.environment})")

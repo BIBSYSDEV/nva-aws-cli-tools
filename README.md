@@ -405,6 +405,7 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   * `--limit`: Max number of NVA resources to move in the first step. The Lambda defaults to 10 when it is not given.
   * `--yes`: Skip the confirmation prompts — both of them, including the one before the irreversible Cristin merge.
   * `--vault-path`: Read the Cristin credentials from another Vault path.
+  * `--db-user`: Connect as another database user from the same secret (default `FRIDA`).
 
 * **Order**: Both Cristin profiles are looked up first, so a wrong identifier or a missing Tailscale tunnel stops the
   routine before anything is written. Step 1 then previews the NVA changes with a dry run and asks before applying
