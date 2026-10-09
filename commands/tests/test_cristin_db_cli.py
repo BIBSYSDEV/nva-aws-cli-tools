@@ -12,6 +12,8 @@ from commands.services.cristin_db import (
 FROM_LOPENR = 123456
 TO_LOPENR = 654321
 SESSION_ID = 4711
+PROFILE_NAME = "unit-test-profile"
+VAULT_PATH = "unit/test/vault/path"
 
 LOSING_PROFILE = PersonProfile(
     lopenr=FROM_LOPENR,
@@ -76,26 +78,27 @@ def test_merge_person_shows_preview_and_merges_after_confirmation(monkeypatch):
 
 def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch):
     service = build_service(monkeypatch)
+    monkeypatch.setattr("cli.build_session", lambda profile: MagicMock())
 
     result = CliRunner().invoke(
         cli,
         [
             "--profile",
-            "sikt-nva-prod",
+            PROFILE_NAME,
             "cristin-db",
             "merge-person",
             str(FROM_LOPENR),
             str(TO_LOPENR),
             "--vault-path",
-            "service/cristin/database/prod",
+            VAULT_PATH,
             "--yes",
         ],
     )
 
     assert result.exit_code == 0
     arguments, keyword_arguments = service.construction[0]
-    assert arguments[0] == "sikt-nva-prod"
-    assert keyword_arguments["vault_path"] == "service/cristin/database/prod"
+    assert arguments[0] == PROFILE_NAME
+    assert keyword_arguments["vault_path"] == VAULT_PATH
 
 
 def test_merge_person_aborts_when_not_confirmed(monkeypatch):
