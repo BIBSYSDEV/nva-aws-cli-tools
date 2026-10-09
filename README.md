@@ -402,12 +402,18 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 * **Prerequisites**: The same as `cristin-db merge-person`, plus AWS credentials for the Lambda.
 
 * **Options**:
-  * `--limit`: Max number of NVA resources to move in the first step.
-  * `--yes`: Skip the confirmation prompts.
+  * `--limit`: Max number of NVA resources to move in the first step. The Lambda defaults to 10 when it is not given.
+  * `--yes`: Skip the confirmation prompts — both of them, including the one before the irreversible Cristin merge.
   * `--vault-path`: Read the Cristin credentials from another Vault path.
 
-* **Output**: Step 1 previews the NVA changes with a dry run and asks before applying them; step 2 prints the
-  profile comparison and asks before merging in Cristin.
+* **Order**: Both Cristin profiles are looked up first, so a wrong identifier or a missing Tailscale tunnel stops the
+  routine before anything is written. Step 1 then previews the NVA changes with a dry run and asks before applying
+  them, and step 2 prints the profile comparison and asks before merging in Cristin.
+
+* **Stops on remaining hits**: If step 1 ends on `limitReached` with more results pending, the routine aborts without
+  merging in Cristin — otherwise the profiles would be merged while NVA resources still point at the identifier that
+  disappears. Rerun `manual-update contributor-identifier` with a higher `--limit` until nothing is left, then run
+  this command again.
 
 * **Examples**:
   * `> uv run cli.py routines merge-person 123456 654321`

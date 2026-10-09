@@ -1,5 +1,6 @@
 import functools
 import logging
+from collections.abc import Collection
 
 import click
 from rich.console import Console
@@ -109,6 +110,19 @@ def run_merge_person(
         )
         result = service.merge_person(from_lopenr, to_lopenr)
         print_merge_result(console, result, "UTFØRT")
+
+
+def require_persons_exist(
+    ctx: AppContext,
+    lopenrs: Collection[int],
+    vault_path: str | None,
+    console: Console | None = None,
+) -> None:
+    console = console or Console()
+    with CristinDatabaseService(ctx.profile, vault_path=vault_path) as service:
+        for lopenr in lopenrs:
+            person = require_person(service, lopenr)
+            console.print(f"{lopenr}: {person.full_name} ({service.environment})")
 
 
 def print_merge_preview(
