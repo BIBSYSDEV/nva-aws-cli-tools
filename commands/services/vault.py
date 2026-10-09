@@ -21,8 +21,6 @@ KV_V2_DATA_SEGMENT = "data"
 KV_V2_VERSION = "2"
 MOUNT_LOOKUP_PATH = "sys/internal/ui/mounts"
 TOKEN_LOOKUP_PATH = "auth/token/lookup-self"
-TOKEN_RENEW_PATH = "auth/token/renew-self"
-RENEW_WHEN_SECONDS_LEFT = 300
 
 
 class VaultError(Exception):
@@ -58,31 +56,10 @@ class VaultClient:
         logical_path = path.strip("/")
         if not self.token:
             raise VaultError(f"No Vault token found.\n{self.login_instructions()}")
-        self.renew_token_if_expiring()
         try:
             return self._read_any(logical_path)
         except VaultTokenRejectedError as denial:
             raise VaultError(self._explain_denial(logical_path, denial)) from denial
-
-    def renew_token_if_expiring(self) -> None:
-        token_data = self._look_up_token()
-        if not token_data or not token_data.get("renewable"):
-            return
-        seconds_left = token_data.get("ttl")
-        if not isinstance(seconds_left, int) or seconds_left > RENEW_WHEN_SECONDS_LEFT:
-            return
-        logger.debug("Renewing Vault token with %s seconds left", seconds_left)
-        try:
-            response = self.http_client.post(
-                f"{self.address}/v1/{TOKEN_RENEW_PATH}",
-                headers={VAULT_TOKEN_HEADER: self.token or ""},
-                timeout=REQUEST_TIMEOUT_SECONDS,
-            )
-        except requests.RequestException as error:
-            logger.debug("Could not renew the Vault token: %s", error)
-            return
-        if not response.ok:
-            logger.debug("Vault refused to renew the token: %s", response.status_code)
 
     def login_instructions(self) -> str:
         return (

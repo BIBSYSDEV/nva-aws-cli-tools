@@ -7,7 +7,6 @@ VAULT_ADDRESS = "https://vault.example.no:8200"
 SECRET_PATH = "service/cristin/database/test"
 MOUNT_LOOKUP_URL = f"{VAULT_ADDRESS}/v1/sys/internal/ui/mounts/{SECRET_PATH}"
 TOKEN_LOOKUP_URL = f"{VAULT_ADDRESS}/v1/auth/token/lookup-self"
-TOKEN_RENEW_URL = f"{VAULT_ADDRESS}/v1/auth/token/renew-self"
 
 SHALLOW_MOUNT_URL = f"{VAULT_ADDRESS}/v1/service/data/cristin/database/test"
 DEEP_MOUNT_URL = f"{VAULT_ADDRESS}/v1/service/cristin/data/database/test"
@@ -132,43 +131,3 @@ def test_valid_token_without_access_is_reported_as_a_permission_problem():
         build_client().read_secret(SECRET_PATH)
 
     assert "vault login" not in str(error.value)
-
-
-@responses.activate
-def test_a_token_close_to_expiry_is_renewed_before_reading():
-    responses.get(
-        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
-    )
-    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
-    mount_is("service/", "2")
-    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
-
-    build_client().read_secret(SECRET_PATH)
-
-    assert renewal.call_count == 1
-
-
-@responses.activate
-def test_a_token_with_plenty_of_time_left_is_not_renewed():
-    responses.get(
-        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 3600}}, status=200
-    )
-    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
-    mount_is("service/", "2")
-    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
-
-    build_client().read_secret(SECRET_PATH)
-
-    assert renewal.call_count == 0
-
-
-@responses.activate
-def test_a_failed_renewal_does_not_stop_the_read():
-    responses.get(
-        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
-    )
-    responses.post(TOKEN_RENEW_URL, json={"errors": ["no"]}, status=403)
-    mount_is("service/", "2")
-    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
-
-    assert build_client().read_secret(SECRET_PATH) == SECRET
