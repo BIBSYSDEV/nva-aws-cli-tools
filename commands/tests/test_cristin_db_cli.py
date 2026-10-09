@@ -91,6 +91,8 @@ def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch
             str(TO_LOPENR),
             "--vault-path",
             VAULT_PATH,
+            "--db-user",
+            "FRIDA_SYSTEM",
             "--yes",
         ],
     )
@@ -99,6 +101,7 @@ def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch
     arguments, keyword_arguments = service.construction[0]
     assert arguments[0] == PROFILE_NAME
     assert keyword_arguments["vault_path"] == VAULT_PATH
+    assert keyword_arguments["username"] == "FRIDA_SYSTEM"
 
 
 def test_merge_person_aborts_when_not_confirmed(monkeypatch):

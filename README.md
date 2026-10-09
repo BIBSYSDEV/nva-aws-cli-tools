@@ -323,10 +323,11 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 * **Prerequisites**:
   * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
   * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
-    `service/cristin/database/test` and `service/cristin/database/prod`. An existing token in `VAULT_TOKEN` or
-    `~/.vault-token` is used when present; otherwise the CLI opens a browser for an OIDC login and caches the
-    token. Override the Vault address with `VAULT_ADDR`, and the auth mount/role with `VAULT_OIDC_MOUNT` /
-    `VAULT_OIDC_ROLE`.
+    `service/cristin/database/test` and `service/cristin/database/prod`, where each key is a database username
+    and its value is that user's password. The CLI connects as `FRIDA` unless `--db-user` names another user
+    from the same secret. An existing token in `VAULT_TOKEN` or `~/.vault-token` is used when present; otherwise
+    the CLI opens a browser for an OIDC login and caches the token. Override the Vault address with `VAULT_ADDR`,
+    and the auth mount/role with `VAULT_OIDC_MOUNT` / `VAULT_OIDC_ROLE`.
 
 * **Environment**: Chosen from the AWS profile, like the other commands. A profile containing `prod` connects to
   `CRISPRD`, everything else to `CRISTST`.
@@ -334,6 +335,7 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 * **Options**:
   * `--yes`: Skip the confirmation prompt.
   * `--vault-path`: Read the credentials from another Vault path.
+  * `--db-user`: Connect as another database user from the same secret (default `FRIDA`).
 
 * **Output**: A table comparing the two profiles (name, key `PERSON` columns and row counts in related tables),
   then a confirmation prompt, and finally the session id and `DBMS_OUTPUT` from the procedure. The merge runs
