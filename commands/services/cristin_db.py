@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Self
 
@@ -48,6 +49,16 @@ begin
 end;
 """
 
+ORACLE_CLIENT_LIB_DIR_ENV = "ORACLE_CLIENT_LIB_DIR"
+INSTANT_CLIENT_HELP = (
+    "The Cristin database requires Oracle Native Network Encryption, which python-oracledb "
+    "only supports with the Oracle Instant Client installed. Install it with:\n"
+    "    brew tap InstantClientTap/instantclient\n"
+    "    brew install instantclient-basic\n"
+    f"If the libraries end up somewhere unusual, point {ORACLE_CLIENT_LIB_DIR_ENV} at the "
+    "directory holding them."
+)
+
 PARTIAL_MERGE_WARNING = (
     "Prosedyren committer underveis, så deler av sammenslåingen kan allerede være lagret. "
     "Sjekk begge profilene i Cristin før du prøver på nytt."
@@ -87,6 +98,15 @@ def is_production(profile: str | None) -> bool:
 
 def dsn_for(profile: str | None) -> str:
     return PROD_DSN if is_production(profile) else TEST_DSN
+
+
+def enable_thick_mode() -> None:
+    if not oracledb.is_thin_mode():
+        return
+    try:
+        oracledb.init_oracle_client(lib_dir=os.environ.get(ORACLE_CLIENT_LIB_DIR_ENV))
+    except oracledb.Error as error:
+        raise CristinDatabaseError(f"{error}\n{INSTANT_CLIENT_HELP}") from error
 
 
 def vault_path_for(profile: str | None) -> str:
@@ -237,6 +257,7 @@ class CristinDatabaseService:
 
     def _open_connection(self, username: str, password: str) -> Any:
         logger.debug("Connecting to %s as %s", self.dsn, username)
+        enable_thick_mode()
         try:
             return oracledb.connect(user=username, password=password, dsn=self.dsn)
         except oracledb.Error as error:
