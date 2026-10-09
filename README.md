@@ -319,7 +319,7 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   Oracle database, as described in
   [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438).
   The first argument is the profile that disappears, the second the one that is kept. Move the publications in
-  NVA first with `manual-update contributor-identifier`.
+  NVA first with `manual-update contributor-identifier`, or run both steps with `routines merge-person`.
 
 * **Prerequisites**:
   * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
