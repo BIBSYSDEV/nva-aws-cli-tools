@@ -100,14 +100,13 @@ def extract_credentials(
         raise CristinDatabaseError(
             "Vault secret holds no database users. It should map each username to its password."
         )
-    wanted_username = username or DEFAULT_DB_USER
-    return wanted_username, _password_for(users, wanted_username)
+    return _credentials_for(users, username or DEFAULT_DB_USER)
 
 
-def _password_for(users: dict[str, str], username: str) -> str:
+def _credentials_for(users: dict[str, str], username: str) -> tuple[str, str]:
     for candidate, password in users.items():
         if candidate.lower() == username.lower():
-            return password
+            return candidate, password
     raise CristinDatabaseError(
         f"Vault secret has no database user named {username!r}. "
         f"Available: {_usernames(users)}"
