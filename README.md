@@ -325,9 +325,21 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   * Access to the database credentials in Vault (group `RG_VAULT_Cristin`). They are read from
     `service/cristin/database/test` and `service/cristin/database/prod`, where each key is a database username
     and its value is that user's password. The CLI connects as `FRIDA` unless `--db-user` names another user
-    from the same secret. An existing token in `VAULT_TOKEN` or `~/.vault-token` is used when present; otherwise
-    the CLI opens a browser for an OIDC login and caches the token. Override the Vault address with `VAULT_ADDR`,
-    and the auth mount/role with `VAULT_OIDC_MOUNT` / `VAULT_OIDC_ROLE`.
+    from the same secret.
+  * A Vault token. The CLI reads it from `VAULT_TOKEN` or `~/.vault-token` and never logs in by itself, so log
+    in with the Vault CLI first:
+
+    ```bash
+    brew tap hashicorp/tap && brew install hashicorp/tap/vault
+    vault login -method=oidc -address=https://vault.sikt.no:8200
+    ```
+
+    A token that is about to expire is renewed automatically when it is renewable; otherwise log in again. You
+    can also copy a token from the user menu at <https://vault.sikt.no:8200/ui> and `export VAULT_TOKEN=<token>`.
+    Override the address with `VAULT_ADDR`.
+
+  See [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438) for
+  the Tailscale and Vault group memberships, and for the routines themselves.
 
 * **Environment**: Chosen from the AWS profile, like the other commands. A profile containing `prod` connects to
   `CRISPRD`, everything else to `CRISTST`.
