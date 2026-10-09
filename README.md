@@ -102,6 +102,7 @@ Commands:
   organization-migration  Publication organization migrations
   pipelines               AWS pipeline management
   publications            Publication CRUD, export, migration
+  routines                Manual routines spanning both NVA and Cristin
   sqs                     SQS queue management
   users                   User search and management
 ```
@@ -318,7 +319,7 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   Oracle database, as described in
   [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438).
   The first argument is the profile that disappears, the second the one that is kept. Move the publications in
-  NVA first with `manual-update contributor-identifier`.
+  NVA first with `manual-update contributor-identifier`, or run both steps with `routines merge-person`.
 
 * **Prerequisites**:
   * Tailscale, with membership in `RG_Tailscale_Cristin` / `RG_Tailscale_Cristin-prod`.
@@ -388,3 +389,33 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 * **Examples**:
   * `> uv run cli.py cristin-db merge-person 123456 654321`
   * `> uv run cli.py cristin-db merge-person 123456 654321 --yes`
+
+---
+
+#### **`routines merge-person`**
+
+* **Description**: Runs the full "slå sammen personprofiler" routine in the order the manual describes: first the
+  NVA step (`manual-update contributor-identifier`, which moves the publications via the
+  ManuallyUpdatePublications Lambda), then the Cristin step (`cristin-db merge-person`). The command only
+  orchestrates the two commands; the logic lives with each system.
+
+* **Prerequisites**: The same as `cristin-db merge-person`, plus AWS credentials for the Lambda.
+
+* **Options**:
+  * `--limit`: Max number of NVA resources to move in the first step. The Lambda defaults to 10 when it is not given.
+  * `--yes`: Skip the confirmation prompts — both of them, including the one before the irreversible Cristin merge.
+  * `--vault-path`: Read the Cristin credentials from another Vault path.
+  * `--db-user`: Connect as another database user from the same secret (default `FRIDA`).
+
+* **Order**: Both Cristin profiles are looked up first, so a wrong identifier or a missing Tailscale tunnel stops the
+  routine before anything is written. Step 1 then previews the NVA changes with a dry run and asks before applying
+  them, and step 2 prints the profile comparison and asks before merging in Cristin.
+
+* **Stops on remaining hits**: If step 1 ends on `limitReached` with more results pending, the routine aborts without
+  merging in Cristin — otherwise the profiles would be merged while NVA resources still point at the identifier that
+  disappears. Rerun `manual-update contributor-identifier` with a higher `--limit` until nothing is left, then run
+  this command again.
+
+* **Examples**:
+  * `> uv run cli.py routines merge-person 123456 654321`
+  * `> uv run cli.py routines merge-person 123456 654321 --limit 50`

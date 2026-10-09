@@ -1,5 +1,6 @@
 import functools
 import logging
+from collections.abc import Collection
 
 import click
 from rich.console import Console
@@ -78,7 +79,8 @@ def merge_person(
     """Merge Cristin person FROM_LOPENR into TO_LOPENR (PK_FDS200010.P_Merge_Person).
 
     FROM_LOPENR is the profile that disappears, TO_LOPENR the one that is kept.
-    Move the publications in NVA first with `manual-update contributor-identifier`.
+    Move the publications in NVA first with `manual-update contributor-identifier`,
+    or run the whole routine with `routines merge-person`.
     """
     run_merge_person(ctx, from_lopenr, to_lopenr, yes, vault_path, username)
 
@@ -109,6 +111,22 @@ def run_merge_person(
         )
         result = service.merge_person(from_lopenr, to_lopenr)
         print_merge_result(console, result, "UTFØRT")
+
+
+def require_persons_exist(
+    ctx: AppContext,
+    lopenrs: Collection[int],
+    vault_path: str | None,
+    username: str | None = None,
+    console: Console | None = None,
+) -> None:
+    console = console or Console()
+    with CristinDatabaseService(
+        ctx.profile, vault_path=vault_path, username=username
+    ) as service:
+        for lopenr in lopenrs:
+            person = require_person(service, lopenr)
+            console.print(f"{lopenr}: {person.full_name} ({service.environment})")
 
 
 def print_merge_preview(
