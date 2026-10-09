@@ -51,6 +51,7 @@ end;
 """
 
 DBMS_OUTPUT_BUFFER_SIZE = 1_000_000
+DBMS_OUTPUT_LINE_SIZE = 32767
 UPDATE_DATABASE = 1
 
 
@@ -146,6 +147,14 @@ class CristinDatabaseService:
         self.close()
 
     def fetch_person(self, lopenr: int) -> PersonProfile | None:
+        try:
+            return self._fetch_person(lopenr)
+        except oracledb.Error as error:
+            raise CristinDatabaseError(
+                f"Oppslag av person {lopenr} i {self.dsn} feilet: {error}"
+            ) from error
+
+    def _fetch_person(self, lopenr: int) -> PersonProfile | None:
         connection = self.connect()
         with connection.cursor() as cursor:
             cursor.execute(
@@ -176,6 +185,7 @@ class CristinDatabaseService:
             )
         connection = self.connect()
         self._enable_dbms_output(connection)
+        committed = False
         with connection.cursor() as cursor:
             session_id = cursor.var(int)
             try:
@@ -186,13 +196,17 @@ class CristinDatabaseService:
                     to_lopenr=to_lopenr,
                     session_id=session_id,
                 )
+                output_lines = self._read_dbms_output(connection)
+                connection.commit()
+                committed = True
             except oracledb.Error as error:
-                connection.rollback()
                 raise CristinDatabaseError(
                     f"PK_FDS200010.P_Merge_Person feilet: {error}"
-                )
-            output_lines = self._read_dbms_output(connection)
-        connection.commit()
+                    f"{self._reported_output(connection)}"
+                ) from error
+            finally:
+                if not committed:
+                    connection.rollback()
         return MergeResult(
             session_id=self._to_int(session_id.getvalue()),
             output_lines=output_lines,
@@ -203,7 +217,7 @@ class CristinDatabaseService:
         try:
             secret = client.read_secret(self.vault_path)
         except VaultError as error:
-            raise CristinDatabaseError(str(error))
+            raise CristinDatabaseError(str(error)) from error
         return extract_credentials(secret)
 
     def _open_connection(self, username: str, password: str) -> Any:
@@ -213,7 +227,7 @@ class CristinDatabaseService:
         except oracledb.Error as error:
             raise CristinDatabaseError(
                 f"Could not connect to {self.dsn}: {error}. Is Tailscale connected?"
-            )
+            ) from error
 
     def _count_related_rows(self, lopenr: int) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -253,7 +267,7 @@ class CristinDatabaseService:
     def _read_dbms_output(connection: Any) -> list[str]:
         lines: list[str] = []
         with connection.cursor() as cursor:
-            line = cursor.var(str)
+            line = cursor.var(str, DBMS_OUTPUT_LINE_SIZE)
             status = cursor.var(int)
             while True:
                 cursor.callproc("dbms_output.get_line", (line, status))
@@ -261,6 +275,14 @@ class CristinDatabaseService:
                     break
                 lines.append(line.getvalue() or "")
         return lines
+
+    @classmethod
+    def _reported_output(cls, connection: Any) -> str:
+        try:
+            lines = cls._read_dbms_output(connection)
+        except oracledb.Error:
+            return ""
+        return "\n" + "\n".join(lines) if lines else ""
 
     @staticmethod
     def _to_int(value: Any) -> int | None:
