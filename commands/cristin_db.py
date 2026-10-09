@@ -93,6 +93,10 @@ def run_merge_person(
                 default=False,
                 abort=True,
             )
+        console.print(
+            f"[bold]Slår sammen {from_lopenr} inn i {to_lopenr} i Cristin "
+            f"{service.environment}[/bold]"
+        )
         result = service.merge_person(from_lopenr, to_lopenr)
         print_merge_result(console, result, "UTFØRT")
 
