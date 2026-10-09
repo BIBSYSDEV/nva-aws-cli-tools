@@ -18,6 +18,8 @@ OIDC_LOGIN_PATH = "microsoft"
 REQUEST_TIMEOUT_SECONDS = 15
 
 KV_V2_DATA_SEGMENT = "data"
+KV_V2_VERSION = "2"
+MOUNT_LOOKUP_PATH = "sys/internal/ui/mounts"
 TOKEN_LOOKUP_PATH = "auth/token/lookup-self"
 TOKEN_RENEW_PATH = "auth/token/renew-self"
 RENEW_WHEN_SECONDS_LEFT = 300
@@ -120,9 +122,40 @@ class VaultClient:
         data = response.json().get("data")
         return data if isinstance(data, dict) else {}
 
+    def _resolve_api_path(self, logical_path: str) -> str | None:
+        try:
+            response = self.http_client.get(
+                f"{self.address}/v1/{MOUNT_LOOKUP_PATH}/{logical_path}",
+                headers={VAULT_TOKEN_HEADER: self.token or ""},
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except requests.RequestException as error:
+            logger.debug("Could not look up the Vault mount: %s", error)
+            return None
+        if not response.ok:
+            return None
+        mount_data = response.json().get("data")
+        if not isinstance(mount_data, dict):
+            return None
+        mount = str(mount_data.get("path") or "").strip("/")
+        if not mount or not logical_path.startswith(mount):
+            return None
+        if self._kv_version(mount_data) != KV_V2_VERSION:
+            return logical_path
+        rest = logical_path[len(mount) :].strip("/")
+        logger.debug("Vault mount %r is KV v2", mount)
+        return f"{mount}/{KV_V2_DATA_SEGMENT}/{rest}"
+
+    @staticmethod
+    def _kv_version(mount_data: dict[str, Any]) -> str:
+        options = mount_data.get("options")
+        if not isinstance(options, dict):
+            return ""
+        return str(options.get("version") or "")
+
     def _read_any(self, logical_path: str) -> dict[str, Any]:
         denials: list[VaultTokenRejectedError] = []
-        for api_path in self._candidate_paths(logical_path):
+        for api_path in self._api_paths(logical_path):
             try:
                 secret = self._read(api_path)
             except VaultTokenRejectedError as denial:
@@ -162,15 +195,22 @@ class VaultClient:
             )
         return self._unwrap(response.json())
 
+    def _api_paths(self, logical_path: str) -> list[str]:
+        resolved = self._resolve_api_path(logical_path)
+        if resolved:
+            return [resolved]
+        return self._candidate_paths(logical_path)
+
     @staticmethod
     def _candidate_paths(logical_path: str) -> list[str]:
         segments = logical_path.split("/")
-        if len(segments) > 1 and segments[1] != KV_V2_DATA_SEGMENT:
-            return [
-                "/".join([segments[0], KV_V2_DATA_SEGMENT, *segments[1:]]),
-                logical_path,
-            ]
-        return [logical_path]
+        if KV_V2_DATA_SEGMENT in segments:
+            return [logical_path]
+        with_data_segment = [
+            "/".join([*segments[:depth], KV_V2_DATA_SEGMENT, *segments[depth:]])
+            for depth in range(1, len(segments))
+        ]
+        return [*with_data_segment, logical_path]
 
     @staticmethod
     def _unwrap(payload: dict[str, Any]) -> dict[str, Any]:
