@@ -5,90 +5,91 @@ from commands.services.vault import VaultClient, VaultError
 
 VAULT_ADDRESS = "https://vault.example.no:8200"
 SECRET_PATH = "service/cristin/database/test"
-KV_V2_URL = f"{VAULT_ADDRESS}/v1/service/data/cristin/database/test"
-KV_V1_URL = f"{VAULT_ADDRESS}/v1/service/cristin/database/test"
+MOUNT_LOOKUP_URL = f"{VAULT_ADDRESS}/v1/sys/internal/ui/mounts/{SECRET_PATH}"
 TOKEN_LOOKUP_URL = f"{VAULT_ADDRESS}/v1/auth/token/lookup-self"
 TOKEN_RENEW_URL = f"{VAULT_ADDRESS}/v1/auth/token/renew-self"
+
+SHALLOW_MOUNT_URL = f"{VAULT_ADDRESS}/v1/service/data/cristin/database/test"
+DEEP_MOUNT_URL = f"{VAULT_ADDRESS}/v1/service/cristin/data/database/test"
+RAW_URL = f"{VAULT_ADDRESS}/v1/{SECRET_PATH}"
+GUESSED_URLS = (
+    SHALLOW_MOUNT_URL,
+    DEEP_MOUNT_URL,
+    f"{VAULT_ADDRESS}/v1/service/cristin/database/data/test",
+    RAW_URL,
+)
+
+SECRET = {"frida": "frida-password"}
 
 
 def build_client() -> VaultClient:
     return VaultClient(address=VAULT_ADDRESS, token="token")
 
 
-@responses.activate
-def test_read_secret_unwraps_kv_v2_payload():
+def mount_is(path: str, version: str) -> None:
     responses.get(
-        KV_V2_URL,
-        json={"data": {"data": {"FRIDA": "frida-password"}}},
+        MOUNT_LOOKUP_URL,
+        json={"data": {"path": path, "options": {"version": version}}},
         status=200,
     )
 
-    secret = build_client().read_secret(SECRET_PATH)
 
-    assert secret == {"FRIDA": "frida-password"}
+def mount_lookup_unavailable() -> None:
+    responses.get(MOUNT_LOOKUP_URL, json={"errors": []}, status=403)
 
 
-@responses.activate
-def test_read_secret_falls_back_to_kv_v1_path():
-    responses.get(KV_V2_URL, json={"errors": []}, status=404)
-    responses.get(KV_V1_URL, json={"data": {"FRIDA": "frida-password"}}, status=200)
-
-    secret = build_client().read_secret(SECRET_PATH)
-
-    assert secret == {"FRIDA": "frida-password"}
+def deny_every_guess() -> None:
+    for url in GUESSED_URLS:
+        responses.get(url, json={"errors": ["permission denied"]}, status=403)
 
 
 @responses.activate
-def test_denied_kv_v2_probe_still_falls_back_to_kv_v1():
-    responses.get(KV_V2_URL, json={"errors": ["permission denied"]}, status=403)
-    responses.get(KV_V1_URL, json={"data": {"FRIDA": "frida-password"}}, status=200)
+def test_reads_from_the_kv_v2_path_of_a_single_segment_mount():
+    mount_is("service/", "2")
+    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
 
-    secret = build_client().read_secret(SECRET_PATH)
-
-    assert secret == {"FRIDA": "frida-password"}
+    assert build_client().read_secret(SECRET_PATH) == SECRET
 
 
 @responses.activate
-def test_a_token_close_to_expiry_is_renewed_before_reading():
-    responses.get(
-        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
-    )
-    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
-    responses.get(KV_V2_URL, json={"data": {"data": {"FRIDA": "pw"}}}, status=200)
+def test_reads_from_the_kv_v2_path_of_a_nested_mount():
+    mount_is("service/cristin/", "2")
+    responses.get(DEEP_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
 
-    build_client().read_secret(SECRET_PATH)
-
-    assert renewal.call_count == 1
+    assert build_client().read_secret(SECRET_PATH) == SECRET
 
 
 @responses.activate
-def test_a_token_with_plenty_of_time_left_is_not_renewed():
-    responses.get(
-        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 3600}}, status=200
-    )
-    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
-    responses.get(KV_V2_URL, json={"data": {"data": {"FRIDA": "pw"}}}, status=200)
+def test_reads_from_the_raw_path_of_a_kv_v1_mount():
+    mount_is("service/", "1")
+    responses.get(RAW_URL, json={"data": SECRET}, status=200)
 
-    build_client().read_secret(SECRET_PATH)
-
-    assert renewal.call_count == 0
+    assert build_client().read_secret(SECRET_PATH) == SECRET
 
 
 @responses.activate
-def test_a_failed_renewal_does_not_stop_the_read():
-    responses.get(
-        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
-    )
-    responses.post(TOKEN_RENEW_URL, json={"errors": ["no"]}, status=403)
-    responses.get(KV_V2_URL, json={"data": {"data": {"FRIDA": "pw"}}}, status=200)
+def test_guesses_the_path_when_the_mount_cannot_be_looked_up():
+    mount_lookup_unavailable()
+    responses.get(SHALLOW_MOUNT_URL, json={"errors": []}, status=404)
+    responses.get(DEEP_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
 
-    assert build_client().read_secret(SECRET_PATH) == {"FRIDA": "pw"}
+    assert build_client().read_secret(SECRET_PATH) == SECRET
+
+
+@responses.activate
+def test_a_denied_guess_does_not_stop_the_remaining_ones():
+    mount_lookup_unavailable()
+    responses.get(SHALLOW_MOUNT_URL, json={"errors": ["permission denied"]}, status=403)
+    responses.get(DEEP_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
+
+    assert build_client().read_secret(SECRET_PATH) == SECRET
 
 
 @responses.activate
 def test_read_secret_reports_missing_secret():
-    responses.get(KV_V2_URL, json={"errors": []}, status=404)
-    responses.get(KV_V1_URL, json={"errors": []}, status=404)
+    mount_lookup_unavailable()
+    for url in GUESSED_URLS:
+        responses.get(url, json={"errors": []}, status=404)
 
     with pytest.raises(VaultError, match="not found"):
         build_client().read_secret(SECRET_PATH)
@@ -106,13 +107,13 @@ def test_missing_token_explains_how_to_log_in(monkeypatch, tmp_path):
         client.read_secret(SECRET_PATH)
 
     assert "No Vault token found" in str(error.value)
-    assert VAULT_ADDRESS in str(error.value)
+    assert "-path=microsoft" in str(error.value)
 
 
 @responses.activate
 def test_expired_token_is_reported_as_a_login_problem():
-    responses.get(KV_V2_URL, json={"errors": ["permission denied"]}, status=403)
-    responses.get(KV_V1_URL, json={"errors": ["permission denied"]}, status=403)
+    mount_lookup_unavailable()
+    deny_every_guess()
     responses.get(TOKEN_LOOKUP_URL, json={"errors": ["permission denied"]}, status=403)
 
     with pytest.raises(VaultError, match="expired or invalid") as error:
@@ -123,11 +124,51 @@ def test_expired_token_is_reported_as_a_login_problem():
 
 @responses.activate
 def test_valid_token_without_access_is_reported_as_a_permission_problem():
-    responses.get(KV_V2_URL, json={"errors": ["permission denied"]}, status=403)
-    responses.get(KV_V1_URL, json={"errors": ["permission denied"]}, status=403)
+    mount_lookup_unavailable()
+    deny_every_guess()
     responses.get(TOKEN_LOOKUP_URL, json={"data": {"id": "token"}}, status=200)
 
     with pytest.raises(VaultError, match="no access to") as error:
         build_client().read_secret(SECRET_PATH)
 
     assert "vault login" not in str(error.value)
+
+
+@responses.activate
+def test_a_token_close_to_expiry_is_renewed_before_reading():
+    responses.get(
+        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
+    )
+    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
+    mount_is("service/", "2")
+    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
+
+    build_client().read_secret(SECRET_PATH)
+
+    assert renewal.call_count == 1
+
+
+@responses.activate
+def test_a_token_with_plenty_of_time_left_is_not_renewed():
+    responses.get(
+        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 3600}}, status=200
+    )
+    renewal = responses.post(TOKEN_RENEW_URL, json={"auth": {}}, status=200)
+    mount_is("service/", "2")
+    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
+
+    build_client().read_secret(SECRET_PATH)
+
+    assert renewal.call_count == 0
+
+
+@responses.activate
+def test_a_failed_renewal_does_not_stop_the_read():
+    responses.get(
+        TOKEN_LOOKUP_URL, json={"data": {"renewable": True, "ttl": 60}}, status=200
+    )
+    responses.post(TOKEN_RENEW_URL, json={"errors": ["no"]}, status=403)
+    mount_is("service/", "2")
+    responses.get(SHALLOW_MOUNT_URL, json={"data": {"data": SECRET}}, status=200)
+
+    assert build_client().read_secret(SECRET_PATH) == SECRET
