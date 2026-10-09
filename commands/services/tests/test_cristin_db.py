@@ -149,10 +149,16 @@ def test_extract_credentials_reads_the_password_of_the_default_user():
     assert extract_credentials(secret) == (DEFAULT_DB_USER, "frida-password")
 
 
-def test_extract_credentials_reads_the_password_of_the_requested_user():
-    secret = {"FRIDA": "frida-password", "FRIDA_SYSTEM": "system-password"}
+def test_extract_credentials_keeps_the_username_as_the_secret_spells_it():
+    secret = {"frida": "frida-password"}
 
-    assert extract_credentials(secret, "frida_system") == (
+    assert extract_credentials(secret) == ("frida", "frida-password")
+
+
+def test_extract_credentials_reads_the_password_of_the_requested_user():
+    secret = {"FRIDA": "frida-password", "frida_system": "system-password"}
+
+    assert extract_credentials(secret, "FRIDA_SYSTEM") == (
         "frida_system",
         "system-password",
     )
