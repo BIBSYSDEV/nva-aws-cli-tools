@@ -94,6 +94,19 @@ def test_read_secret_reports_missing_secret():
         build_client().read_secret(SECRET_PATH)
 
 
+def test_a_client_without_an_address_is_rejected(monkeypatch):
+    monkeypatch.delenv("VAULT_ADDR", raising=False)
+
+    with pytest.raises(VaultError, match="No Vault address configured"):
+        VaultClient()
+
+
+def test_the_address_can_come_from_the_environment(monkeypatch):
+    monkeypatch.setenv("VAULT_ADDR", f"{VAULT_ADDRESS}/")
+
+    assert VaultClient(token="token").address == VAULT_ADDRESS
+
+
 def test_missing_token_explains_how_to_log_in(monkeypatch, tmp_path):
     monkeypatch.delenv("VAULT_TOKEN", raising=False)
     monkeypatch.setattr(

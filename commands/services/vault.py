@@ -9,13 +9,16 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_VAULT_ADDR = "https://vault.sikt.no:8200"
 VAULT_ADDR_ENV = "VAULT_ADDR"
 VAULT_TOKEN_ENV = "VAULT_TOKEN"
 VAULT_TOKEN_FILE = "~/.vault-token"
 VAULT_TOKEN_HEADER = "X-Vault-Token"
 OIDC_LOGIN_PATH = "microsoft"
 REQUEST_TIMEOUT_SECONDS = 15
+
+MISSING_ADDRESS_MESSAGE = (
+    f"No Vault address configured. Set {VAULT_ADDR_ENV}, or let the caller pass one."
+)
 
 KV_V2_DATA_SEGMENT = "data"
 KV_V2_VERSION = "2"
@@ -46,9 +49,10 @@ def read_cached_token() -> str | None:
 
 class VaultClient:
     def __init__(self, address: str | None = None, token: str | None = None) -> None:
-        self.address = (
-            address or os.environ.get(VAULT_ADDR_ENV) or DEFAULT_VAULT_ADDR
-        ).rstrip("/")
+        resolved_address = address or os.environ.get(VAULT_ADDR_ENV)
+        if not resolved_address:
+            raise VaultError(MISSING_ADDRESS_MESSAGE)
+        self.address = resolved_address.rstrip("/")
         self.http_client = requests.Session()
         self.token = token or read_cached_token()
 
