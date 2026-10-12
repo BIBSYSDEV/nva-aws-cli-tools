@@ -13,9 +13,13 @@ logger = logging.getLogger(__name__)
 
 PROD_DSN = "cmanora-prod05.uio.no:5435/CRISPRD.uio.no"
 TEST_DSN = "cmanora-prod05.uio.no:5434/CRISTST.uio.no"
+PROD_DSN_MARKER = "CRISPRD"
 
 PROD_VAULT_PATH = "secret/service/cristin/database/prod"
 TEST_VAULT_PATH = "secret/service/cristin/database/test"
+
+DSN_ENV = "CRISTIN_DB_DSN"
+VAULT_PATH_ENV = "CRISTIN_DB_VAULT_PATH"
 
 SCHEMA = "FRIDA"
 DEFAULT_DB_USER = SCHEMA
@@ -98,7 +102,14 @@ def is_production(profile: str | None) -> bool:
 
 
 def dsn_for(profile: str | None) -> str:
+    configured = os.environ.get(DSN_ENV)
+    if configured:
+        return configured
     return PROD_DSN if is_production(profile) else TEST_DSN
+
+
+def is_production_dsn(dsn: str) -> bool:
+    return PROD_DSN_MARKER in dsn.upper()
 
 
 def instant_client_lib_dir() -> str | None:
@@ -116,6 +127,9 @@ def enable_thick_mode() -> None:
 
 
 def vault_path_for(profile: str | None) -> str:
+    configured = os.environ.get(VAULT_PATH_ENV)
+    if configured:
+        return configured
     return PROD_VAULT_PATH if is_production(profile) else TEST_VAULT_PATH
 
 
@@ -166,7 +180,7 @@ class CristinDatabaseService:
 
     @property
     def environment(self) -> str:
-        return "PROD" if is_production(self.profile) else "TEST"
+        return "PROD" if is_production_dsn(self.dsn) else "TEST"
 
     def connect(self) -> Any:
         if self._connection is None:

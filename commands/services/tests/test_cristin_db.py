@@ -138,11 +138,36 @@ def build_service(connection: FakeConnection, profile: str = NON_PROD_PROFILE):
     return CristinDatabaseService(profile, connection=connection)
 
 
-def test_profile_decides_environment():
+def test_profile_decides_environment(monkeypatch):
+    monkeypatch.delenv("CRISTIN_DB_DSN", raising=False)
+    monkeypatch.delenv("CRISTIN_DB_VAULT_PATH", raising=False)
+
     assert dsn_for(PROD_PROFILE) == PROD_DSN
     assert vault_path_for(PROD_PROFILE) == PROD_VAULT_PATH
     assert dsn_for(NON_PROD_PROFILE) == TEST_DSN
     assert vault_path_for(None) == TEST_VAULT_PATH
+
+
+def test_environment_overrides_the_profile(monkeypatch):
+    monkeypatch.setenv("CRISTIN_DB_DSN", PROD_DSN)
+    monkeypatch.setenv("CRISTIN_DB_VAULT_PATH", PROD_VAULT_PATH)
+
+    assert dsn_for(NON_PROD_PROFILE) == PROD_DSN
+    assert vault_path_for(NON_PROD_PROFILE) == PROD_VAULT_PATH
+
+
+def test_the_environment_label_follows_the_dsn_not_the_profile(monkeypatch):
+    monkeypatch.setenv("CRISTIN_DB_DSN", PROD_DSN)
+    service = CristinDatabaseService(NON_PROD_PROFILE, connection=FakeConnection())
+
+    assert service.environment == "PROD"
+
+
+def test_the_environment_label_is_test_for_the_test_dsn(monkeypatch):
+    monkeypatch.setenv("CRISTIN_DB_DSN", TEST_DSN)
+    service = CristinDatabaseService(PROD_PROFILE, connection=FakeConnection())
+
+    assert service.environment == "TEST"
 
 
 def test_extract_credentials_reads_the_password_of_the_default_user():
