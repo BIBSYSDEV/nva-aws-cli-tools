@@ -94,7 +94,7 @@ def run_merge_person(
 ) -> None:
     console = console or Console()
     with CristinDatabaseService(
-        ctx.profile, vault_path=vault_path, username=username
+        ctx.profile, vault_path=vault_path, username=username, session=ctx.session
     ) as service:
         print_merge_preview(console, service, from_lopenr, to_lopenr)
         if not yes:

@@ -373,10 +373,13 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   See [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438) for
   the Tailscale and Vault group memberships, and for the routines themselves.
 
-* **Environment**: Chosen from the AWS profile, like the other commands. A profile containing `prod` connects to
-  `CRISPRD`, everything else to `CRISTST`. `CRISTIN_DB_DSN` and `CRISTIN_DB_VAULT_PATH` override both, which is
-  what a per-environment `.env` file would set. The `PROD`/`TEST` label in the preview follows the DSN, not the
-  profile, so it cannot claim `TEST` while connected to `CRISPRD`.
+* **Environment**: The database and its Vault secret come from SSM in the AWS account you are using —
+  `/NVA/Cristin/DatabaseDsn` and `/NVA/Cristin/DatabaseVaultPath` — so a test account cannot reach the
+  production database. Where the parameters are not set yet, the AWS profile decides as before: a profile
+  containing `prod` connects to `CRISPRD`, everything else to `CRISTST`. Any other SSM failure (no access,
+  expired credentials) is an error rather than a guess. The `PROD`/`TEST` label in the preview is derived from
+  the DSN, so it always names the database actually connected to. The Vault address is read the same way, from
+  `VAULT_ADDR` or `/NVA/Vault/Address`.
 
 * **Options**:
   * `--yes`: Skip the confirmation prompt.
