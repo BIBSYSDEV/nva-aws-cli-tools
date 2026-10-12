@@ -374,7 +374,9 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
   the Tailscale and Vault group memberships, and for the routines themselves.
 
 * **Environment**: Chosen from the AWS profile, like the other commands. A profile containing `prod` connects to
-  `CRISPRD`, everything else to `CRISTST`.
+  `CRISPRD`, everything else to `CRISTST`. `CRISTIN_DB_DSN` and `CRISTIN_DB_VAULT_PATH` override both, which is
+  what a per-environment `.env` file would set. The `PROD`/`TEST` label in the preview follows the DSN, not the
+  profile, so it cannot claim `TEST` while connected to `CRISPRD`.
 
 * **Options**:
   * `--yes`: Skip the confirmation prompt.
