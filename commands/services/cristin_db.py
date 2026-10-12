@@ -6,8 +6,10 @@ from dataclasses import dataclass, field
 from typing import Any, Self
 
 import oracledb
+from botocore.exceptions import BotoCoreError, ClientError
 
-from commands.services.vault import VaultClient, VaultError
+from commands.services.aws_utils import get_ssm_parameter
+from commands.services.vault import VAULT_ADDR_ENV, VaultClient, VaultError
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,11 @@ TEST_VAULT_PATH = "secret/service/cristin/database/test"
 
 DSN_ENV = "CRISTIN_DB_DSN"
 VAULT_PATH_ENV = "CRISTIN_DB_VAULT_PATH"
+
+PARAMETER_NOT_FOUND = "ParameterNotFound"
+DSN_PARAMETER = "/NVA/Cristin/DatabaseDsn"
+VAULT_PATH_PARAMETER = "/NVA/Cristin/DatabaseVaultPath"
+VAULT_ADDRESS_PARAMETER = "/NVA/Vault/Address"
 
 SCHEMA = "FRIDA"
 DEFAULT_DB_USER = SCHEMA
@@ -101,11 +108,33 @@ def is_production(profile: str | None) -> bool:
     return bool(profile) and "prod" in profile.lower()
 
 
-def dsn_for(profile: str | None) -> str:
-    configured = os.environ.get(DSN_ENV)
+def dsn_for(profile: str | None, session: Any | None = None) -> str:
+    configured = os.environ.get(DSN_ENV) or ssm_value(session, DSN_PARAMETER)
     if configured:
         return configured
     return PROD_DSN if is_production(profile) else TEST_DSN
+
+
+def vault_address_for(session: Any | None = None) -> str | None:
+    return os.environ.get(VAULT_ADDR_ENV) or ssm_value(session, VAULT_ADDRESS_PARAMETER)
+
+
+def ssm_value(session: Any | None, name: str) -> str | None:
+    if session is None:
+        return None
+    try:
+        return get_ssm_parameter(session, name)
+    except ClientError as error:
+        if error.response.get("Error", {}).get("Code") == PARAMETER_NOT_FOUND:
+            logger.debug("%s is not set in this account", name)
+            return None
+        raise CristinDatabaseError(
+            f"Could not read {name} from SSM: {error}"
+        ) from error
+    except BotoCoreError as error:
+        raise CristinDatabaseError(
+            f"Could not read {name} from SSM: {error}"
+        ) from error
 
 
 def is_production_dsn(dsn: str) -> bool:
@@ -126,8 +155,10 @@ def enable_thick_mode() -> None:
         raise CristinDatabaseError(f"{error}\n{INSTANT_CLIENT_HELP}") from error
 
 
-def vault_path_for(profile: str | None) -> str:
-    configured = os.environ.get(VAULT_PATH_ENV)
+def vault_path_for(profile: str | None, session: Any | None = None) -> str:
+    configured = os.environ.get(VAULT_PATH_ENV) or ssm_value(
+        session, VAULT_PATH_PARAMETER
+    )
     if configured:
         return configured
     return PROD_VAULT_PATH if is_production(profile) else TEST_VAULT_PATH
@@ -168,12 +199,14 @@ class CristinDatabaseService:
         profile: str | None,
         vault_path: str | None = None,
         username: str | None = None,
+        session: Any | None = None,
         vault_client: VaultClient | None = None,
         connection: Any | None = None,
     ) -> None:
         self.profile = profile
-        self.dsn = dsn_for(profile)
-        self.vault_path = vault_path or vault_path_for(profile)
+        self.session = session
+        self.dsn = dsn_for(profile, session)
+        self.vault_path = vault_path or vault_path_for(profile, session)
         self.username = username or DEFAULT_DB_USER
         self._vault_client = vault_client
         self._connection = connection
@@ -267,8 +300,16 @@ class CristinDatabaseService:
             output_lines=output_lines,
         )
 
+    def _build_vault_client(self) -> VaultClient:
+        try:
+            return VaultClient(address=vault_address_for(self.session))
+        except VaultError as error:
+            raise CristinDatabaseError(
+                f"{error}\nIt is also read from {VAULT_ADDRESS_PARAMETER} in the AWS account."
+            ) from error
+
     def _credentials(self) -> tuple[str, str]:
-        client = self._vault_client or VaultClient()
+        client = self._vault_client or self._build_vault_client()
         try:
             secret = client.read_secret(self.vault_path)
         except VaultError as error:

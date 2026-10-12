@@ -1,5 +1,6 @@
 import oracledb
 import pytest
+from botocore.exceptions import ClientError
 
 from commands.services.cristin_db import (
     DEFAULT_DB_USER,
@@ -146,6 +147,56 @@ def test_profile_decides_environment(monkeypatch):
     assert vault_path_for(PROD_PROFILE) == PROD_VAULT_PATH
     assert dsn_for(NON_PROD_PROFILE) == TEST_DSN
     assert vault_path_for(None) == TEST_VAULT_PATH
+
+
+def test_ssm_supplies_the_dsn_and_vault_path(monkeypatch):
+    monkeypatch.delenv("CRISTIN_DB_DSN", raising=False)
+    monkeypatch.delenv("CRISTIN_DB_VAULT_PATH", raising=False)
+    parameters = {
+        "/NVA/Cristin/DatabaseDsn": PROD_DSN,
+        "/NVA/Cristin/DatabaseVaultPath": PROD_VAULT_PATH,
+    }
+    monkeypatch.setattr(
+        "commands.services.cristin_db.get_ssm_parameter",
+        lambda session, name: parameters[name],
+    )
+    session = object()
+
+    assert dsn_for(NON_PROD_PROFILE, session) == PROD_DSN
+    assert vault_path_for(NON_PROD_PROFILE, session) == PROD_VAULT_PATH
+
+
+def test_the_environment_wins_over_ssm(monkeypatch):
+    monkeypatch.setenv("CRISTIN_DB_DSN", TEST_DSN)
+    monkeypatch.setattr(
+        "commands.services.cristin_db.get_ssm_parameter",
+        lambda session, name: PROD_DSN,
+    )
+
+    assert dsn_for(PROD_PROFILE, object()) == TEST_DSN
+
+
+def test_a_missing_parameter_falls_back_to_the_profile(monkeypatch):
+    monkeypatch.delenv("CRISTIN_DB_DSN", raising=False)
+
+    def not_found(session, name):
+        raise ClientError({"Error": {"Code": "ParameterNotFound"}}, "GetParameter")
+
+    monkeypatch.setattr("commands.services.cristin_db.get_ssm_parameter", not_found)
+
+    assert dsn_for(PROD_PROFILE, object()) == PROD_DSN
+
+
+def test_a_denied_parameter_read_is_an_error(monkeypatch):
+    monkeypatch.delenv("CRISTIN_DB_DSN", raising=False)
+
+    def denied(session, name):
+        raise ClientError({"Error": {"Code": "AccessDeniedException"}}, "GetParameter")
+
+    monkeypatch.setattr("commands.services.cristin_db.get_ssm_parameter", denied)
+
+    with pytest.raises(CristinDatabaseError, match="Could not read"):
+        dsn_for(PROD_PROFILE, object())
 
 
 def test_environment_overrides_the_profile(monkeypatch):

@@ -96,7 +96,7 @@ def run_merge_person(
 ) -> None:
     console = console or Console()
     with CristinDatabaseService(
-        ctx.profile, vault_path=vault_path, username=username
+        ctx.profile, vault_path=vault_path, username=username, session=ctx.session
     ) as service:
         print_merge_preview(console, service, from_lopenr, to_lopenr)
         if not yes:
@@ -122,7 +122,7 @@ def require_persons_exist(
 ) -> None:
     console = console or Console()
     with CristinDatabaseService(
-        ctx.profile, vault_path=vault_path, username=username
+        ctx.profile, vault_path=vault_path, username=username, session=ctx.session
     ) as service:
         for lopenr in lopenrs:
             person = require_person(service, lopenr)
