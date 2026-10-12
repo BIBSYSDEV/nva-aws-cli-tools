@@ -1,5 +1,6 @@
 import oracledb
 import pytest
+from botocore.exceptions import ClientError
 
 from commands.services.cristin_db import (
     DEFAULT_DB_USER,
@@ -148,24 +149,72 @@ def test_profile_decides_environment(monkeypatch):
     assert vault_path_for(None) == TEST_VAULT_PATH
 
 
-def test_environment_overrides_the_profile(monkeypatch):
-    monkeypatch.setenv("CRISTIN_DB_DSN", PROD_DSN)
-    monkeypatch.setenv("CRISTIN_DB_VAULT_PATH", PROD_VAULT_PATH)
+def serve_parameters(monkeypatch, **parameters: str) -> object:
+    monkeypatch.setattr(
+        "commands.services.cristin_db.get_ssm_parameter",
+        lambda session, name: parameters[name],
+    )
+    return object()
 
-    assert dsn_for(NON_PROD_PROFILE) == PROD_DSN
-    assert vault_path_for(NON_PROD_PROFILE) == PROD_VAULT_PATH
+
+def test_ssm_supplies_the_dsn_and_vault_path(monkeypatch):
+    session = serve_parameters(
+        monkeypatch,
+        **{
+            "/NVA/Cristin/DatabaseDsn": PROD_DSN,
+            "/NVA/Cristin/DatabaseVaultPath": PROD_VAULT_PATH,
+        },
+    )
+
+    assert dsn_for(NON_PROD_PROFILE, session) == PROD_DSN
+    assert vault_path_for(NON_PROD_PROFILE, session) == PROD_VAULT_PATH
+
+
+def test_a_missing_parameter_falls_back_to_the_profile(monkeypatch):
+    def not_found(session, name):
+        raise ClientError({"Error": {"Code": "ParameterNotFound"}}, "GetParameter")
+
+    monkeypatch.setattr("commands.services.cristin_db.get_ssm_parameter", not_found)
+
+    assert dsn_for(PROD_PROFILE, object()) == PROD_DSN
+
+
+def test_a_denied_parameter_read_is_an_error(monkeypatch):
+    def denied(session, name):
+        raise ClientError({"Error": {"Code": "AccessDeniedException"}}, "GetParameter")
+
+    monkeypatch.setattr("commands.services.cristin_db.get_ssm_parameter", denied)
+
+    with pytest.raises(CristinDatabaseError, match="Could not read"):
+        dsn_for(PROD_PROFILE, object())
 
 
 def test_the_environment_label_follows_the_dsn_not_the_profile(monkeypatch):
-    monkeypatch.setenv("CRISTIN_DB_DSN", PROD_DSN)
-    service = CristinDatabaseService(NON_PROD_PROFILE, connection=FakeConnection())
+    session = serve_parameters(
+        monkeypatch,
+        **{
+            "/NVA/Cristin/DatabaseDsn": PROD_DSN,
+            "/NVA/Cristin/DatabaseVaultPath": PROD_VAULT_PATH,
+        },
+    )
+    service = CristinDatabaseService(
+        NON_PROD_PROFILE, session=session, connection=FakeConnection()
+    )
 
     assert service.environment == "PROD"
 
 
 def test_the_environment_label_is_test_for_the_test_dsn(monkeypatch):
-    monkeypatch.setenv("CRISTIN_DB_DSN", TEST_DSN)
-    service = CristinDatabaseService(PROD_PROFILE, connection=FakeConnection())
+    session = serve_parameters(
+        monkeypatch,
+        **{
+            "/NVA/Cristin/DatabaseDsn": TEST_DSN,
+            "/NVA/Cristin/DatabaseVaultPath": TEST_VAULT_PATH,
+        },
+    )
+    service = CristinDatabaseService(
+        PROD_PROFILE, session=session, connection=FakeConnection()
+    )
 
     assert service.environment == "TEST"
 
