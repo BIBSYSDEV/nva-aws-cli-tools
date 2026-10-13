@@ -123,7 +123,7 @@ def require_persons_exist(
 ) -> None:
     console = console or Console()
     with CristinDatabaseService(
-        ctx.profile, vault_path=vault_path, username=username
+        ctx.profile, vault_path=vault_path, username=username, session=ctx.session
     ) as service:
         for lopenr in lopenrs:
             person = require_person(service, lopenr)

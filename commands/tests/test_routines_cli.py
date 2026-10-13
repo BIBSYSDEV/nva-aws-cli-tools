@@ -72,6 +72,20 @@ def test_nva_step_arguments_match_the_real_command_signature(monkeypatch):
     inspect.signature(REAL_NVA_CALLBACK).bind_partial(**nva_step.call_args.kwargs)
 
 
+def test_merging_a_person_into_itself_is_rejected_before_anything_runs(monkeypatch):
+    _, nva_step, cristin_step, validation = patch_steps(monkeypatch)
+
+    result = CliRunner().invoke(
+        cli,
+        ["routines", "merge-person", str(FROM_LOPENR), str(FROM_LOPENR), "--yes"],
+    )
+
+    assert result.exit_code != 0
+    validation.assert_not_called()
+    nva_step.assert_not_called()
+    cristin_step.assert_not_called()
+
+
 def test_merge_person_passes_limit_to_nva_step(monkeypatch):
     _, nva_step, _, _ = patch_steps(monkeypatch)
 

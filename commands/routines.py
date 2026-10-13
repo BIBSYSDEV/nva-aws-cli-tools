@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 VALIDATION_HEADING = "Sjekker at begge personprofilene finnes i Cristin"
 NVA_STEP_HEADING = "Steg 1 – flytt forskningsresultater i NVA"
 CRISTIN_STEP_HEADING = "Steg 2 – slå sammen personprofilene i Cristin"
+SAME_PERSON_MESSAGE = (
+    "Personen som skal forsvinne og personen som skal beholdes er den samme."
+)
 PENDING_RESULTS_MESSAGE = (
     "Steg 1 stoppet på limitReached med flere treff igjen i NVA. "
     "Profilene er ikke slått sammen i Cristin. Kjør manual-update contributor-identifier "
@@ -67,6 +70,8 @@ def merge_person(
     """
     app_context: AppContext = click_context.obj
     console = Console()
+    if from_lopenr == to_lopenr:
+        raise click.UsageError(SAME_PERSON_MESSAGE)
 
     console.rule(VALIDATION_HEADING)
     require_persons_exist(
