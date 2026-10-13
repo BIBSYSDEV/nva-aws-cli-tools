@@ -7,6 +7,7 @@ from rich.table import Table
 
 from commands.services.cristin_db import (
     DEFAULT_DB_USER,
+    VAULT_PATH_PARAMETER,
     CristinDatabaseError,
     CristinDatabaseService,
     MergeResult,
@@ -42,7 +43,7 @@ def credential_options(func):
     return click.option(
         "--vault-path",
         default=None,
-        help="Vault path holding the Cristin database credentials. Defaults to the one matching the AWS profile.",
+        help=f"Vault path holding the Cristin database credentials. Defaults to {VAULT_PATH_PARAMETER} in the AWS account.",
     )(func)
 
 
@@ -52,9 +53,10 @@ def cristin_db(ctx: AppContext) -> None:
     """Run manual Cristin database routines directly against Oracle.
 
     Requires Tailscale (groups RG_Tailscale_Cristin / -prod) and access to the
-    database credentials in Vault (group RG_VAULT_Cristin). The AWS profile
-    decides the environment: a profile containing "prod" uses CRISPRD,
-    everything else uses CRISTST.
+    database credentials in Vault (group RG_VAULT_Cristin). The database and the
+    Vault path come from SSM in the AWS account being used, falling back to the
+    AWS profile: a profile containing "prod" means CRISPRD, everything else
+    CRISTST.
     """
 
 
