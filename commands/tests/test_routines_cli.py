@@ -9,6 +9,10 @@ from commands.manual_update import contributor_identifier
 FROM_LOPENR = 123456
 TO_LOPENR = 654321
 
+# Captured before any test patches it away, so the signature check binds against
+# the real command and not against the mock that replaces it.
+REAL_NVA_CALLBACK = contributor_identifier.callback
+
 NVA_STEP = "nva"
 CRISTIN_STEP = "cristin"
 VALIDATION_STEP = "validation"
@@ -64,9 +68,8 @@ def test_nva_step_arguments_match_the_real_command_signature(monkeypatch):
 
     run_routine("--yes")
 
-    callback = contributor_identifier.callback
-    assert callback is not None
-    inspect.signature(callback).bind_partial(**nva_step.call_args.kwargs)
+    assert REAL_NVA_CALLBACK is not None
+    inspect.signature(REAL_NVA_CALLBACK).bind_partial(**nva_step.call_args.kwargs)
 
 
 def test_merge_person_passes_limit_to_nva_step(monkeypatch):
