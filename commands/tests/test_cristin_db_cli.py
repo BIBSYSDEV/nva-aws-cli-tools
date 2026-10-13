@@ -27,9 +27,11 @@ KEEPING_PROFILE = PersonProfile(
 )
 
 
-def build_service(monkeypatch, profiles=None, merge_error=None) -> MagicMock:
+def build_service(
+    monkeypatch, profiles=None, merge_error=None, environment="TEST"
+) -> MagicMock:
     service = MagicMock()
-    service.environment = "TEST"
+    service.environment = environment
     service.dsn = "cmanora-prod05.uio.no:5434/CRISTST.uio.no"
     service.__enter__.return_value = service
     service.__exit__.return_value = False
@@ -74,6 +76,33 @@ def test_merge_person_shows_preview_and_merges_after_confirmation(monkeypatch):
     assert "Ansettelser" in result.output
     assert "Sessionid: 4711" in result.output
     service.merge_person.assert_called_once_with(FROM_LOPENR, TO_LOPENR)
+
+
+def test_the_environment_is_named_in_the_prompt_and_before_the_merge(monkeypatch):
+    service = build_service(monkeypatch, environment="PROD")
+
+    result = CliRunner().invoke(
+        cli,
+        ["cristin-db", "merge-person", str(FROM_LOPENR), str(TO_LOPENR)],
+        input="y\n",
+    )
+
+    assert result.exit_code == 0
+    prompt = result.output[: result.output.index("?")]
+    assert "PROD" in prompt
+    assert "i Cristin PROD" in result.output
+    service.merge_person.assert_called_once_with(FROM_LOPENR, TO_LOPENR)
+
+
+def test_the_environment_is_named_even_when_the_prompt_is_skipped(monkeypatch):
+    build_service(monkeypatch, environment="PROD")
+
+    result = CliRunner().invoke(
+        cli, ["cristin-db", "merge-person", str(FROM_LOPENR), str(TO_LOPENR), "--yes"]
+    )
+
+    assert result.exit_code == 0
+    assert "PROD" in result.output
 
 
 def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch):
