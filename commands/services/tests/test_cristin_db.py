@@ -118,6 +118,7 @@ class FakeConnection:
         self.merge_error = merge_error
         self.output_failure = None
         self.lookup_error = None
+        self.rollback_error = None
         self.commits = 0
         self.rollbacks = 0
         self.closed = False
@@ -130,6 +131,8 @@ class FakeConnection:
 
     def rollback(self):
         self.rollbacks += 1
+        if self.rollback_error:
+            raise self.rollback_error
 
     def close(self):
         self.closed = True
@@ -350,6 +353,17 @@ def test_merge_rolls_back_on_error():
     assert "kan allerede være lagret" in str(error.value)
     assert connection.commits == 0
     assert connection.rollbacks == 1
+
+
+def test_a_failing_rollback_does_not_hide_the_merge_error():
+    connection = FakeConnection(merge_error="ORA-03113: end-of-file on communication")
+    connection.rollback_error = oracledb.DatabaseError("ORA-03114: not connected")
+    service = build_service(connection)
+
+    with pytest.raises(CristinDatabaseError, match="ORA-03113") as error:
+        service.merge_person(FROM_LOPENR, TO_LOPENR)
+
+    assert "kan allerede være lagret" in str(error.value)
 
 
 def test_merge_rolls_back_when_reading_output_fails():

@@ -289,7 +289,7 @@ class CristinDatabaseService:
                 ) from error
             finally:
                 if not committed:
-                    connection.rollback()
+                    self._roll_back(connection)
         return MergeResult(
             session_id=self._to_int(session_id.getvalue()),
             output_lines=output_lines,
@@ -349,6 +349,13 @@ class CristinDatabaseService:
                 lopenr=lopenr,
             )
             return self._to_int(cursor.fetchone()[0]) or 0
+
+    @staticmethod
+    def _roll_back(connection: Any) -> None:
+        try:
+            connection.rollback()
+        except oracledb.Error as error:
+            logger.debug("Could not roll back: %s", error)
 
     @staticmethod
     def _enable_dbms_output(connection: Any) -> None:
