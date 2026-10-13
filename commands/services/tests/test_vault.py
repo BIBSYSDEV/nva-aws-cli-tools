@@ -1,7 +1,7 @@
 import pytest
 import responses
 
-from commands.services.vault import VaultClient, VaultError
+from commands.services.vault import VaultClient, VaultError, read_cached_token
 
 VAULT_ADDRESS = "https://vault.example.no:8200"
 SECRET_PATH = "service/cristin/database/test"
@@ -92,6 +92,48 @@ def test_read_secret_reports_missing_secret():
 
     with pytest.raises(VaultError, match="not found"):
         build_client().read_secret(SECRET_PATH)
+
+
+def use_token_file(monkeypatch, tmp_path, contents: str | None) -> None:
+    token_file = tmp_path / "vault-token"
+    if contents is not None:
+        token_file.write_text(contents, encoding="utf-8")
+    monkeypatch.setattr("commands.services.vault.VAULT_TOKEN_FILE", str(token_file))
+
+
+def test_the_token_comes_from_the_environment_first(monkeypatch, tmp_path):
+    use_token_file(monkeypatch, tmp_path, "file-token\n")
+    monkeypatch.setenv("VAULT_TOKEN", "  env-token \n")
+
+    assert read_cached_token() == "env-token"
+
+
+def test_a_blank_environment_token_falls_through_to_the_file(monkeypatch, tmp_path):
+    use_token_file(monkeypatch, tmp_path, "file-token\n")
+    monkeypatch.setenv("VAULT_TOKEN", "   ")
+
+    assert read_cached_token() == "file-token"
+
+
+def test_an_empty_token_file_counts_as_no_token(monkeypatch, tmp_path):
+    use_token_file(monkeypatch, tmp_path, "\n")
+    monkeypatch.delenv("VAULT_TOKEN", raising=False)
+
+    assert read_cached_token() is None
+
+
+def test_no_token_anywhere_is_none(monkeypatch, tmp_path):
+    use_token_file(monkeypatch, tmp_path, None)
+    monkeypatch.delenv("VAULT_TOKEN", raising=False)
+
+    assert read_cached_token() is None
+
+
+def test_the_client_picks_up_the_cached_token(monkeypatch, tmp_path):
+    use_token_file(monkeypatch, tmp_path, "file-token\n")
+    monkeypatch.delenv("VAULT_TOKEN", raising=False)
+
+    assert VaultClient(address=VAULT_ADDRESS).token == "file-token"
 
 
 def test_a_client_without_an_address_is_rejected(monkeypatch):
