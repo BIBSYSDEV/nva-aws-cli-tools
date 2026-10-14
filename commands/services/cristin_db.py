@@ -13,12 +13,7 @@ from commands.services.vault import VAULT_ADDR_ENV, VaultClient, VaultError
 
 logger = logging.getLogger(__name__)
 
-PROD_DSN = "cmanora-prod05.uio.no:5435/CRISPRD.uio.no"
-TEST_DSN = "cmanora-prod05.uio.no:5434/CRISTST.uio.no"
 PROD_DSN_MARKER = "CRISPRD"
-
-PROD_VAULT_PATH = "secret/service/cristin/database/prod"
-TEST_VAULT_PATH = "secret/service/cristin/database/test"
 
 PARAMETER_NOT_FOUND = "ParameterNotFound"
 DSN_PARAMETER = "/NVA/Cristin/DatabaseDsn"
@@ -101,15 +96,18 @@ class MergeResult:
     output_lines: list[str]
 
 
-def is_production(profile: str | None) -> bool:
-    return bool(profile) and "prod" in profile.lower()
+def dsn_for(session: Any | None = None) -> str:
+    return required_parameter(session, DSN_PARAMETER)
 
 
-def dsn_for(profile: str | None, session: Any | None = None) -> str:
-    configured = ssm_value(session, DSN_PARAMETER)
-    if configured:
-        return configured
-    return PROD_DSN if is_production(profile) else TEST_DSN
+def required_parameter(session: Any | None, name: str) -> str:
+    configured = ssm_value(session, name)
+    if not configured:
+        raise CristinDatabaseError(
+            f"{name} is not set in this AWS account. The Cristin database and its Vault "
+            "secret are configured per account; see the nva-infrastructure README."
+        )
+    return configured
 
 
 def vault_address_for(session: Any | None = None) -> str | None:
@@ -152,11 +150,8 @@ def enable_thick_mode() -> None:
         raise CristinDatabaseError(f"{error}\n{INSTANT_CLIENT_HELP}") from error
 
 
-def vault_path_for(profile: str | None, session: Any | None = None) -> str:
-    configured = ssm_value(session, VAULT_PATH_PARAMETER)
-    if configured:
-        return configured
-    return PROD_VAULT_PATH if is_production(profile) else TEST_VAULT_PATH
+def vault_path_for(session: Any | None = None) -> str:
+    return required_parameter(session, VAULT_PATH_PARAMETER)
 
 
 def extract_credentials(
@@ -191,17 +186,15 @@ def _usernames(users: dict[str, str]) -> str:
 class CristinDatabaseService:
     def __init__(
         self,
-        profile: str | None,
+        session: Any | None = None,
         vault_path: str | None = None,
         username: str | None = None,
-        session: Any | None = None,
         vault_client: VaultClient | None = None,
         connection: Any | None = None,
     ) -> None:
-        self.profile = profile
         self.session = session
-        self.dsn = dsn_for(profile, session)
-        self.vault_path = vault_path or vault_path_for(profile, session)
+        self.dsn = dsn_for(session)
+        self.vault_path = vault_path or vault_path_for(session)
         self.username = username or DEFAULT_DB_USER
         self._vault_client = vault_client
         self._connection = connection

@@ -7,12 +7,8 @@ from commands.services.cristin_db import (
     MERGE_PERSON_STATEMENT,
     PERSON_KEY_COLUMN,
     PERSON_TABLE,
-    PROD_DSN,
-    PROD_VAULT_PATH,
     RELATED_COUNT_TABLES,
     SCHEMA,
-    TEST_DSN,
-    TEST_VAULT_PATH,
     CristinDatabaseError,
     CristinDatabaseService,
     dsn_for,
@@ -26,8 +22,10 @@ FROM_LOPENR = 123456
 TO_LOPENR = 654321
 SESSION_ID = 4711
 ROW_COUNT = 3
-PROD_PROFILE = "a-profile-named-prod"
-NON_PROD_PROFILE = "a-profile-named-anything-else"
+PROD_DSN = "a-host:1521/CRISPRD.example.no"
+TEST_DSN = "a-host:1521/CRISTST.example.no"
+PROD_VAULT_PATH = "secret/example/database/prod"
+TEST_VAULT_PATH = "secret/example/database/test"
 
 PERSON_COLUMNS = ("PERSONLOPENR", "FORNAVN", "ETTERNAVN", "EPOST")
 PERSON_ROWS = {
@@ -138,21 +136,13 @@ class FakeConnection:
         self.closed = True
 
 
-def build_service(connection: FakeConnection, profile: str = NON_PROD_PROFILE):
-    return CristinDatabaseService(profile, connection=connection)
-
-
-def test_profile_decides_environment(monkeypatch):
-    monkeypatch.delenv("CRISTIN_DB_DSN", raising=False)
-    monkeypatch.delenv("CRISTIN_DB_VAULT_PATH", raising=False)
-
-    assert dsn_for(PROD_PROFILE) == PROD_DSN
-    assert vault_path_for(PROD_PROFILE) == PROD_VAULT_PATH
-    assert dsn_for(NON_PROD_PROFILE) == TEST_DSN
-    assert vault_path_for(None) == TEST_VAULT_PATH
-
-
-def serve_parameters(monkeypatch, **parameters: str) -> object:
+def serve_parameters(
+    monkeypatch, dsn: str = TEST_DSN, vault_path: str = TEST_VAULT_PATH
+) -> object:
+    parameters = {
+        "/NVA/Cristin/DatabaseDsn": dsn,
+        "/NVA/Cristin/DatabaseVaultPath": vault_path,
+    }
     monkeypatch.setattr(
         "commands.services.cristin_db.get_ssm_parameter",
         lambda session, name: parameters[name],
@@ -160,26 +150,30 @@ def serve_parameters(monkeypatch, **parameters: str) -> object:
     return object()
 
 
+@pytest.fixture(autouse=True)
+def parameters_are_set(monkeypatch):
+    serve_parameters(monkeypatch)
+
+
+def build_service(connection: FakeConnection, session: object | None = None):
+    return CristinDatabaseService(session=session or object(), connection=connection)
+
+
 def test_ssm_supplies_the_dsn_and_vault_path(monkeypatch):
-    session = serve_parameters(
-        monkeypatch,
-        **{
-            "/NVA/Cristin/DatabaseDsn": PROD_DSN,
-            "/NVA/Cristin/DatabaseVaultPath": PROD_VAULT_PATH,
-        },
-    )
+    session = serve_parameters(monkeypatch, dsn=PROD_DSN, vault_path=PROD_VAULT_PATH)
 
-    assert dsn_for(NON_PROD_PROFILE, session) == PROD_DSN
-    assert vault_path_for(NON_PROD_PROFILE, session) == PROD_VAULT_PATH
+    assert dsn_for(session) == PROD_DSN
+    assert vault_path_for(session) == PROD_VAULT_PATH
 
 
-def test_a_missing_parameter_falls_back_to_the_profile(monkeypatch):
+def test_a_missing_parameter_is_an_error(monkeypatch):
     def not_found(session, name):
         raise ClientError({"Error": {"Code": "ParameterNotFound"}}, "GetParameter")
 
     monkeypatch.setattr("commands.services.cristin_db.get_ssm_parameter", not_found)
 
-    assert dsn_for(PROD_PROFILE, object()) == PROD_DSN
+    with pytest.raises(CristinDatabaseError, match="is not set in this AWS account"):
+        dsn_for(object())
 
 
 def test_a_denied_parameter_read_is_an_error(monkeypatch):
@@ -189,35 +183,19 @@ def test_a_denied_parameter_read_is_an_error(monkeypatch):
     monkeypatch.setattr("commands.services.cristin_db.get_ssm_parameter", denied)
 
     with pytest.raises(CristinDatabaseError, match="Could not read"):
-        dsn_for(PROD_PROFILE, object())
+        dsn_for(object())
 
 
-def test_the_environment_label_follows_the_dsn_not_the_profile(monkeypatch):
-    session = serve_parameters(
-        monkeypatch,
-        **{
-            "/NVA/Cristin/DatabaseDsn": PROD_DSN,
-            "/NVA/Cristin/DatabaseVaultPath": PROD_VAULT_PATH,
-        },
-    )
-    service = CristinDatabaseService(
-        NON_PROD_PROFILE, session=session, connection=FakeConnection()
-    )
+def test_the_environment_label_follows_the_dsn(monkeypatch):
+    session = serve_parameters(monkeypatch, dsn=PROD_DSN, vault_path=PROD_VAULT_PATH)
+    service = build_service(FakeConnection(), session)
 
     assert service.environment == "PROD"
 
 
 def test_the_environment_label_is_test_for_the_test_dsn(monkeypatch):
-    session = serve_parameters(
-        monkeypatch,
-        **{
-            "/NVA/Cristin/DatabaseDsn": TEST_DSN,
-            "/NVA/Cristin/DatabaseVaultPath": TEST_VAULT_PATH,
-        },
-    )
-    service = CristinDatabaseService(
-        PROD_PROFILE, session=session, connection=FakeConnection()
-    )
+    session = serve_parameters(monkeypatch)
+    service = build_service(FakeConnection(), session)
 
     assert service.environment == "TEST"
 
