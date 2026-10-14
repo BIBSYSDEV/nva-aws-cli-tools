@@ -362,13 +362,14 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 
     ```bash
     brew tap hashicorp/tap && brew install hashicorp/tap/vault
-    vault login -method=oidc -path=microsoft -address=https://vault.sikt.no:8200
+    export VAULT_ADDR=<the Vault server, see /NVA/Vault/Address>
+    vault login -method=oidc -path=microsoft
     ```
 
     `-path=microsoft` matters: the OIDC auth method is mounted there, not at the default `oidc`, and leaving it
     out fails with `403 permission denied`. The token lasts about eight hours; when it expires, log in again. You
-    can also copy a token from the user menu at <https://vault.sikt.no:8200/ui> and `export VAULT_TOKEN=<token>`,
-    which takes precedence over `~/.vault-token`. Override the address with `VAULT_ADDR`.
+    can also copy a token from the user menu in the Vault web UI and `export VAULT_TOKEN=<token>`, which takes
+    precedence over `~/.vault-token`.
 
   See [Manual for manuelle cristin endringer](https://sikt.atlassian.net/wiki/spaces/NVAP/pages/4895506438) for
   the Tailscale and Vault group memberships, and for the routines themselves.
