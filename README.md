@@ -281,30 +281,30 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 
 ---
 
-#### **`approvals policies`**
+#### **`approvals`**
 
-* **Description**: Manages the `IdentifierPolicy` rows in the approvals DynamoDB table owned by
-  [nva-handle-service](https://github.com/BIBSYSDEV/nva-handle-service). A policy lists which identifier names
-  (e.g. `ctis`, `dmp`, `rek`) a customer may use when creating approvals. There is at most one policy per customer,
-  stored under `PK0=Customer:<customer-uuid>` / `SK0=IdentifierPolicy`. Names are trimmed and lower-cased before they
-  are stored, matching the normalization in nva-handle-service.
+* **Description**: Manages the `IdentifierPolicy` rows in the approvals DynamoDB table and the `ApprovalCredentials`
+  secret, both owned by [nva-handle-service](https://github.com/BIBSYSDEV/nva-handle-service). A policy lists which
+  identifier names (e.g. `ctis`, `dmp`, `rek`) a customer may use, and which approval sources may be fetched and how
+  they authenticate. There is at most one policy per customer, stored under `PK0=Customer:<customer-uuid>` /
+  `SK0=IdentifierPolicy`; attributes the service owns (such as `createdDate`) are left untouched by writes.
 
-* **Common options** (every subcommand):
-  * `--table`: Substring of the approvals table name (default `nva-approvals-`). Make it more specific if several
-    stacks are deployed in the account.
+* **Subcommands**:
+  * `policy`: List every policy with customer name, allowed names and sources.
+  * `policy <customer_identifier>`: Open that customer's `allowedIdentifierNames` and `sourceConfigs` as JSON in
+    `$EDITOR` (prefilled with a template for a new customer), validate the result against what nva-handle-service can
+    read, show the diff and ask for confirmation before writing. An OAuth2 source naming an unknown credentials key
+    asks for those credentials and stores them in the same operation.
+    * `--table`: Substring of the approvals table name (default `nva-approvals-`). Make it more specific if several
+      stacks are deployed in the account.
+  * `credentials <credentials_key>`: Prompt for OAuth2 client credentials (the client secret is never echoed) and
+    store them under that key in the `ApprovalCredentials` secret, keeping the other keys. By convention the key is
+    the host of the source's `baseUri`.
 
 * **Arguments**:
   * `customer_identifier`: The customer UUID, or the full customer URI (`https://api.nva.unit.no/customer/<uuid>`).
 
-* **Subcommands**:
-  * `list [--json]`: Show every policy with the customer name (resolved from the customers table when available).
-  * `get <customer_identifier>`: Print one policy as JSON.
-  * `add <customer_identifier> <name>...`: Create the policy. Fails if the customer already has one.
-  * `update <customer_identifier> [--add <name>]... [--remove <name>]...`: Add and/or remove allowed names.
-  * `delete <customer_identifier> [--yes]`: Delete the policy (asks for confirmation unless `--yes`).
-
 * **Examples**:
-  * `> uv run cli.py approvals policies list`
-  * `> uv run cli.py approvals policies add f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c ctis dmp`
-  * `> uv run cli.py approvals policies update f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --add rek --remove dmp`
-  * `> uv run cli.py approvals policies delete f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c --yes`
+  * `> uv run cli.py approvals policy`
+  * `> uv run cli.py approvals policy f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c`
+  * `> uv run cli.py approvals credentials api.dmp.no`
