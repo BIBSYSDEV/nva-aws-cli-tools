@@ -122,6 +122,15 @@ def write_credentials(
         )
 
 
+def _with_lists(item: dict[str, Any]) -> dict[str, Any]:
+    """Rows written as DynamoDB string sets come back as Python sets, which
+    neither JSON nor the editor can show; the service reads sets and lists alike."""
+    return {
+        attribute: sorted(value) if isinstance(value, set) else value
+        for attribute, value in item.items()
+    }
+
+
 def _validate_source_config(source_config: dict[str, Any]) -> None:
     base_uri = urlparse(str(source_config.get(BASE_URI_ATTRIBUTE)))
     if not (base_uri.scheme and base_uri.netloc):
@@ -165,13 +174,16 @@ class ApprovalsService:
                 break
             scan_arguments["ExclusiveStartKey"] = response["LastEvaluatedKey"]
         policies = [
-            item for item in items if item.get(SORT_KEY) == IDENTIFIER_POLICY_TYPE
+            _with_lists(item)
+            for item in items
+            if item.get(SORT_KEY) == IDENTIFIER_POLICY_TYPE
         ]
         return sorted(policies, key=lambda item: item.get(PARTITION_KEY, ""))
 
     def get_policy(self, customer_identifier: str) -> dict[str, Any] | None:
         response = self.table.get_item(Key=policy_primary_key(customer_identifier))
-        return response.get("Item")
+        item = response.get("Item")
+        return _with_lists(item) if item else None
 
     def put_policy(self, customer_identifier: str, policy: dict[str, Any]) -> None:
         item = self.get_policy(customer_identifier) or {}

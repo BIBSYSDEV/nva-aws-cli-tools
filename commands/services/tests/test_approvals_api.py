@@ -168,6 +168,19 @@ def test_put_policy_omits_empty_lists_and_creates_missing_row():
 
 
 @mock_aws
+def test_get_policy_turns_a_string_set_row_into_a_list():
+    _create_table()
+    _seed_policy({"allowedIdentifierNames": {"REK", "DMP"}})
+
+    policy = ApprovalsService(boto3.Session(), TABLE_NAME).get_policy(
+        CUSTOMER_IDENTIFIER
+    )
+
+    assert policy is not None
+    assert policy["allowedIdentifierNames"] == ["DMP", "REK"]
+
+
+@mock_aws
 def test_list_policies_skips_other_row_types():
     _create_table()
     _seed_policy({"allowedIdentifierNames": ["rek"]})
