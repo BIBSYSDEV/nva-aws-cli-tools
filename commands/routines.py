@@ -73,12 +73,12 @@ def merge_person(
     if from_lopenr == to_lopenr:
         raise click.UsageError(SAME_PERSON_MESSAGE)
 
-    console.rule(VALIDATION_HEADING)
+    print_heading(console, VALIDATION_HEADING)
     require_persons_exist(
         app_context, (from_lopenr, to_lopenr), vault_path, username, console
     )
 
-    console.rule(NVA_STEP_HEADING)
+    print_heading(console, NVA_STEP_HEADING)
     report = click_context.invoke(
         contributor_identifier,
         old_value=str(from_lopenr),
@@ -89,7 +89,7 @@ def merge_person(
     if has_pending_results(report):
         raise click.ClickException(PENDING_RESULTS_MESSAGE)
 
-    console.rule(CRISTIN_STEP_HEADING)
+    print_heading(console, CRISTIN_STEP_HEADING)
     run_merge_person(
         app_context,
         from_lopenr,
@@ -99,3 +99,7 @@ def merge_person(
         username,
         console=console,
     )
+
+
+def print_heading(console: Console, heading: str) -> None:
+    console.print(f"\n[bold]{heading}[/bold]")
