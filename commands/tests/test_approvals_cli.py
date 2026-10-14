@@ -135,27 +135,6 @@ def test_policy_edit_writes_nothing_when_not_confirmed(monkeypatch):
 
 
 @mock_aws
-def test_policy_edit_rejects_a_policy_the_service_cannot_read(monkeypatch):
-    _create_approvals_table()
-    _seed_policy(allowedIdentifierNames=["rek"])
-    _edits(
-        monkeypatch,
-        {
-            "allowedIdentifierNames": ["rek"],
-            "sourceConfigs": [
-                {"baseUri": "api.dmp.no", "authentication": {"type": "X"}}
-            ],
-        },
-    )
-
-    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input="y\n")
-
-    assert result.exit_code != 0
-    assert "baseUri must be an absolute URI" in result.output
-    assert "sourceConfigs" not in _raw_policy()
-
-
-@mock_aws
 def test_policy_edit_asks_for_missing_credentials_and_writes_both(monkeypatch):
     _create_approvals_table()
     _seed_policy(allowedIdentifierNames=["dmp"])

@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import shutil
 
 import click
 from botocore.exceptions import BotoCoreError, ClientError
@@ -38,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 UNKNOWN_CUSTOMER_NAME = "?"
 DENY_ALL_LABEL = "(none - denies all)"
+VS_CODE_EDITOR = "code --new-window --wait"
 POLICY_TEMPLATE = {
     NAMES_ATTRIBUTE: ["rek"],
     SOURCE_CONFIGS_ATTRIBUTE: [
@@ -101,7 +104,9 @@ def policy(
         if existing_item
         else POLICY_TEMPLATE
     )
-    edited = click.edit(prettify(EMPTY_POLICY | current), extension=".json")
+    edited = click.edit(
+        prettify(EMPTY_POLICY | current), editor=_editor(), extension=".json"
+    )
     if edited is None:
         click.echo("No changes made.")
         return
@@ -154,6 +159,14 @@ def credentials(ctx: AppContext, credentials_key: str) -> None:
     )
     write_credentials(ctx.session, new_credentials)
     click.echo(f"WROTE credentials under {credentials_key}")
+
+
+def _editor() -> str | None:
+    return (
+        os.environ.get("VISUAL")
+        or os.environ.get("EDITOR")
+        or (VS_CODE_EDITOR if shutil.which("code") else None)
+    )
 
 
 def _prompt_credentials(credentials_key: str) -> dict[str, str]:

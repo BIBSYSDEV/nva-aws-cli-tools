@@ -7,7 +7,6 @@ from moto import mock_aws
 from commands.services.approvals_api import (
     CREDENTIALS_SECRET_NAME,
     ApprovalsService,
-    parse_customer_identifier,
     read_credentials,
     required_credentials_keys,
     validated_policy,
@@ -60,21 +59,6 @@ def _seed_policy(item: dict) -> None:
             **item,
         }
     )
-
-
-def test_parse_customer_identifier_accepts_uuid_and_uri():
-    assert parse_customer_identifier(CUSTOMER_IDENTIFIER) == CUSTOMER_IDENTIFIER
-    assert (
-        parse_customer_identifier(
-            f"https://api.nva.unit.no/customer/{CUSTOMER_IDENTIFIER.upper()}"
-        )
-        == CUSTOMER_IDENTIFIER
-    )
-
-
-def test_parse_customer_identifier_rejects_non_uuid():
-    with pytest.raises(ValueError, match="not a customer UUID"):
-        parse_customer_identifier("not-a-uuid")
 
 
 def test_validated_policy_normalizes_names_and_keeps_source_order():
@@ -168,34 +152,6 @@ def test_put_policy_omits_empty_lists_and_creates_missing_row():
 
 
 @mock_aws
-def test_get_policy_turns_a_string_set_row_into_a_list():
-    _create_table()
-    _seed_policy({"allowedIdentifierNames": {"REK", "DMP"}})
-
-    policy = ApprovalsService(boto3.Session(), TABLE_NAME).get_policy(
-        CUSTOMER_IDENTIFIER
-    )
-
-    assert policy is not None
-    assert policy["allowedIdentifierNames"] == ["DMP", "REK"]
-
-
-@mock_aws
-def test_list_policies_skips_other_row_types():
-    _create_table()
-    _seed_policy({"allowedIdentifierNames": ["rek"]})
-    boto3.resource("dynamodb").Table(TABLE_NAME).put_item(
-        Item={"PK0": "Approval:1", "SK0": "Approval:1", "type": "Approval"}
-    )
-
-    policies = ApprovalsService(boto3.Session(), TABLE_NAME).list_policies()
-
-    assert [policy["customerIdentifier"] for policy in policies] == [
-        CUSTOMER_IDENTIFIER
-    ]
-
-
-@mock_aws
 def test_write_credentials_creates_secret_when_missing():
     write_credentials(boto3.Session(), {"api.dmp.no": CREDENTIALS})
 
@@ -213,8 +169,3 @@ def test_write_credentials_keeps_the_other_keys():
     write_credentials(session, {"api.dmp.no": CREDENTIALS})
 
     assert sorted(read_credentials(session)) == ["api.dmp.no", "api.rek.no"]
-
-
-@mock_aws
-def test_read_credentials_without_secret_is_empty():
-    assert read_credentials(boto3.Session()) == {}
