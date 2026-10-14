@@ -104,6 +104,26 @@ def test_validated_policy_normalizes_names_and_keeps_source_order():
             ]
         },
         {"sourceConfigs": ["https://api.dmp.no/"]},
+        {
+            "sourceConfigs": [
+                {
+                    "baseUri": "https://api.dmp.no/a b",
+                    "authentication": {"type": "NoAuthentication"},
+                }
+            ]
+        },
+        {"sourceConfigs": [{"baseUri": "https://api.dmp.no/", "authentication": []}]},
+        {
+            "sourceConfigs": [
+                {
+                    "baseUri": "https://api.dmp.no/",
+                    "authentication": {
+                        "type": "OAuth2ClientCredentials",
+                        "key": ["dmp"],
+                    },
+                }
+            ]
+        },
     ],
 )
 def test_validated_policy_rejects_what_the_service_cannot_read(invalid_policy):

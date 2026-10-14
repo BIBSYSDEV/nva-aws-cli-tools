@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import boto3
+from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
 
 from commands.services.aws_utils import find_table_name
@@ -37,6 +38,8 @@ SCOPE_FIELD = "scope"
 CREDENTIALS_FIELDS = ("clientId", CLIENT_SECRET_FIELD, "accessTokenUrl", SCOPE_FIELD)
 
 NAME_PATTERN = re.compile(r"[a-z0-9_-]{1,100}")
+# The characters java.net.URI accepts unescaped (RFC 3986 unreserved, reserved and %)
+URI_CHARACTERS = re.compile(r"[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+")
 RESOURCE_NOT_FOUND = "ResourceNotFoundException"
 EMPTY_POLICY: dict[str, Any] = {NAMES_ATTRIBUTE: [], SOURCE_CONFIGS_ATTRIBUTE: []}
 
@@ -132,22 +135,29 @@ def _with_lists(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_source_config(source_config: dict[str, Any]) -> None:
-    base_uri = urlparse(str(source_config.get(BASE_URI_ATTRIBUTE)))
-    if not (base_uri.scheme and base_uri.netloc):
+    raw_base_uri = source_config.get(BASE_URI_ATTRIBUTE)
+    base_uri = urlparse(str(raw_base_uri))
+    if not (
+        isinstance(raw_base_uri, str)
+        and URI_CHARACTERS.fullmatch(raw_base_uri)
+        and base_uri.scheme
+        and base_uri.netloc
+    ):
         raise ValueError(
-            f"{BASE_URI_ATTRIBUTE} must be an absolute URI, got "
-            f"{source_config.get(BASE_URI_ATTRIBUTE)!r}"
+            f"{BASE_URI_ATTRIBUTE} must be an absolute URI, got {raw_base_uri!r}"
         )
     authentication = source_config.get(AUTHENTICATION_ATTRIBUTE) or {}
-    authentication_type = authentication.get(TYPE_ATTRIBUTE)
+    authentication_type = (
+        authentication.get(TYPE_ATTRIBUTE) if isinstance(authentication, dict) else None
+    )
     if authentication_type not in AUTHENTICATION_TYPES:
         raise ValueError(
             f"{AUTHENTICATION_ATTRIBUTE}.{TYPE_ATTRIBUTE} must be one of "
             f"{', '.join(AUTHENTICATION_TYPES)}, got {authentication_type!r}"
         )
-    if (
-        authentication_type == OAUTH2_AUTHENTICATION
-        and not str(authentication.get(CREDENTIALS_KEY_ATTRIBUTE) or "").strip()
+    credentials_key = authentication.get(CREDENTIALS_KEY_ATTRIBUTE)
+    if authentication_type == OAUTH2_AUTHENTICATION and not (
+        isinstance(credentials_key, str) and credentials_key.strip()
     ):
         raise ValueError(
             f"{OAUTH2_AUTHENTICATION} needs a {CREDENTIALS_KEY_ATTRIBUTE} naming "
@@ -166,18 +176,16 @@ class ApprovalsService:
 
     def list_policies(self) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
-        scan_arguments: dict[str, Any] = {}
+        scan_arguments: dict[str, Any] = {
+            "FilterExpression": Attr(SORT_KEY).eq(IDENTIFIER_POLICY_TYPE)
+        }
         while True:
             response = self.table.scan(**scan_arguments)
             items.extend(response.get("Items", []))
             if "LastEvaluatedKey" not in response:
                 break
             scan_arguments["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-        policies = [
-            _with_lists(item)
-            for item in items
-            if item.get(SORT_KEY) == IDENTIFIER_POLICY_TYPE
-        ]
+        policies = [_with_lists(item) for item in items]
         return sorted(policies, key=lambda item: item.get(PARTITION_KEY, ""))
 
     def get_policy(self, customer_identifier: str) -> dict[str, Any] | None:
@@ -186,12 +194,27 @@ class ApprovalsService:
         return _with_lists(item) if item else None
 
     def put_policy(self, customer_identifier: str, policy: dict[str, Any]) -> None:
-        item = self.get_policy(customer_identifier) or {}
-        item |= policy_primary_key(customer_identifier)
-        item[TYPE_ATTRIBUTE] = IDENTIFIER_POLICY_TYPE
-        item[CUSTOMER_IDENTIFIER_ATTRIBUTE] = customer_identifier
+        """Only the edited attributes are set or removed, so whatever else the
+        service keeps on the row survives, even if it wrote in the meantime."""
+        set_expressions = ["#type = :type", "#customer = :customer"]
+        remove_expressions = []
+        values = {":type": IDENTIFIER_POLICY_TYPE, ":customer": customer_identifier}
         for attribute, value in policy.items():
-            item[attribute] = value
-            if not value:
-                item.pop(attribute)
-        self.table.put_item(Item=item)
+            if value:
+                set_expressions.append(f"#{attribute} = :{attribute}")
+                values[f":{attribute}"] = value
+            else:
+                remove_expressions.append(f"#{attribute}")
+        update_expression = f"SET {', '.join(set_expressions)}"
+        if remove_expressions:
+            update_expression += f" REMOVE {', '.join(remove_expressions)}"
+        self.table.update_item(
+            Key=policy_primary_key(customer_identifier),
+            UpdateExpression=update_expression,
+            ExpressionAttributeNames={
+                "#type": TYPE_ATTRIBUTE,
+                "#customer": CUSTOMER_IDENTIFIER_ATTRIBUTE,
+                **{f"#{attribute}": attribute for attribute in policy},
+            },
+            ExpressionAttributeValues=values,
+        )

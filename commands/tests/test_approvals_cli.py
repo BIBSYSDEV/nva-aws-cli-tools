@@ -5,6 +5,7 @@ from click.testing import CliRunner
 from moto import mock_aws
 
 from cli import cli
+from commands.approvals import POLICY_TEMPLATE
 from commands.services.approvals_api import CREDENTIALS_SECRET_NAME, read_credentials
 
 APPROVALS_TABLE = (
@@ -120,6 +121,21 @@ def test_policy_edit_keeps_service_owned_attributes_after_confirmation(monkeypat
         "createdDate": CREATED_DATE,
         "allowedIdentifierNames": ["ctis", "rek"],
     }
+
+
+@mock_aws
+def test_policy_edit_creates_a_new_customer_from_the_unchanged_template(monkeypatch):
+    _create_approvals_table()
+    _edits(monkeypatch, POLICY_TEMPLATE)
+
+    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert (
+        _raw_policy()["allowedIdentifierNames"]
+        == POLICY_TEMPLATE["allowedIdentifierNames"]
+    )
+    assert _raw_policy()["sourceConfigs"] == POLICY_TEMPLATE["sourceConfigs"]
 
 
 @mock_aws

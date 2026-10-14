@@ -94,19 +94,14 @@ def policy(
     if not customer_identifier:
         _render_policies(service.list_policies(), ctx, service.table_name)
         return
-    existing_item = service.get_policy(customer_identifier)
-    current = (
-        {
-            attribute: existing_item[attribute]
-            for attribute in EMPTY_POLICY
-            if attribute in existing_item
-        }
-        if existing_item
-        else POLICY_TEMPLATE
-    )
-    edited = click.edit(
-        prettify(EMPTY_POLICY | current), editor=_editor(), extension=".json"
-    )
+    existing_item = service.get_policy(customer_identifier) or {}
+    current = EMPTY_POLICY | {
+        attribute: existing_item[attribute]
+        for attribute in EMPTY_POLICY
+        if attribute in existing_item
+    }
+    starting_point = current if existing_item else EMPTY_POLICY | POLICY_TEMPLATE
+    edited = click.edit(prettify(starting_point), editor=_editor(), extension=".json")
     if edited is None:
         click.echo("No changes made.")
         return
@@ -115,8 +110,8 @@ def policy(
         stored_credentials = read_credentials(ctx.session)
     except (ValueError, AttributeError) as error:
         raise click.ClickException(str(error))
-    difference = DeepDiff(EMPTY_POLICY | current, wanted)
-    if not difference:
+    difference = DeepDiff(current, wanted)
+    if not difference and existing_item:
         click.echo("No changes made.")
         return
     missing_credentials = {
@@ -124,7 +119,7 @@ def policy(
         for credentials_key in required_credentials_keys(wanted)
         if credentials_key not in stored_credentials
     }
-    click.echo(difference.pretty())
+    click.echo(difference.pretty() or "Creating the policy as shown.")
     click.confirm(
         f"Write this policy for customer {customer_identifier} to {service.table_name} "
         f"(profile {ctx.session.profile_name})?",
