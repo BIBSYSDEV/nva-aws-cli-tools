@@ -376,11 +376,12 @@ Then run `nva pipelines status` or `nva --profile sikt-nva-dev pipelines deploy`
 
 * **Environment**: The database and its Vault secret come from SSM in the AWS account you are using —
   `/NVA/Cristin/DatabaseDsn` and `/NVA/Cristin/DatabaseVaultPath` — so a test account cannot reach the
-  production database. Where the parameters are not set yet, the AWS profile decides as before: a profile
-  containing `prod` connects to `CRISPRD`, everything else to `CRISTST`. Any other SSM failure (no access,
-  expired credentials) is an error rather than a guess. The `PROD`/`TEST` label in the preview is derived from
-  the DSN, so it always names the database actually connected to. The Vault address is read the same way, from
-  `VAULT_ADDR` or `/NVA/Vault/Address`.
+  production database. Both parameters are required: a missing one, or an SSM read that fails for any other
+  reason, is an error rather than a guess at which database to connect to. They are set per account with
+  `aws ssm put-parameter` and documented in the
+  [nva-infrastructure README](https://github.com/BIBSYSDEV/nva-infrastructure). The `PROD`/`TEST` label in the
+  preview is derived from the DSN, so it always names the database actually connected to. The Vault address is
+  read the same way, from `VAULT_ADDR` or `/NVA/Vault/Address`.
 
 * **Options**:
   * `--yes`: Skip the confirmation prompt.

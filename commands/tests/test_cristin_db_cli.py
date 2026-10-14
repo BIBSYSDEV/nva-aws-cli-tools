@@ -105,9 +105,10 @@ def test_the_environment_is_named_even_when_the_prompt_is_skipped(monkeypatch):
     assert "PROD" in result.output
 
 
-def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch):
+def test_merge_person_builds_the_service_from_session_and_options(monkeypatch):
     service = build_service(monkeypatch)
-    monkeypatch.setattr("cli.build_session", lambda profile: MagicMock())
+    session = MagicMock()
+    monkeypatch.setattr("cli.build_session", lambda profile: session)
 
     result = CliRunner().invoke(
         cli,
@@ -127,8 +128,8 @@ def test_merge_person_builds_the_service_from_profile_and_vault_path(monkeypatch
     )
 
     assert result.exit_code == 0
-    arguments, keyword_arguments = service.construction[0]
-    assert arguments[0] == PROFILE_NAME
+    _, keyword_arguments = service.construction[0]
+    assert keyword_arguments["session"] is session
     assert keyword_arguments["vault_path"] == VAULT_PATH
     assert keyword_arguments["username"] == "FRIDA_SYSTEM"
 

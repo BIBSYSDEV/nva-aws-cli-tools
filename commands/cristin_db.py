@@ -53,10 +53,9 @@ def cristin_db(ctx: AppContext) -> None:
     """Run manual Cristin database routines directly against Oracle.
 
     Requires Tailscale (groups RG_Tailscale_Cristin / -prod) and access to the
-    database credentials in Vault (group RG_VAULT_Cristin). The database and the
-    Vault path come from SSM in the AWS account being used, falling back to the
-    AWS profile: a profile containing "prod" means CRISPRD, everything else
-    CRISTST.
+    database credentials in Vault (group RG_VAULT_Cristin). Which database to use
+    and where its credentials live come from SSM in the AWS account you are using,
+    so the account decides the environment.
     """
 
 
@@ -96,7 +95,7 @@ def run_merge_person(
 ) -> None:
     console = console or Console()
     with CristinDatabaseService(
-        ctx.profile, vault_path=vault_path, username=username, session=ctx.session
+        session=ctx.session, vault_path=vault_path, username=username
     ) as service:
         print_merge_preview(console, service, from_lopenr, to_lopenr)
         if not yes:
