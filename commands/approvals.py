@@ -20,7 +20,7 @@ from commands.services.approvals_api import (
     DEFAULT_TABLE_NAME_SUBSTRING,
     EMPTY_POLICY,
     NAMES_ATTRIBUTE,
-    NO_AUTHENTICATION,
+    OAUTH2_AUTHENTICATION,
     OAUTH2_CREDENTIALS_TYPE,
     SCOPE_FIELD,
     SOURCE_CONFIGS_ATTRIBUTE,
@@ -42,11 +42,14 @@ UNKNOWN_CUSTOMER_NAME = "?"
 DENY_ALL_LABEL = "(none - denies all)"
 VS_CODE_EDITOR = "code --new-window --wait"
 POLICY_TEMPLATE = {
-    NAMES_ATTRIBUTE: ["rek"],
+    NAMES_ATTRIBUTE: ["example-namespace"],
     SOURCE_CONFIGS_ATTRIBUTE: [
         {
-            BASE_URI_ATTRIBUTE: "https://api.rekportalen.no/",
-            AUTHENTICATION_ATTRIBUTE: {TYPE_ATTRIBUTE: NO_AUTHENTICATION},
+            BASE_URI_ATTRIBUTE: "https://api.example.org/",
+            AUTHENTICATION_ATTRIBUTE: {
+                TYPE_ATTRIBUTE: OAUTH2_AUTHENTICATION,
+                CREDENTIALS_KEY_ATTRIBUTE: "api.example.org",
+            },
         }
     ],
 }

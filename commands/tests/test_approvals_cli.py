@@ -128,7 +128,7 @@ def test_policy_edit_creates_a_new_customer_from_the_unchanged_template(monkeypa
     _create_approvals_table()
     _edits(monkeypatch, POLICY_TEMPLATE)
 
-    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input="y\n")
+    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input=CREDENTIALS_INPUT + "y\n")
 
     assert result.exit_code == 0, result.output
     assert (
