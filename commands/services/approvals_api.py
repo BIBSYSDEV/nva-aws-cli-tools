@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from urllib.parse import urlparse
 
@@ -14,6 +17,7 @@ from commands.services.aws_utils import find_table_name
 
 DEFAULT_TABLE_NAME_SUBSTRING = "nva-approvals-"
 CREDENTIALS_SECRET_NAME = "ApprovalCredentials"
+PAYLOAD_LOGGERS = ("botocore.endpoint", "botocore.parsers")
 
 PARTITION_KEY = "PK0"
 SORT_KEY = "SK0"
@@ -95,9 +99,10 @@ def required_credentials_keys(policy: dict[str, Any]) -> list[str]:
 
 def read_credentials(session: boto3.Session) -> dict[str, Any]:
     try:
-        secret = session.client("secretsmanager").get_secret_value(
-            SecretId=CREDENTIALS_SECRET_NAME
-        )
+        with _without_payload_logging():
+            secret = session.client("secretsmanager").get_secret_value(
+                SecretId=CREDENTIALS_SECRET_NAME
+            )
     except ClientError as error:
         if error.response.get("Error", {}).get("Code") != RESOURCE_NOT_FOUND:
             raise
@@ -113,16 +118,32 @@ def write_credentials(
 ) -> None:
     merged = {CREDENTIALS_ATTRIBUTE: read_credentials(session) | new_credentials}
     client = session.client("secretsmanager")
+    with _without_payload_logging():
+        try:
+            client.put_secret_value(
+                SecretId=CREDENTIALS_SECRET_NAME, SecretString=json.dumps(merged)
+            )
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") != RESOURCE_NOT_FOUND:
+                raise
+            client.create_secret(
+                Name=CREDENTIALS_SECRET_NAME, SecretString=json.dumps(merged)
+            )
+
+
+@contextmanager
+def _without_payload_logging() -> Iterator[None]:
+    # --verbose makes botocore log request params and response bodies, which
+    # would print every stored client secret; keep the rest of the logging
+    loggers = [logging.getLogger(name) for name in PAYLOAD_LOGGERS]
+    previous_levels = [logger.level for logger in loggers]
+    for logger in loggers:
+        logger.setLevel(max(logger.level, logging.INFO))
     try:
-        client.put_secret_value(
-            SecretId=CREDENTIALS_SECRET_NAME, SecretString=json.dumps(merged)
-        )
-    except ClientError as error:
-        if error.response.get("Error", {}).get("Code") != RESOURCE_NOT_FOUND:
-            raise
-        client.create_secret(
-            Name=CREDENTIALS_SECRET_NAME, SecretString=json.dumps(merged)
-        )
+        yield
+    finally:
+        for logger, previous_level in zip(loggers, previous_levels, strict=True):
+            logger.setLevel(previous_level)
 
 
 def _with_lists(item: dict[str, Any]) -> dict[str, Any]:
