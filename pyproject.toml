@@ -18,6 +18,7 @@ dependencies = [
     "polars>=1.42.1",
     "xlsxwriter>=3.2.9",
     "fastexcel>=0.20.2",
+    "oracledb>=3.4.0",
 ]
 
 [tool.pytest.ini_options]
