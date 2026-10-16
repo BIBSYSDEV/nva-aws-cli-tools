@@ -14,6 +14,7 @@ TO_LOPENR = 654321
 SESSION_ID = 4711
 PROFILE_NAME = "unit-test-profile"
 VAULT_PATH = "unit/test/vault/path"
+DSN = "db.example.test:1521/CRISTST"
 
 LOSING_PROFILE = PersonProfile(
     lopenr=FROM_LOPENR,
@@ -32,7 +33,7 @@ def build_service(
 ) -> MagicMock:
     service = MagicMock()
     service.environment = environment
-    service.dsn = "cmanora-prod05.uio.no:5434/CRISTST.uio.no"
+    service.dsn = DSN
     service.__enter__.return_value = service
     service.__exit__.return_value = False
     lookup = (
