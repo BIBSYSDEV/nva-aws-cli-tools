@@ -5,18 +5,26 @@ from click.testing import CliRunner
 from moto import mock_aws
 
 from cli import cli
+from commands.approvals import POLICY_TEMPLATE
+from commands.services.approvals_api import CREDENTIALS_SECRET_NAME, read_credentials
 
 APPROVALS_TABLE = (
     "nva-approvals-master-pipelines-NvaHandleService-ABC123-nva-handle-service"
 )
 CUSTOMERS_TABLE = "nva-customers-ABC123"
 CUSTOMER_IDENTIFIER = "f8a1c0e2-3b4d-4a5e-9c7f-1d2e3f4a5b6c"
-OTHER_CUSTOMER_IDENTIFIER = "0b6f7a1e-2c3d-4e5f-8a9b-0c1d2e3f4a5b"
+CREATED_DATE = "2026-09-08T09:11:19.123Z"
+OAUTH2_SOURCE = {
+    "baseUri": "https://api.dmp.no/",
+    "authentication": {"type": "OAuth2ClientCredentials", "key": "api.dmp.no"},
+}
+CLIENT_SECRET = "s3cr3t"
+CREDENTIALS_INPUT = f"id\n{CLIENT_SECRET}\nhttps://auth.dmp.no/token\ndmp/read\n"
 
 
-def _create_approvals_table(name: str = APPROVALS_TABLE) -> None:
+def _create_approvals_table() -> None:
     boto3.client("dynamodb").create_table(
-        TableName=name,
+        TableName=APPROVALS_TABLE,
         KeySchema=[
             {"AttributeName": "PK0", "KeyType": "HASH"},
             {"AttributeName": "SK0", "KeyType": "RANGE"},
@@ -41,395 +49,140 @@ def _create_customers_table(customers: dict[str, str]) -> None:
         table.put_item(Item={"identifier": identifier, "name": name})
 
 
-def _seed_policy(customer_identifier: str, allowed_names: list[str]) -> None:
+def _seed_policy(**attributes) -> None:
     boto3.resource("dynamodb").Table(APPROVALS_TABLE).put_item(
         Item={
-            "PK0": f"Customer:{customer_identifier}",
+            "PK0": f"Customer:{CUSTOMER_IDENTIFIER}",
             "SK0": "IdentifierPolicy",
             "type": "IdentifierPolicy",
-            "customerIdentifier": customer_identifier,
-            "allowedIdentifierNames": allowed_names,
+            "customerIdentifier": CUSTOMER_IDENTIFIER,
+            "createdDate": CREATED_DATE,
+            **attributes,
         }
     )
 
 
-def _seed_approval(
-    approval_identifier: str, handle: str, name: str, value: str
-) -> None:
-    approval_key = f"Approval:{approval_identifier}"
-    handle_key = f"Handle:{handle}"
-    identifier_key = f"Identifier:{name}#{value}"
-    table = boto3.resource("dynamodb").Table(APPROVALS_TABLE)
-    table.put_item(
-        Item={
-            "PK0": approval_key,
-            "SK0": approval_key,
-            "PK1": approval_key,
-            "SK1": approval_key,
-            "PK2": handle_key,
-            "SK2": handle_key,
-            "type": "Approval",
-            "identifier": approval_identifier,
-            "source": "https://example.org/source/1",
-        }
-    )
-    table.put_item(
-        Item={
-            "PK0": handle_key,
-            "SK0": handle_key,
-            "PK1": approval_key,
-            "SK1": approval_key,
-            "PK2": handle_key,
-            "SK2": handle_key,
-            "type": "Handle",
-            "uri": handle,
-        }
-    )
-    table.put_item(
-        Item={
-            "PK0": identifier_key,
-            "SK0": identifier_key,
-            "PK1": approval_key,
-            "SK1": approval_key,
-            "PK2": handle_key,
-            "SK2": handle_key,
-            "type": "Identifier",
-            "name": name,
-            "value": value,
-        }
-    )
-
-
-def _count_rows() -> int:
-    return boto3.resource("dynamodb").Table(APPROVALS_TABLE).scan()["Count"]
-
-
-def _raw_policy(customer_identifier: str) -> dict | None:
-    response = (
+def _raw_policy() -> dict:
+    return (
         boto3.resource("dynamodb")
         .Table(APPROVALS_TABLE)
         .get_item(
-            Key={"PK0": f"Customer:{customer_identifier}", "SK0": "IdentifierPolicy"}
+            Key={"PK0": f"Customer:{CUSTOMER_IDENTIFIER}", "SK0": "IdentifierPolicy"}
         )
+        .get("Item", {})
     )
-    return response.get("Item")
 
 
 def _run(args: list[str], user_input: str | None = None):
     return CliRunner().invoke(
-        cli, ["--quiet", "approvals", "policies", *args], input=user_input
+        cli, ["--quiet", "approvals", *args], input=user_input, env={"COLUMNS": "200"}
     )
 
 
-def _table_row(output: str, needle: str) -> list[str]:
-    matching_lines = [line for line in output.splitlines() if needle in line]
-    assert matching_lines, f"No table row containing '{needle}' in output:\n{output}"
-    cells = [cell.strip() for cell in matching_lines[0].split("│")]
-    return [cell for cell in cells if cell]
+def _edits(monkeypatch, policy: dict) -> None:
+    monkeypatch.setattr(
+        "commands.approvals.click.edit", lambda *_, **__: json.dumps(policy)
+    )
 
 
 @mock_aws
-def test_list_shows_policies_with_customer_names():
+def test_policy_lists_names_sources_and_customer_names():
     _create_approvals_table()
     _create_customers_table({CUSTOMER_IDENTIFIER: "Sikt"})
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis", "dmp"])
-    _seed_policy(OTHER_CUSTOMER_IDENTIFIER, [])
-
-    result = _run(["list"])
-
-    assert result.exit_code == 0, result.output
-    assert _table_row(result.output, CUSTOMER_IDENTIFIER) == [
-        "Sikt",
-        CUSTOMER_IDENTIFIER,
-        "ctis, dmp",
-    ]
-    assert _table_row(result.output, OTHER_CUSTOMER_IDENTIFIER) == [
-        "?",
-        OTHER_CUSTOMER_IDENTIFIER,
-        "(none - denies all)",
-    ]
-    assert "Total: 2 policy(ies)" in result.output
-
-
-@mock_aws
-def test_list_ignores_approval_handle_and_identifier_rows():
-    _create_approvals_table()
-    _seed_approval(
-        "3d235e16-5fd5-4a7e-8eb6-ac53f298e65e",
-        "https://hdl.handle.net/11250.1/12345",
-        "REK",
-        "2024/123",
-    )
-    _seed_policy(CUSTOMER_IDENTIFIER, ["rek"])
-
-    result = _run(["list", "--json"])
-
-    assert result.exit_code == 0, result.output
-    assert json.loads(result.output) == [
-        {"customerIdentifier": CUSTOMER_IDENTIFIER, "allowedIdentifierNames": ["rek"]}
-    ]
-
-
-@mock_aws
-def test_list_still_works_when_customers_table_is_missing():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
-
-    result = _run(["list"])
-
-    assert result.exit_code == 0, result.output
-    assert _table_row(result.output, CUSTOMER_IDENTIFIER) == [
-        "?",
-        CUSTOMER_IDENTIFIER,
-        "ctis",
-    ]
-
-
-@mock_aws
-def test_list_json_outputs_policies():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["dmp", "ctis"])
-
-    result = _run(["list", "--json"])
-
-    assert result.exit_code == 0, result.output
-    assert json.loads(result.output) == [
-        {
-            "customerIdentifier": CUSTOMER_IDENTIFIER,
-            "allowedIdentifierNames": ["ctis", "dmp"],
-        }
-    ]
-
-
-@mock_aws
-def test_list_reports_when_no_policies_exist():
-    _create_approvals_table()
-
-    result = _run(["list"])
-
-    assert result.exit_code == 0, result.output
-    assert "No identifier policies found" in result.output
-
-
-@mock_aws
-def test_list_fails_when_approvals_table_is_missing():
-    result = _run(["list"])
-
-    assert result.exit_code == 1
-    assert "No DynamoDB table found containing 'nva-approvals-'" in result.output
-
-
-@mock_aws
-def test_table_option_disambiguates_between_several_stacks():
-    _create_approvals_table("nva-approvals-feature-one")
-    _create_approvals_table("nva-approvals-feature-two")
-
-    ambiguous = _run(["list", "--json"])
-    specific = _run(["list", "--json", "--table", "feature-two"])
-
-    assert ambiguous.exit_code == 1
-    assert "Several DynamoDB tables contain 'nva-approvals-'" in ambiguous.output
-    assert specific.exit_code == 0, specific.output
-    assert json.loads(specific.output) == []
-
-
-@mock_aws
-def test_get_outputs_policy_as_json():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
-
-    result = _run(["get", f"https://api.nva.unit.no/customer/{CUSTOMER_IDENTIFIER}"])
-
-    assert result.exit_code == 0, result.output
-    assert json.loads(result.output) == {
-        "customerIdentifier": CUSTOMER_IDENTIFIER,
-        "allowedIdentifierNames": ["ctis"],
-    }
-
-
-@mock_aws
-def test_get_fails_when_policy_is_missing():
-    _create_approvals_table()
-
-    result = _run(["get", CUSTOMER_IDENTIFIER])
-
-    assert result.exit_code == 1
-    assert f"No identifier policy found for customer {CUSTOMER_IDENTIFIER}" in (
-        result.output
+    _seed_policy(allowedIdentifierNames=["ctis", "dmp"], sourceConfigs=[OAUTH2_SOURCE])
+    boto3.resource("dynamodb").Table(APPROVALS_TABLE).put_item(
+        Item={"PK0": "Approval:1", "SK0": "Approval:1", "type": "Approval"}
     )
 
-
-@mock_aws
-def test_add_creates_policy_with_normalized_names():
-    _create_approvals_table()
-
-    result = _run(["add", CUSTOMER_IDENTIFIER, "CTIS", "dmp", " Dmp "])
+    result = _run(["policy"])
 
     assert result.exit_code == 0, result.output
-    assert (
-        f"CREATED identifier policy for customer {CUSTOMER_IDENTIFIER}: ctis, dmp"
-        in (result.output)
-    )
-    assert _raw_policy(CUSTOMER_IDENTIFIER) == {
+    assert "Sikt" in result.output
+    assert "ctis, dmp" in result.output
+    assert "https://api.dmp.no/ (OAuth2ClientCredentials: api.dmp.no)" in result.output
+    assert "Total: 1 policy(ies)" in result.output
+
+
+@mock_aws
+def test_policy_edit_keeps_service_owned_attributes_after_confirmation(monkeypatch):
+    _create_approvals_table()
+    _seed_policy(allowedIdentifierNames=["rek"])
+    _edits(monkeypatch, {"allowedIdentifierNames": ["REK ", "ctis"]})
+
+    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert APPROVALS_TABLE in result.output
+    assert _raw_policy() == {
         "PK0": f"Customer:{CUSTOMER_IDENTIFIER}",
         "SK0": "IdentifierPolicy",
         "type": "IdentifierPolicy",
         "customerIdentifier": CUSTOMER_IDENTIFIER,
-        "allowedIdentifierNames": ["ctis", "dmp"],
+        "createdDate": CREATED_DATE,
+        "allowedIdentifierNames": ["ctis", "rek"],
     }
 
 
 @mock_aws
-def test_add_fails_when_policy_already_exists():
+def test_policy_edit_creates_a_new_customer_from_the_unchanged_template(monkeypatch):
     _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
+    _edits(monkeypatch, POLICY_TEMPLATE)
 
-    result = _run(["add", CUSTOMER_IDENTIFIER, "dmp"])
-
-    assert result.exit_code == 1
-    assert "already exists" in result.output
-    raw_policy = _raw_policy(CUSTOMER_IDENTIFIER)
-    assert raw_policy is not None
-    assert raw_policy["allowedIdentifierNames"] == ["ctis"]
-
-
-@mock_aws
-def test_add_requires_at_least_one_identifier_name():
-    _create_approvals_table()
-
-    result = _run(["add", CUSTOMER_IDENTIFIER])
-
-    assert result.exit_code == 2
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is None
-
-
-@mock_aws
-def test_add_rejects_blank_identifier_name():
-    _create_approvals_table()
-
-    result = _run(["add", CUSTOMER_IDENTIFIER, "ctis", "  "])
-
-    assert result.exit_code == 1
-    assert "must not be blank" in result.output
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is None
-
-
-@mock_aws
-def test_add_rejects_invalid_customer_identifier():
-    _create_approvals_table()
-
-    result = _run(["add", "not-a-customer", "ctis"])
-
-    assert result.exit_code == 2
-    assert "not a customer UUID" in result.output
-
-
-@mock_aws
-def test_update_adds_and_removes_names():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis", "dmp"])
-
-    result = _run(["update", CUSTOMER_IDENTIFIER, "--add", "REK", "--remove", "dmp"])
+    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input=CREDENTIALS_INPUT + "y\n")
 
     assert result.exit_code == 0, result.output
     assert (
-        f"UPDATED identifier policy for customer {CUSTOMER_IDENTIFIER}: ctis, rek"
-        in (result.output)
+        _raw_policy()["allowedIdentifierNames"]
+        == POLICY_TEMPLATE["allowedIdentifierNames"]
     )
-    raw_policy = _raw_policy(CUSTOMER_IDENTIFIER)
-    assert raw_policy is not None
-    assert raw_policy["allowedIdentifierNames"] == ["ctis", "rek"]
+    assert _raw_policy()["sourceConfigs"] == POLICY_TEMPLATE["sourceConfigs"]
 
 
 @mock_aws
-def test_update_requires_add_or_remove():
+def test_policy_edit_writes_nothing_when_not_confirmed(monkeypatch):
     _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
+    _seed_policy(allowedIdentifierNames=["rek"])
+    _edits(monkeypatch, {"allowedIdentifierNames": ["dmp"]})
 
-    result = _run(["update", CUSTOMER_IDENTIFIER])
+    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input="n\n")
 
-    assert result.exit_code == 2
-    assert "at least one --add or --remove" in result.output
+    assert result.exit_code != 0
+    assert _raw_policy()["allowedIdentifierNames"] == ["rek"]
 
 
 @mock_aws
-def test_update_fails_when_policy_is_missing():
+def test_policy_edit_asks_for_missing_credentials_and_writes_both(monkeypatch):
     _create_approvals_table()
-
-    result = _run(["update", CUSTOMER_IDENTIFIER, "--add", "ctis"])
-
-    assert result.exit_code == 1
-    assert f"No identifier policy found for customer {CUSTOMER_IDENTIFIER}" in (
-        result.output
+    _seed_policy(allowedIdentifierNames=["dmp"])
+    _edits(
+        monkeypatch,
+        {"allowedIdentifierNames": ["dmp"], "sourceConfigs": [OAUTH2_SOURCE]},
     )
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is None
 
-
-@mock_aws
-def test_delete_asks_for_confirmation_and_deletes_when_confirmed():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
-
-    result = _run(["delete", CUSTOMER_IDENTIFIER], user_input="y\n")
+    result = _run(["policy", CUSTOMER_IDENTIFIER], user_input=CREDENTIALS_INPUT + "y\n")
 
     assert result.exit_code == 0, result.output
-    assert "Delete identifier policy" in result.output
-    assert f"DELETED identifier policy for customer {CUSTOMER_IDENTIFIER}" in (
-        result.output
+    assert CLIENT_SECRET not in result.output
+    assert _raw_policy()["sourceConfigs"] == [OAUTH2_SOURCE]
+    assert read_credentials(boto3.Session())["api.dmp.no"] == {
+        "type": "OAuth2Credentials",
+        "clientId": "id",
+        "clientSecret": CLIENT_SECRET,
+        "accessTokenUrl": "https://auth.dmp.no/token",
+        "scope": "dmp/read",
+    }
+
+
+@mock_aws
+def test_credentials_keeps_other_keys_and_never_echoes_the_secret():
+    session = boto3.Session()
+    session.client("secretsmanager").create_secret(
+        Name=CREDENTIALS_SECRET_NAME,
+        SecretString=json.dumps({"credentials": {"api.rek.no": {"type": "x"}}}),
     )
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is None
 
-
-@mock_aws
-def test_delete_keeps_policy_when_not_confirmed():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
-
-    result = _run(["delete", CUSTOMER_IDENTIFIER], user_input="n\n")
-
-    assert result.exit_code == 1
-    assert "Aborted" in result.output
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is not None
-
-
-@mock_aws
-def test_delete_with_yes_skips_confirmation():
-    _create_approvals_table()
-    _seed_policy(CUSTOMER_IDENTIFIER, ["ctis"])
-
-    result = _run(["delete", CUSTOMER_IDENTIFIER, "--yes"])
+    result = _run(["credentials", "api.dmp.no"], user_input=CREDENTIALS_INPUT + "y\n")
 
     assert result.exit_code == 0, result.output
-    assert "Delete identifier policy" not in result.output
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is None
-
-
-@mock_aws
-def test_delete_leaves_approval_rows_untouched():
-    _create_approvals_table()
-    _seed_approval(
-        "3d235e16-5fd5-4a7e-8eb6-ac53f298e65e",
-        "https://hdl.handle.net/11250.1/12345",
-        "REK",
-        "2024/123",
-    )
-    _seed_policy(CUSTOMER_IDENTIFIER, ["rek"])
-    assert _count_rows() == 4
-
-    result = _run(["delete", CUSTOMER_IDENTIFIER, "--yes"])
-
-    assert result.exit_code == 0, result.output
-    assert _raw_policy(CUSTOMER_IDENTIFIER) is None
-    assert _count_rows() == 3
-
-
-@mock_aws
-def test_delete_fails_when_policy_is_missing():
-    _create_approvals_table()
-
-    result = _run(["delete", CUSTOMER_IDENTIFIER, "--yes"])
-
-    assert result.exit_code == 1
-    assert f"No identifier policy found for customer {CUSTOMER_IDENTIFIER}" in (
-        result.output
-    )
+    assert CLIENT_SECRET not in result.output
+    assert sorted(read_credentials(session)) == ["api.dmp.no", "api.rek.no"]

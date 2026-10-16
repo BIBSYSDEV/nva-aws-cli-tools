@@ -1,17 +1,36 @@
-import functools
+import json
 import logging
+import os
+import shutil
 
 import click
 from botocore.exceptions import BotoCoreError, ClientError
+from deepdiff import DeepDiff
 from rich.console import Console
 from rich.table import Table
 
 from commands.services.approvals_api import (
+    AUTHENTICATION_ATTRIBUTE,
+    BASE_URI_ATTRIBUTE,
+    CLIENT_SECRET_FIELD,
+    CREDENTIALS_FIELDS,
+    CREDENTIALS_KEY_ATTRIBUTE,
+    CREDENTIALS_SECRET_NAME,
+    CUSTOMER_IDENTIFIER_ATTRIBUTE,
     DEFAULT_TABLE_NAME_SUBSTRING,
-    IdentifierPolicy,
-    IdentifierPolicyError,
-    IdentifierPolicyService,
+    EMPTY_POLICY,
+    NAMES_ATTRIBUTE,
+    OAUTH2_AUTHENTICATION,
+    OAUTH2_CREDENTIALS_TYPE,
+    SCOPE_FIELD,
+    SOURCE_CONFIGS_ATTRIBUTE,
+    TYPE_ATTRIBUTE,
+    ApprovalsService,
     parse_customer_identifier,
+    read_credentials,
+    required_credentials_keys,
+    validated_policy,
+    write_credentials,
 )
 from commands.services.aws_utils import prettify
 from commands.services.customers_api import build_customer_lookup
@@ -21,6 +40,19 @@ logger = logging.getLogger(__name__)
 
 UNKNOWN_CUSTOMER_NAME = "?"
 DENY_ALL_LABEL = "(none - denies all)"
+VS_CODE_EDITOR = "code --new-window --wait"
+POLICY_TEMPLATE = {
+    NAMES_ATTRIBUTE: ["example-namespace"],
+    SOURCE_CONFIGS_ATTRIBUTE: [
+        {
+            BASE_URI_ATTRIBUTE: "https://api.example.org/",
+            AUTHENTICATION_ATTRIBUTE: {
+                TYPE_ATTRIBUTE: OAUTH2_AUTHENTICATION,
+                CREDENTIALS_KEY_ATTRIBUTE: "api.example.org",
+            },
+        }
+    ],
+}
 
 
 class CustomerIdentifierType(click.ParamType):
@@ -35,181 +67,117 @@ class CustomerIdentifierType(click.ParamType):
             self.fail(str(error), param, ctx)
 
 
-CUSTOMER_IDENTIFIER = CustomerIdentifierType()
-
-
-def _table_option(func):
-    return click.option(
-        "--table",
-        "table_name_substring",
-        default=DEFAULT_TABLE_NAME_SUBSTRING,
-        show_default=True,
-        help="Substring of the approvals DynamoDB table name. Make it more specific when several stacks match.",
-    )(func)
-
-
-def _handle_errors(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (IdentifierPolicyError, ValueError) as error:
-            raise click.ClickException(str(error))
-
-    return wrapper
-
-
 @click.group()
 @click.pass_obj
 def approvals(ctx: AppContext) -> None:
     """Manage data owned by nva-handle-service (approvals table)."""
 
 
-@approvals.group()
-@click.pass_obj
-def policies(ctx: AppContext) -> None:
-    """Manage identifier policies: which identifier names each customer may use.
-
-    The approvals table also holds the approval records themselves (Approval,
-    Handle and Identifier rows). These commands only read and write the
-    IdentifierPolicy rows and never touch approvals.
-
-    There is at most one policy per customer. Names are stored lower-cased,
-    matching how nva-handle-service normalizes them.
-    """
-
-
-@policies.command(name="list")
-@_table_option
+@approvals.command()
+@click.argument("customer_identifier", type=CustomerIdentifierType(), required=False)
 @click.option(
-    "--json",
-    "as_json",
-    is_flag=True,
-    default=False,
-    help="Print JSON instead of a table",
+    "--table",
+    "table_name_substring",
+    default=DEFAULT_TABLE_NAME_SUBSTRING,
+    show_default=True,
+    help="Substring of the approvals DynamoDB table name. Make it more specific when several stacks match.",
 )
 @click.pass_obj
-@_handle_errors
-def list_policies(ctx: AppContext, table_name_substring: str, as_json: bool) -> None:
-    """List all identifier policies."""
-    service = IdentifierPolicyService(ctx.session, table_name_substring)
-    identifier_policies = service.list_policies()
-    if as_json:
-        click.echo(prettify([policy.to_json_dict() for policy in identifier_policies]))
+def policy(
+    ctx: AppContext, customer_identifier: str, table_name_substring: str
+) -> None:
+    """List the identifier policies, or edit one customer's policy as JSON in $EDITOR.
+
+    Without CUSTOMER_IDENTIFIER (a customer UUID or customer URI) the policies of all
+    customers are listed. With one, its allowedIdentifierNames and sourceConfigs open
+    in $EDITOR; everything else in the row is left untouched. OAuth2 sources naming
+    an unknown credentials key ask for those credentials and write them too.
+    """
+    service = ApprovalsService(ctx.session, table_name_substring)
+    if not customer_identifier:
+        _render_policies(service.list_policies(), ctx, service.table_name)
         return
-    _render_policies(identifier_policies, _customer_names(ctx), service.table_name)
+    existing_item = service.get_policy(customer_identifier) or {}
+    current = EMPTY_POLICY | {
+        attribute: existing_item[attribute]
+        for attribute in EMPTY_POLICY
+        if attribute in existing_item
+    }
+    starting_point = current if existing_item else EMPTY_POLICY | POLICY_TEMPLATE
+    edited = click.edit(prettify(starting_point), editor=_editor(), extension=".json")
+    if edited is None:
+        click.echo("No changes made.")
+        return
+    try:
+        wanted = validated_policy(json.loads(edited))
+        stored_credentials = read_credentials(ctx.session)
+    except (ValueError, AttributeError) as error:
+        raise click.ClickException(str(error))
+    difference = DeepDiff(current, wanted)
+    if not difference and existing_item:
+        click.echo("No changes made.")
+        return
+    missing_credentials = {
+        credentials_key: _prompt_credentials(credentials_key)
+        for credentials_key in required_credentials_keys(wanted)
+        if credentials_key not in stored_credentials
+    }
+    click.echo(difference.pretty() or "Creating the policy as shown.")
+    click.confirm(
+        f"Write this policy for customer {customer_identifier} to {service.table_name} "
+        f"(profile {ctx.session.profile_name})?",
+        abort=True,
+    )
+    if missing_credentials:
+        write_credentials(ctx.session, missing_credentials)
+    service.put_policy(customer_identifier, wanted)
+    click.echo(f"WROTE identifier policy for customer {customer_identifier}")
 
 
-@policies.command()
-@click.argument("customer_identifier", type=CUSTOMER_IDENTIFIER)
-@_table_option
+@approvals.command()
+@click.argument("credentials_key")
 @click.pass_obj
-@_handle_errors
-def get(ctx: AppContext, customer_identifier: str, table_name_substring: str) -> None:
-    """Show the identifier policy for one customer as JSON."""
-    service = IdentifierPolicyService(ctx.session, table_name_substring)
-    policy = service.get_policy(customer_identifier)
-    if policy is None:
-        raise click.ClickException(
-            f"No identifier policy found for customer {customer_identifier}"
-        )
-    click.echo(prettify(policy.to_json_dict()))
+def credentials(ctx: AppContext, credentials_key: str) -> None:
+    """Store OAuth2 client credentials under CREDENTIALS_KEY in the ApprovalCredentials secret.
 
-
-@policies.command()
-@click.argument("customer_identifier", type=CUSTOMER_IDENTIFIER)
-@click.argument("identifier_names", nargs=-1, required=True)
-@_table_option
-@click.pass_obj
-@_handle_errors
-def add(
-    ctx: AppContext,
-    customer_identifier: str,
-    identifier_names: tuple[str, ...],
-    table_name_substring: str,
-) -> None:
-    """Create the identifier policy for a customer (fails if one already exists).
-
-    CUSTOMER_IDENTIFIER is the customer UUID or customer URI. IDENTIFIER_NAMES are
-    the allowed identifier names, e.g. ctis dmp rek.
+    CREDENTIALS_KEY is the key a source config's authentication refers to, by
+    convention the host of its baseUri. Other keys in the secret are kept.
     """
-    service = IdentifierPolicyService(ctx.session, table_name_substring)
-    policy = service.create_policy(customer_identifier, identifier_names)
-    click.echo(
-        f"CREATED identifier policy for customer {customer_identifier}: "
-        f"{_format_names(policy)}"
+    try:
+        action = (
+            "Replace" if credentials_key in read_credentials(ctx.session) else "Add"
+        )
+    except ValueError as error:
+        raise click.ClickException(str(error))
+    new_credentials = {credentials_key: _prompt_credentials(credentials_key)}
+    click.confirm(
+        f"{action} the credentials under {credentials_key} in the "
+        f"{CREDENTIALS_SECRET_NAME} secret (profile {ctx.session.profile_name})?",
+        abort=True,
+    )
+    write_credentials(ctx.session, new_credentials)
+    click.echo(f"WROTE credentials under {credentials_key}")
+
+
+def _editor() -> str | None:
+    return (
+        os.environ.get("VISUAL")
+        or os.environ.get("EDITOR")
+        or (VS_CODE_EDITOR if shutil.which("code") else None)
     )
 
 
-@policies.command()
-@click.argument("customer_identifier", type=CUSTOMER_IDENTIFIER)
-@click.option(
-    "--add",
-    "names_to_add",
-    multiple=True,
-    help="Identifier name to allow (repeatable)",
-)
-@click.option(
-    "--remove",
-    "names_to_remove",
-    multiple=True,
-    help="Identifier name to stop allowing (repeatable)",
-)
-@_table_option
-@click.pass_obj
-@_handle_errors
-def update(
-    ctx: AppContext,
-    customer_identifier: str,
-    names_to_add: tuple[str, ...],
-    names_to_remove: tuple[str, ...],
-    table_name_substring: str,
-) -> None:
-    """Add and/or remove allowed identifier names on an existing policy."""
-    if not names_to_add and not names_to_remove:
-        raise click.UsageError("Specify at least one --add or --remove.")
-    service = IdentifierPolicyService(ctx.session, table_name_substring)
-    policy = service.update_policy(customer_identifier, names_to_add, names_to_remove)
-    click.echo(
-        f"UPDATED identifier policy for customer {customer_identifier}: "
-        f"{_format_names(policy)}"
-    )
-    if not policy.allowed_identifier_names:
-        logger.warning(
-            "The policy no longer allows any identifier names, so the customer is denied all identifiers"
+def _prompt_credentials(credentials_key: str) -> dict[str, str]:
+    click.echo(f"OAuth2 credentials for key {credentials_key}:")
+    return {TYPE_ATTRIBUTE: OAUTH2_CREDENTIALS_TYPE} | {
+        field: click.prompt(
+            field,
+            hide_input=field == CLIENT_SECRET_FIELD,
+            default="" if field == SCOPE_FIELD else None,
+            show_default=False,
         )
-
-
-@policies.command()
-@click.argument("customer_identifier", type=CUSTOMER_IDENTIFIER)
-@click.option("--yes", is_flag=True, default=False, help="Skip confirmation prompt")
-@_table_option
-@click.pass_obj
-@_handle_errors
-def delete(
-    ctx: AppContext, customer_identifier: str, yes: bool, table_name_substring: str
-) -> None:
-    """Delete the identifier policy for a customer."""
-    service = IdentifierPolicyService(ctx.session, table_name_substring)
-    existing_policy = service.get_policy(customer_identifier)
-    if existing_policy is None:
-        raise click.ClickException(
-            f"No identifier policy found for customer {customer_identifier}"
-        )
-    if not yes:
-        click.confirm(
-            f"Delete identifier policy for customer {customer_identifier} "
-            f"(allowed: {_format_names(existing_policy)})?",
-            abort=True,
-        )
-    service.delete_policy(customer_identifier)
-    click.echo(f"DELETED identifier policy for customer {customer_identifier}")
-
-
-def _format_names(policy: IdentifierPolicy) -> str:
-    if not policy.allowed_identifier_names:
-        return DENY_ALL_LABEL
-    return ", ".join(policy.allowed_identifier_names)
+        for field in CREDENTIALS_FIELDS
+    }
 
 
 def _customer_names(ctx: AppContext) -> dict[str, str]:
@@ -220,15 +188,12 @@ def _customer_names(ctx: AppContext) -> dict[str, str]:
         return {}
 
 
-def _render_policies(
-    identifier_policies: list[IdentifierPolicy],
-    customer_names: dict[str, str],
-    table_name: str,
-) -> None:
+def _render_policies(items: list[dict], ctx: AppContext, table_name: str) -> None:
     console = Console()
-    if not identifier_policies:
+    if not items:
         console.print(f"[yellow]No identifier policies found in {table_name}[/yellow]")
         return
+    customer_names = _customer_names(ctx)
     table = Table(
         title=f"Identifier policies ({table_name})",
         show_header=True,
@@ -237,11 +202,30 @@ def _render_policies(
     table.add_column("Customer", style="cyan")
     table.add_column("Customer identifier", no_wrap=True)
     table.add_column("Allowed identifier names")
-    for policy in identifier_policies:
+    table.add_column("Sources")
+    for item in items:
+        customer_identifier = str(item.get(CUSTOMER_IDENTIFIER_ATTRIBUTE, ""))
         table.add_row(
-            customer_names.get(policy.customer_identifier, UNKNOWN_CUSTOMER_NAME),
-            policy.customer_identifier,
-            _format_names(policy),
+            customer_names.get(customer_identifier, UNKNOWN_CUSTOMER_NAME),
+            customer_identifier,
+            ", ".join(item.get(NAMES_ATTRIBUTE) or []) or DENY_ALL_LABEL,
+            "\n".join(
+                _format_source(source)
+                for source in item.get(SOURCE_CONFIGS_ATTRIBUTE) or []
+            ),
         )
     console.print(table)
-    console.print(f"[dim]Total: {len(identifier_policies)} policy(ies)[/dim]")
+    console.print(f"[dim]Total: {len(items)} policy(ies)[/dim]")
+
+
+def _format_source(source_config: dict) -> str:
+    authentication = source_config.get(AUTHENTICATION_ATTRIBUTE) or {}
+    label = ": ".join(
+        str(part)
+        for part in (
+            authentication.get(TYPE_ATTRIBUTE),
+            authentication.get(CREDENTIALS_KEY_ATTRIBUTE),
+        )
+        if part
+    )
+    return f"{source_config.get(BASE_URI_ATTRIBUTE)} ({label})"
